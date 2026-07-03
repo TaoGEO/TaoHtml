@@ -1,48 +1,47 @@
 # TaoHtml
 
-TaoHtml is a Codex skill for building high-design HTML presentations from PDFs, screenshots, outlines, source documents, and existing decks.
+TaoHtml 是一个面向 Codex / AI Agent 的高设计 HTML 课件与报告生成 skill。
 
-It is designed for reports that need more than a clean conversion. TaoHtml helps an AI agent decide whether to preserve source material faithfully or rebuild it into a roadshow-style HTML deck with story structure, evidence pages, motion, QA, and portable packaging.
+它适合把 PDF、截图、汇报材料、课程大纲、路演内容、已有 HTML 课件，改造成可演示、可追溯、可打包迁移的 HTML Presentation。
 
-## What TaoHtml Does
+> English brief: TaoHtml is a Codex skill for turning PDFs, screenshots, outlines, reports, and existing decks into high-design, source-traceable HTML presentations.
 
-TaoHtml turns messy source material into a presentable HTML deck:
+## TaoHtml 解决什么问题
 
-- Convert PDFs and source documents into portable HTML presentations.
-- Redesign ordinary reports into high-design roadshow decks.
-- Preserve dense source information through source-page buttons, appendix views, and evidence modals.
-- Build slide sequences around audience decision, story spine, and proof chain.
-- Use a design quality rubric to avoid generic "title + cards" output.
-- Use layout patterns for cover pages, evidence stages, mechanism diagrams, system cutaways, case teardowns, demo shells, offer pages, and closings.
-- Generate dependency-free local HTML decks with keyboard navigation, staged reveals, modal source views, and progress indicators.
-- Run asset checks, browser QA, contact-sheet generation, and portable zip packaging.
+很多 AI 生成的课件会出现两个极端：
 
-## Why It Exists
+1. 只是把原 PDF 包成一个浏览器页面，看起来像 PDF 阅读器。
+2. 页面变好看了，但原始信息、图表、证据和业务逻辑被丢掉。
 
-Most AI-generated presentation pages fail in one of two ways:
+TaoHtml 的核心原则是：
 
-1. They preserve the original document but look like a PDF viewer.
-2. They look decorated but lose source facts, charts, evidence, and business logic.
+> 主页面负责演讲和说服，证据层负责信息保真，QA 流程负责交付可靠。
 
-TaoHtml is built around a different standard:
+它不是单纯“美化 PPT”，而是把报告重构成一套完整的 HTML 演示系统。
 
-> Keep the source truthful, but redesign the live presentation surface.
+## 核心能力
 
-The main deck should persuade. The source layer should preserve. The QA scripts should verify.
+- 将 PDF / 截图 / 文档 / 旧课件转成 HTML 演示稿。
+- 判断应该做“忠实迁移”还是“路演重构”。
+- 保留原始信息：通过原始页按钮、证据弹窗、附录页、下载文件承载完整来源。
+- 重构演讲主线：从受众决策、故事脊柱、证据链开始设计页面。
+- 避免普通卡片堆砌：内置高设计评分尺和版式母型库。
+- 支持本地 HTML：键盘翻页、分步展开、原始页弹窗、进度条、离线使用。
+- 支持交付检查：资产路径检查、浏览器截图 QA、总览图、zip 打包。
 
-## Good Use Cases
+## 适合哪些场景
 
-- Roadshow decks
-- Client proposal decks
-- Internal strategy reports
-- Training courseware
-- Product demo decks
-- Diagnostic reports
-- Commercial service presentations
-- PDF-to-HTML report redesign
-- Speaker-note-ready presentation systems
+- 路演课件
+- 客户提案
+- 内部汇报
+- 培训课程
+- 产品演示
+- 诊断报告
+- 商业服务介绍
+- PDF 报告重构
+- 带口播稿的沙龙 / 课程课件
 
-## Repository Structure
+## 项目结构
 
 ```text
 TaoHtml/
@@ -62,83 +61,89 @@ TaoHtml/
       └─ scripts/
 ```
 
-The installable Codex skill is `skill/taohtml`.
+真正可安装的 Codex skill 位于：
 
-## Installation
+```text
+skill/taohtml
+```
 
-Copy the skill folder into your Codex skills directory:
+## 安装方式
+
+将 `skill/taohtml` 复制到你的 Codex skills 目录。
+
+Windows PowerShell:
 
 ```powershell
 Copy-Item -Recurse -Force .\skill\taohtml $env:USERPROFILE\.codex\skills\taohtml
 ```
 
-On macOS or Linux:
+macOS / Linux:
 
 ```bash
 cp -R ./skill/taohtml ~/.codex/skills/taohtml
 ```
 
-Restart Codex or open a new thread so the skill list refreshes.
+然后重启 Codex，或新开一个线程，让 skill 列表刷新。
 
-## Quick Start
+## 快速使用
 
-Ask Codex:
-
-```text
-Use $taohtml to turn this PDF into a high-design HTML roadshow deck.
-Keep the source information traceable, but redesign the main slides for live presentation.
-```
-
-Or:
+对 Codex 说：
 
 ```text
-Use $taohtml to polish this existing HTML presentation.
-Improve story structure, visual hierarchy, evidence pages, animation rhythm, and portable packaging.
+使用 $taohtml，把这个 PDF 改成一个高设计感的 HTML 路演课件。
+不要丢失原始信息，原始页可以放在证据弹窗或附录里，但主页面要重新设计成适合现场演讲的版本。
 ```
 
-## Core Workflow
+或者：
 
-TaoHtml guides the agent through:
+```text
+使用 $taohtml，帮我升级这个已有 HTML 课件。
+重点优化故事结构、视觉层级、证据页、动画节奏、翻页器友好的分步展开，以及最终可迁移打包。
+```
 
-1. Audience decision: what should the audience believe or do?
-2. Story spine: what sequence earns that decision?
-3. Output mode: faithful migration or roadshow redesign?
-4. Evidence layer: where do source facts, screenshots, charts, and originals live?
-5. Visual thesis: what design world fits this subject?
-6. Layout pattern selection: which pages need which composition?
-7. HTML implementation: local, dependency-free, 16:9, presenter-friendly.
-8. QA: asset check, browser screenshots, contact sheet, portable zip.
+## TaoHtml 的工作流
 
-## Included Resources
+TaoHtml 会引导 Agent 依次判断：
 
-### References
+1. 受众决策：看完之后，受众应该相信什么、做什么？
+2. 故事脊柱：用什么顺序才能自然推出结论？
+3. 输出模式：忠实迁移，还是路演重构？
+4. 证据层：原始事实、截图、图表、报告、视频放在哪里？
+5. 视觉命题：这个主题应该被设计成什么样的视觉世界？
+6. 页面版式：每页到底承担什么角色，应该用什么构图？
+7. HTML 实现：本地、离线、16:9、翻页器友好、可打包。
+8. QA 交付：资产检查、浏览器截图、总览图、zip 打包。
 
-- `process-playbook.md`: end-to-end report and deck-building workflow.
-- `design-quality-rubric.md`: 100-point quality rubric and hard gates.
-- `layout-pattern-library.md`: 12 reusable layout patterns for high-design decks.
+## 内置资源
 
-### HTML Template
+### 参考文档
 
-- `assets/html-deck-template/index.html`: local 16:9 slide shell with navigation, staged reveals, source modal, and progress bar.
+- `process-playbook.md`：完整课件 / 报告生产流程。
+- `design-quality-rubric.md`：100 分高设计评分标准和硬性失败门槛。
+- `layout-pattern-library.md`：12 类高设计版式母型。
 
-### Scripts
+### HTML 模板
 
-- `extract_pdf_pages.py`: render PDF pages into PNG evidence assets.
-- `check_assets.py`: detect missing assets and non-portable local paths.
-- `check_html_deck.py`: run Playwright browser QA at 1600x900.
-- `build_contact_sheet.py`: create a contact sheet from QA screenshots.
-- `package_deck.py`: package an HTML deck folder into a portable zip.
+- `assets/html-deck-template/index.html`：本地 16:9 HTML 课件壳，包含翻页、分步展开、原始页弹窗、进度条。
 
-## Design Standard
+### 脚本
 
-TaoHtml is opinionated:
+- `extract_pdf_pages.py`：将 PDF 页面渲染成 PNG 证据素材。
+- `check_assets.py`：检查缺失素材和不可迁移的本地绝对路径。
+- `check_html_deck.py`：用 Playwright 在 1600x900 下做浏览器 QA。
+- `build_contact_sheet.py`：把 QA 截图合成总览图。
+- `package_deck.py`：将 HTML 课件文件夹打包成 zip。
 
-- Do not start from slides. Start from audience decision and proof chain.
-- Do not decorate a bad structure. Fix the story first.
-- Do not copy a reference style as colors only. Extract composition, typography, motifs, evidence treatment, and motion grammar.
-- Do not make source screenshots decorative. Make them readable or move them into source views.
-- Do not require mouse-only interaction for live decks. A clicker should advance staged content.
-- Do not ship without QA when the deck includes local assets or media.
+## 设计标准
+
+TaoHtml 是有明确审美立场的：
+
+- 不从页面开始，从受众决策和证据链开始。
+- 不装饰坏结构，先修故事。
+- 不只复制参考风格的颜色，而要复制构图、层级、证据处理和动效语法。
+- 不把截图当装饰，关键证据必须可读、可追溯。
+- 不依赖鼠标悬停和小点击区域，现场演讲必须能用翻页器推进。
+- 不在资产路径、视频、截图没有检查的情况下交付。
 
 ## License
 

@@ -1,110 +1,112 @@
-# Product Introduction
+# 产品介绍
 
-## One-Line Positioning
+## 一句话定位
 
-TaoHtml is a high-design HTML presentation skill for AI agents.
+TaoHtml 是一个面向 AI Agent 的高设计 HTML 课件生成 skill。
 
-It helps Codex turn PDFs, screenshots, outlines, reports, and existing decks into persuasive, source-traceable, presenter-friendly HTML presentations.
+它帮助 Codex 将 PDF、截图、文档、汇报材料、课程大纲、已有课件，重构成可演示、可追溯、可打包交付的 HTML Presentation。
 
-## Product Promise
+English brief: TaoHtml helps AI agents turn source documents into high-design, source-traceable HTML presentations.
 
-TaoHtml does not simply convert files.
+## 产品承诺
 
-It helps an AI agent make four decisions:
+TaoHtml 不只是“把文件转成网页”。
 
-1. What should the audience believe or do after this presentation?
-2. Which source facts and evidence must be preserved?
-3. Which pages should be redesigned for live persuasion?
-4. How should the result be checked, packaged, and moved to another computer?
+它帮助 Agent 做四个关键判断：
 
-## The Problem
+1. 这份课件要让观众形成什么判断？
+2. 哪些原始信息、证据、图表和数字必须保留？
+3. 哪些页面需要为了现场演讲重新设计？
+4. 最终文件如何检查、打包，并在另一台电脑上稳定打开？
 
-AI can quickly generate slides, but the output often feels ordinary:
+## 用户痛点
 
-- Pages become title plus cards.
-- Source PDFs are copied as screenshots with no presentation logic.
-- Charts and evidence become too small to inspect.
-- Colors change, but the composition stays generic.
-- Animations exist, but they do not support the speaker.
-- Assets work on the creator's machine but break on another computer.
+AI 很容易生成页面，但经常出现这些问题：
 
-TaoHtml turns these failure modes into explicit workflow checks.
+- 页面变成“标题 + 卡片”的重复堆砌。
+- 原 PDF 只是被截图塞进页面，没有演讲逻辑。
+- 图表、数据、截图太小，观众看不清。
+- 换了配色，但构图依然普通。
+- 有动画，但动画不服务口播节奏。
+- 在当前电脑能打开，换一台电脑就丢图、丢视频、路径失效。
 
-## The TaoHtml Method
+TaoHtml 的价值，是把这些失败模式变成明确的流程检查和交付标准。
 
-TaoHtml treats a deck as a controlled sequence:
+## TaoHtml 的方法
 
-1. Reframe the audience's problem.
-2. Show evidence that the problem is real.
-3. Explain the mechanism.
-4. Demonstrate the method or system.
-5. Reduce risk with proof, boundaries, and process.
-6. End with a clear next action.
+TaoHtml 把课件看成一条可控的说服序列：
 
-The main deck is optimized for persuasion. The evidence layer preserves source truth.
+1. 重新定义受众正在面对的问题。
+2. 用真实证据说明问题正在发生。
+3. 解释问题背后的机制。
+4. 展示方法、系统或工具。
+5. 用证据、边界和流程降低信任风险。
+6. 用清晰下一步完成收口。
 
-## What Makes It Different
+主页面负责现场说服，证据层负责信息保真。
 
-### 1. Output Mode Gate
+## 和普通 HTML 课件生成有什么不同
 
-TaoHtml distinguishes two jobs:
+### 1. 先判断输出模式
 
-- Faithful migration: preserve the source layout and make it browsable.
-- Roadshow redesign: rebuild the presentation surface while keeping source material traceable.
+TaoHtml 会区分两个任务：
 
-This prevents a common mistake: claiming to redesign a report while merely wrapping a PDF page.
+- 忠实迁移：保留源文件页面，让它变得可浏览、可翻页、可打包。
+- 路演重构：把源文件当作信息和证据，重新设计主页面。
 
-### 2. Design Quality Rubric
+这能避免一个常见错误：明明只是套了一个 PDF 浏览器，却声称完成了设计重构。
 
-TaoHtml includes a quality rubric with hard gates for story, evidence, layout, interaction, portability, and overflow.
+### 2. 内置高设计评分标准
 
-The agent can judge whether a deck feels like a designed presentation or an ordinary report.
+TaoHtml 内置 `design-quality-rubric.md`。
 
-### 3. Layout Pattern Library
+它会从故事、证据、版式、动效、可迁移性、文字溢出等维度判断：这份课件到底是“普通汇报”，还是“真正设计过的演示稿”。
 
-TaoHtml includes 12 layout patterns:
+### 3. 内置版式母型库
 
-- Poster opener
-- Tension split
-- Evidence stage
-- Mechanism pipeline
-- System cutaway
-- Case teardown
-- Metric impact board
-- Diagnostic matrix
-- Live demo shell
-- Offer stack
-- Source appendix viewer
-- Closing landing
+TaoHtml 内置 12 类版式母型：
 
-These patterns help the agent avoid repeating the same card layout.
+- 海报开场
+- 左右冲突
+- 证据舞台
+- 机制流程
+- 系统剖面
+- 案例拆解
+- 指标看板
+- 诊断矩阵
+- 现场演示壳
+- 报价 / 方案页
+- 原始页查看器
+- 收尾页
 
-### 4. HTML Delivery Discipline
+这些母型帮助 Agent 避免把所有页面都做成同一种卡片布局。
 
-TaoHtml includes a local HTML shell and QA scripts for:
+### 4. 内置 HTML 交付纪律
 
-- 16:9 presentation structure
-- keyboard and click navigation
-- staged reveals
-- source modals
-- asset portability checks
-- browser screenshots
-- contact sheets
-- zip packaging
+TaoHtml 提供本地 HTML 模板和 QA 脚本，用于：
 
-## Target Users
+- 16:9 演示结构
+- 键盘和点击翻页
+- 分步展开
+- 原始页弹窗
+- 资产路径检查
+- 浏览器截图
+- QA 总览图
+- zip 打包
 
-TaoHtml is useful for:
+## 目标用户
 
-- founders preparing roadshow decks
-- consultants creating client reports
-- creators building training courseware
-- teams converting PDFs into presentations
-- operators who need evidence-heavy reports
-- AI agents that need a repeatable design workflow
+TaoHtml 适合：
 
-## Product Boundary
+- 准备路演的创业者
+- 做客户提案的咨询顾问
+- 制作课程课件的内容创作者
+- 需要把 PDF 改成演示稿的业务团队
+- 做证据型汇报的运营和项目负责人
+- 需要稳定工作流的 AI Agent 使用者
 
-TaoHtml is not a full design application and not a PPTX editor.
+## 产品边界
 
-It is a Codex skill: a reusable instruction, reference, template, and script package that helps an AI coding agent build better HTML presentations.
+TaoHtml 不是完整的设计软件，也不是 PPTX 编辑器。
+
+它是一个 Codex skill：由说明、参考文档、HTML 模板和脚本组成，帮助 AI 编程代理稳定地产出更好的 HTML 课件。

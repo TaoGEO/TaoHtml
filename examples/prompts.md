@@ -1,40 +1,40 @@
-# Prompt Examples
+# 提示词示例
 
-## PDF To High-Design Roadshow Deck
+## PDF 转高设计路演课件
 
 ```text
-Use $taohtml to turn this PDF into a high-design HTML roadshow deck.
-Do not lose important information. Keep original source pages accessible through source buttons or appendix views, but redesign the main slide surface for live presentation.
-Use local assets only and package the final folder as a zip.
+使用 $taohtml，把这个 PDF 改成一个高设计感的 HTML 路演课件。
+不要丢失重要信息。完整原始页可以通过“原始页”按钮、证据弹窗或附录保留，但主页面要重新设计成适合现场演讲的版本。
+使用本地素材，不要依赖外部链接，最后打包成 zip。
 ```
 
-## Existing HTML Deck Polish
+## 优化已有 HTML 课件
 
 ```text
-Use $taohtml to review and upgrade this HTML presentation.
-Improve the story spine, visual system, page rhythm, evidence treatment, clicker-friendly staged reveals, and final CTA.
-Run asset and browser QA before delivery.
+使用 $taohtml，帮我审查并升级这个 HTML 课件。
+重点优化故事脊柱、视觉系统、页面节奏、证据处理、翻页器友好的分步展开，以及最终 CTA。
+交付前请做资产检查和浏览器 QA。
 ```
 
-## Faithful PDF Migration
+## 忠实迁移 PDF
 
 ```text
-Use $taohtml to convert this PDF into a portable HTML presentation.
-This time prioritize faithful migration, not roadshow redesign.
-Preserve every source page, add keyboard navigation, page numbers, source viewing, and a portable asset folder.
+使用 $taohtml，把这个 PDF 转成一个可离线打开、可翻页、可打包迁移的 HTML 演示稿。
+这次优先忠实迁移，不做路演重构。
+请保留每一页原始内容，增加键盘翻页、页码、进度条、原始页查看和本地素材文件夹。
 ```
 
-## Speaker Notes
+## 生成口播稿
 
 ```text
-Use $taohtml to write speaker notes for this finalized deck.
-For each page, include the opening sentence, main spoken explanation, emphasis points, and transition to the next page.
-For transition pages, write short transition language rather than long lecture text.
+使用 $taohtml，为这份已经定稿的课件写完整口播稿。
+每一页都要包括开场句、主要解释、需要强调的点，以及进入下一页的过渡语。
+如果是过渡页，不要写成长篇讲稿，只写自然的承接语。
 ```
 
-## Design QA
+## 设计审查
 
 ```text
-Use $taohtml to audit this deck against its design-quality rubric.
-Tell me where it feels ordinary, where evidence is weak, which pages repeat the same layout, and what should be redesigned first.
+使用 $taohtml，按照它的高设计评分标准审查这份课件。
+告诉我哪些页面显得普通，哪些证据不够强，哪些页面版式重复，以及应该优先重做哪几页。
 ```

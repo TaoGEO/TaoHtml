@@ -1,99 +1,103 @@
-# Workflow
+# 工作流说明
 
-Use this workflow when applying TaoHtml to a real project.
+这份文档说明如何在真实项目中使用 TaoHtml。
 
-## 1. Intake
+## 1. 明确输入
 
-Identify:
+先判断：
 
-- Audience
-- Occasion
-- Desired action
-- Time budget
-- Source materials
-- Delivery format
-- Offline or portability constraints
+- 观众是谁？
+- 使用场景是什么？
+- 希望观众看完后做什么？
+- 演讲时长是多少？
+- 有哪些源材料？
+- 最终交付 HTML、PDF、PPTX，还是 zip？
+- 是否需要离线使用和跨电脑迁移？
 
-If the user does not provide all answers, proceed with safe assumptions and state them.
+如果用户没有给全信息，Agent 可以做安全假设，但要在交付时说明。
 
-## 2. Choose Output Mode
+## 2. 判断输出模式
 
-Choose one:
+先选一种模式：
 
-- Faithful migration: preserve source pages as the main surface.
-- Roadshow redesign: use source material as evidence and rebuild the main slides.
+- 忠实迁移：原始页面是主内容，重点是可浏览、可翻页、可打包。
+- 路演重构：原始材料是信息和证据，主页面需要重新设计。
 
-If the user asks for both "do not lose information" and "better design", keep full source pages as source views, appendix pages, or downloadable assets.
+如果用户同时要求“不丢信息”和“更有设计感”，不要把所有信息塞进主页面。应该把完整源文件放入原始页按钮、证据弹窗、附录或下载文件。
 
-## 3. Build Story Spine
+## 3. 建立故事脊柱
 
-Write the page role sequence before editing HTML.
+先写页面角色序列，再开始做 HTML。
 
-Useful movement:
+常用叙事顺序：
 
-1. Current behavior
-2. Visible example
-3. Risk or gap
-4. Definition
-5. Mechanism
-6. Framework
-7. Evidence
-8. Operating model
-9. Offer or next action
-10. Closing
+1. 当前行为或环境变化
+2. 一个可见的真实例子
+3. 风险或缺口
+4. 概念定义
+5. 底层机制
+6. 方法框架
+7. 证据证明
+8. 运营系统或执行流程
+9. 产品、服务或下一步
+10. 收尾
 
-## 4. Create Visual Thesis
+## 4. 创建视觉命题
 
-Write one sentence that describes the visual world.
+用一句话定义这份课件的视觉世界。
 
-Example:
+示例：
 
-> This report should feel like a data factory cutaway: manual inputs enter on the left, standardized assets accumulate in the center, and decision outputs leave on the right.
+> 这份报告应该像一个“数据工厂剖面图”：手工材料从左侧进入，中间沉淀为标准化资产，右侧输出可被业务和 AI 调用的决策能力。
 
-Then select 3-5 recurring motifs.
+然后选择 3-5 个视觉母题，例如网格、标尺、黑色控制台、证据卡、流程线、数据面板、源文件弹窗。
 
-## 5. Select Layout Patterns
+## 5. 选择页面版式
 
-Use `references/layout-pattern-library.md`.
+使用 `references/layout-pattern-library.md`。
 
-Avoid using cards as the default. Choose a pattern based on the slide job:
+不要默认使用卡片。先根据页面任务选择构图：
 
-- opener
-- evidence
-- mechanism
-- framework
-- case
-- system
-- demo
-- offer
-- close
+- 开场
+- 证据
+- 机制
+- 框架
+- 案例
+- 系统
+- 演示
+- 报价
+- 收尾
 
-## 6. Implement HTML
+如果连续三页都是卡片布局，至少重构其中一页。
 
-Start with `assets/html-deck-template/` unless the existing deck already has stronger infrastructure.
+## 6. 实现 HTML
 
-Keep:
+从 `assets/html-deck-template/` 开始，除非已有 HTML 课件本身已经有更强的基础设施。
 
-- local assets
-- relative paths
-- 16:9 layout
-- keyboard navigation
-- clicker-friendly staged reveals
-- source modals
-- consistent visual system
+实现时保持：
 
-## 7. Preserve Source Information
+- 本地素材
+- 相对路径
+- 16:9 画布
+- 键盘翻页
+- 翻页器友好的分步展开
+- 原始页或证据弹窗
+- 统一视觉系统
 
-For dense sources:
+## 7. 保留原始信息
 
-- render original pages
-- crop or slice important areas
-- show full source in modal or appendix
-- separate source facts from speaker interpretation
+对于密集源材料：
 
-## 8. QA
+- 渲染原始页面
+- 裁切或拆分关键区域
+- 在弹窗或附录里展示完整来源
+- 区分“源文件事实”和“演讲者解释”
 
-Run:
+主页面不必承载所有信息，但完整信息必须能被追溯。
+
+## 8. 做 QA
+
+运行：
 
 ```bash
 python skill/taohtml/scripts/check_assets.py path/to/index.html
@@ -101,23 +105,23 @@ python skill/taohtml/scripts/check_html_deck.py path/to/index.html path/to/qa
 python skill/taohtml/scripts/build_contact_sheet.py path/to/qa path/to/qa/contact-sheet.png
 ```
 
-Check:
+重点检查：
 
-- first page
-- dense page
-- evidence page
-- media page
-- final page
-- all local assets
-- 1600x900 layout
-- navigation and staged reveal reset
+- 首页
+- 信息密集页
+- 证据页
+- 视频或演示页
+- 最后一页
+- 所有本地素材
+- 1600x900 展示效果
+- 翻页和分步展开是否能重置
 
-## 9. Package
+## 9. 打包交付
 
-Run:
+运行：
 
 ```bash
 python skill/taohtml/scripts/package_deck.py path/to/deck path/to/deck.zip
 ```
 
-Send the whole zip when the deck will be used on another computer.
+如果课件要在另一台电脑使用，交付 zip，而不是只交付单个 HTML 文件。
