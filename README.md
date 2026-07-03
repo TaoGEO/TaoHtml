@@ -2,9 +2,30 @@
 
 TaoHtml 是一个面向 Codex / AI Agent 的高设计 HTML 课件与报告生成 skill。
 
-它适合把 PDF、截图、汇报材料、课程大纲、路演内容、已有 HTML 课件，改造成可演示、可追溯、可打包迁移的 HTML Presentation。
+它不是简单把内容“排成几页”，而是帮助 Agent 把 PDF、截图、汇报材料、课程大纲、路演内容、已有 HTML 课件，重构成一套可演讲、可追溯、可互动、可打包迁移的 HTML Presentation。
 
 > English brief: TaoHtml is a Codex skill for turning PDFs, screenshots, outlines, reports, and existing decks into high-design, source-traceable HTML presentations.
+
+## 真实案例：GEO 沙龙路演 HTML
+
+TaoHtml 的第一个标杆案例，是一套用于线下沙龙的 GEO 路演课件。这个案例不是静态美化，而是从真实演讲场景出发，把海报风格、AI 问答模拟、真实采样截图、视频录屏、复采报告、服务转化页整合成一套可用翻页器推进的 HTML 课件。
+
+![GEO 沙龙案例：AI 搜索机制页](docs/assets/cases/geo-salon/01-ai-search-mechanism.png)
+
+这个案例展示了 TaoHtml 最核心的能力：
+
+- 把普通内容大纲重构成完整演讲主线。
+- 把截图、报告、视频这类真实证据变成可读的演示页面。
+- 用统一视觉系统承接全篇：黑白高反差、荧光黄绿色、橙色风险提示、网格、标尺、圆弧和证据窗口。
+- 把页面交互改成翻页器友好的串行展开，而不是依赖鼠标悬停。
+- 在商业课件末尾加入服务入口、报价页和可执行下一步。
+
+查看更多截图和拆解：
+
+- [Demo Gallery](docs/gallery.md)
+- [案例拆解：GEO 沙龙路演 HTML](docs/cases/geo-salon.md)
+
+如果 TaoHtml 对你有帮助，欢迎给这个项目点一个 Star，方便后续更新。
 
 ## TaoHtml 解决什么问题
 
@@ -48,6 +69,10 @@ TaoHtml/
 ├─ README.md
 ├─ LICENSE
 ├─ docs/
+│  ├─ gallery.md
+│  ├─ cases/
+│  │  └─ geo-salon.md
+│  ├─ assets/
 │  ├─ product-introduction.md
 │  └─ workflow.md
 ├─ examples/
