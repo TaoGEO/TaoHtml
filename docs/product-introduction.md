@@ -110,3 +110,16 @@ TaoHtml 适合：
 TaoHtml 不是完整的设计软件，也不是 PPTX 编辑器。
 
 它是一个 Codex skill：由说明、参考文档、HTML 模板和脚本组成，帮助 AI 编程代理稳定地产出更好的 HTML 课件。
+
+## 作者与合作
+
+TaoHtml 由 Tao 发起。
+
+可交流方向：
+
+- 企业汇报 / 路演课件 HTML 化
+- AI Agent skill 定制
+- 高设计感商业报告与演示系统
+- GEO / 内容工程 / 知识库相关报告系统
+
+微信：`taomir`
