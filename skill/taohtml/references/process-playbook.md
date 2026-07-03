@@ -1,0 +1,447 @@
+# PPT-Like Report Building Playbook
+
+This playbook generalizes a complete collaborative process for turning loose materials, screenshots, demos, and business intent into a polished PPT-like report or HTML presentation.
+
+It is not tied to any single topic. Use it for salon decks, training courseware, sales proposals, consulting reports, diagnostic reports, product presentations, investor-style narratives, internal strategy decks, and other slide-based reports.
+
+## 1. Start With The Real Objective
+
+The first question is not "how many slides". The first question is:
+
+> What decision, belief, or action should the audience reach after this report?
+
+Clarify:
+
+- Who is the audience?
+- What problem do they already feel?
+- What do they misunderstand?
+- What proof would change their mind?
+- What action should they take next?
+- How much time will the presenter have?
+
+For a live talk, the deck should support rhythm and persuasion. For a report sent after the meeting, it should support independent reading. For a product proposal, it should reduce buying risk. These are different documents even when the topic is the same.
+
+## 2. Build The Story Spine Before Writing Slides
+
+Do not begin by filling pages. First create a story spine.
+
+A strong spine usually follows this movement:
+
+1. **Current behavior**: something in the audience's world has changed.
+2. **Visible example**: show that change through a concrete case.
+3. **Risk**: explain what happens if the audience ignores it.
+4. **Definition**: name the new concept after the pain is visible.
+5. **Mechanism**: explain why it happens.
+6. **Framework**: compress complexity into usable categories.
+7. **Evidence**: show real proof, not just opinion.
+8. **Operating model**: turn the idea into a repeatable process.
+9. **Offer**: show how the presenter can help.
+10. **Boundary**: clarify what is promised and what is not.
+11. **Closing action**: give the audience a clear next step.
+
+When a user gives a rough outline, preserve the intent but test whether the order earns the conclusion. If the conclusion appears before the proof, move it later or add evidence earlier.
+
+## 2A. Choose The Output Mode For Existing Source Material
+
+When the input is a PDF, PPT, existing HTML deck, screenshots, or a long report, make an explicit mode decision before design work.
+
+### Faithful Migration
+
+Use this mode when the task is essentially "make this portable, browsable, searchable, or presentable without losing layout."
+
+The main surface can preserve the source page image. Improvements live in the shell:
+
+- Keyboard navigation.
+- Thumbnail overview.
+- Text extraction panel.
+- Zoom or source view.
+- Portable asset folder.
+- Downloadable original.
+- Page count and hash routing.
+
+This is not a redesign. Do not claim that it is.
+
+### Roadshow Redesign
+
+Use this mode when the user asks for a roadshow, redesign, better design sense, a style like an existing deck, animation, stronger storytelling, or says the faithful version is too ordinary.
+
+In this mode:
+
+- The source is raw material, not the layout.
+- Extract every important fact, number, chart, and relationship.
+- Build a new page role sequence.
+- Create a visual metaphor.
+- Use the original source pages as evidence modals, appendix pages, thumbnails, or "source" buttons.
+- Rewrite the information as scenes, systems, contrasts, process flows, data maps, or case teardowns.
+
+If the redesigned page still looks like "title + three cards + small text", it is probably not roadshow quality.
+
+## 3. Use Chapter Grammar
+
+A deck becomes easier to follow when every chapter has a recognizable shape.
+
+Recommended chapter structure:
+
+- **Opener**: one proposition. Big type. Low density. It tells the audience what new part starts now.
+- **Demonstration / proof**: real material that lets the audience see the point.
+- **Explanation**: what the proof means.
+- **Framework / method**: how to act on the explanation.
+- **Closing / hinge**: what we have now established, and why the next part is necessary.
+
+Typical chapter opener:
+
+- "The customer behavior has changed."
+- "The problem is not content volume; it is evidence quality."
+- "This is an engineering problem, not a one-off content task."
+
+Typical chapter closing:
+
+- "So far we have proven the risk."
+- "Now the question becomes: how do we make this repeatable?"
+- "This is why the next section must talk about process, not just ideas."
+
+## 4. Give Every Slide One Job
+
+Before designing any slide, assign a role:
+
+- **Cover**: creates first impression and names the offer or topic.
+- **Opening proposition**: sets the mental frame.
+- **Simulation**: shows a user behavior or system behavior.
+- **Evidence**: displays source material.
+- **Diagnosis**: names the gap.
+- **Definition**: explains a concept.
+- **Mechanism**: shows how something works.
+- **Framework**: gives categories the audience can remember.
+- **Case**: proves the framework with real details.
+- **Workflow**: shows repeatable execution.
+- **Tool / system**: makes the process tangible.
+- **Boundary**: prevents overpromising.
+- **Pricing / offer**: turns interest into action.
+- **Closing**: lands the final message.
+
+If a slide tries to define, prove, sell, and teach at the same time, split it.
+
+## 5. Turn Claims Into Evidence Pages
+
+A claim without proof should either become a hypothesis or receive evidence.
+
+Useful evidence types:
+
+- Real screenshots.
+- Source documents.
+- AI answer examples.
+- Customer messages.
+- Tables and metrics.
+- Before / after comparisons.
+- Process recordings.
+- Generated reports.
+- Media coverage.
+- Certificates, credentials, or third-party proof.
+- Product interfaces.
+- Pricing or service package images.
+
+How to convert evidence into a slide:
+
+1. Keep the original artifact visible.
+2. Crop for readability, not decoration.
+3. Use callouts to guide the eye.
+4. Add only enough interpretation to make the evidence useful.
+5. Avoid rewriting the source into vague summary.
+
+When a report screenshot is long, split it into slices:
+
+- Overview / header and methodology.
+- Core metrics.
+- Data visualization.
+- Case detail or raw samples.
+- Final diagnosis or conclusion.
+
+Do not omit data visualizations if the user says the report itself is important. Visual charts often carry credibility that summaries cannot replace.
+
+## 6. Design A Deck-Level Visual System
+
+A good presentation should feel like one designed object.
+
+Define the system once:
+
+- **Color**: primary background, text, accent, warning color.
+- **Type**: large title scale, compact label scale, body scale.
+- **Grid**: margins, columns, major alignment lines.
+- **Motifs**: rulers, dot matrices, dashboards, paper fragments, labels, terminals, report cards, circular cutouts, timelines.
+- **Density rhythm**: alternate between low-density opener pages and high-evidence pages.
+- **Media treatment**: screenshots, videos, reports, diagrams, posters, QR codes.
+
+Design should match the domain:
+
+- Business reports should feel controlled, precise, and evidence-led.
+- Training decks should feel clear and progressive.
+- Sales decks should feel credible before they feel promotional.
+- Product/tool decks should show the actual tool as early as possible.
+- Workshop decks need more interaction and staged reveals.
+
+Avoid decorating pages before the slide role is clear.
+
+For high-design roadshow work, load `design-quality-rubric.md` and `layout-pattern-library.md` before implementation. The rubric defines the quality bar; the layout library prevents repeated generic card pages.
+
+## 6A. Extract Design DNA From A Reference Deck
+
+When the user says a previous deck "has design sense" or asks to follow a reference style, do not copy only colors. Extract the behaviors that create the effect.
+
+Checklist:
+
+- **Composition**: Is the design symmetric, asymmetric, full-bleed, poster-like, dashboard-like, or stage-like?
+- **Scale**: Does it rely on huge headlines, dense micro-labels, oversized numbers, or dramatic contrast?
+- **Surface system**: Does it use light paper, black panels, glass panes, report windows, source cards, terminal panels, or cutaway diagrams?
+- **Motifs**: Does it use grids, ruler marks, dot matrices, circular cuts, arrows, labels, geometric blocks, magnifiers, evidence tags?
+- **Color behavior**: Which color is background, which is accent, which signals risk or conclusion?
+- **Evidence behavior**: Are screenshots embedded, cropped, floated, magnified, animated, or shown in a modal?
+- **Motion grammar**: Does the deck reveal serially, zoom into cards, type text, scroll reports, or open live demo panels?
+- **Tone**: Does it feel premium, urgent, technical, institutional, product-like, editorial, or operational?
+
+After extraction, write a one-paragraph design thesis for the new subject.
+
+Example:
+
+> This report should feel like a "data factory cutaway": manual reports enter on the left, standardized data assets accumulate in the center, and BI/AI use cases leave on the right. Use dark operational panels, oversized red problem statements, champagne-gold signal lines, source-page evidence modals, and staged reveals.
+
+The thesis is more important than the palette. A weak thesis produces a generic business deck even with good colors.
+
+## 7. Build Interaction For The Presenter
+
+Live decks must follow the speaker's click rhythm.
+
+If a slide has multiple ideas, use serial stages:
+
+1. Title appears.
+2. First object appears.
+3. First object is explained.
+4. Second object appears.
+5. Comparison or conclusion appears.
+6. Final click moves to the next slide.
+
+Important rule:
+
+> If the presenter uses a clicker, every important reveal must be reachable by the same forward action.
+
+Avoid:
+
+- Hidden hover effects.
+- Click targets that require precise mouse placement.
+- A modal that auto-plays before the presenter is ready.
+- Pages that jump to the next slide before the final stage is visible.
+
+For video:
+
+- Default to a poster or still frame.
+- Open the video in a modal when clicked or when the staged reveal reaches it.
+- Match the modal ratio to the video ratio.
+- Provide replay and return.
+- Stop playback when leaving the slide.
+
+For report previews:
+
+- Use an auto-scroll panel only if the user wants a "live report" feeling.
+- Otherwise split the report into readable slices across pages.
+
+## 8. Implement HTML Decks Safely
+
+HTML decks are useful when the presentation needs rich motion, simulations, embedded videos, report previews, or interactive staged reveals.
+
+Implementation rules:
+
+- Use `assets/html-deck-template/` as the starting shell when creating a new HTML deck from scratch.
+- Keep HTML, CSS, and JS in the same file or a controlled local folder.
+- Avoid external dependencies unless there is a clear reason.
+- Use CSS variables for visual system consistency.
+- Use stable 16:9 slide dimensions.
+- Test at 1600x900 and at the user's actual browser scale when possible.
+- Preserve keyboard navigation and hash定位.
+- Make staged content reset when returning to a slide.
+- Keep page count accurate.
+- Do not break existing navigation while adding slide-specific behavior.
+
+Asset rules:
+
+- Do not leave references pointing to random Desktop, WeChat cache, temp, or absolute local paths if the deck must travel.
+- Copy images, videos, posters, and report files into a local `assets/` folder.
+- Prefer relative paths.
+- Create a portable zip when the user wants to use another computer.
+
+Recommended local tool flow:
+
+1. Render PDF pages with `scripts/extract_pdf_pages.py` when original source pages are needed as evidence.
+2. Build or edit the HTML deck using the template or existing deck shell.
+3. Check portability with `scripts/check_assets.py`.
+4. Run browser QA with `scripts/check_html_deck.py`.
+5. Create a contact sheet with `scripts/build_contact_sheet.py`.
+6. Package the folder with `scripts/package_deck.py`.
+
+## 9. Write Speaker Notes After Structure Stabilizes
+
+Speaker notes should follow the slide, not replace it.
+
+For each page:
+
+- Name the page number and title.
+- Write a natural opening line.
+- Explain the main point in spoken language.
+- Tell the presenter what to emphasize.
+- Add a transition sentence.
+
+For opener pages, write short transition language.
+
+For evidence pages, describe:
+
+- What the audience should notice first.
+- Why this evidence matters.
+- What conclusion can be drawn.
+- What cannot be overclaimed.
+
+For commercial closing pages, make the next action concrete without overselling.
+
+## 10. Close With Offer, Boundary, And Action
+
+A report that promotes a product, service, or tool should not end abruptly after the framework.
+
+Recommended closing stack:
+
+1. Summary of what the audience now understands.
+2. The practical problem that remains.
+3. The system, tool, or service that solves it.
+4. What is included.
+5. What is not promised.
+6. Pricing or package, if relevant.
+7. Clear next action.
+
+Boundary language is important:
+
+- Promise process, evidence, diagnosis, construction, review, and iteration.
+- Avoid promising guaranteed rankings, guaranteed recommendations, guaranteed conversion, or platform behavior outside your control.
+
+## 11. Package For Delivery
+
+Before sending or using the deck on another computer:
+
+- Open the final file locally.
+- Check all assets.
+- Check the first page, complex interaction pages, media pages, and final page.
+- Zip the HTML and its asset folder together.
+- Give the user the zip as the portable artifact.
+
+If the output is PPTX or PDF, still preserve the working source and raw assets separately.
+
+## 12. QA Checklist
+
+Content:
+
+- Does the deck have a clear audience and desired action?
+- Does every section open and close cleanly?
+- Does each slide have one job?
+- Are major claims backed by evidence?
+- Is the offer introduced only after the problem and method are credible?
+
+Design:
+
+- Is the visual system consistent?
+- Are adjacent pages visually distinct when their roles differ?
+- Are dense evidence pages balanced by low-density opener pages?
+- Are screenshots readable?
+- Are warnings, conclusions, and CTAs visually differentiated?
+
+Interaction:
+
+- Can the whole deck be operated with a clicker?
+- Do staged reveals advance in the right order?
+- Does a staged page show its final complete state before leaving?
+- Do animations reset when returning?
+- Do videos open at the correct ratio and stop when closed?
+
+Technical:
+
+- Does the deck render at 1600x900?
+- Is the page count correct?
+- Are hash links and progress indicators correct?
+- Are there missing assets?
+- Does the portable zip work on a different path?
+
+High-design score:
+
+- Does the deck clear all hard gates in `design-quality-rubric.md`?
+- Does the deck score at least 80 before delivery?
+- If the user explicitly asks for a premium or reference-level deck, does it score 90 or above on story, composition, evidence, and motion combined?
+
+## 13. Common Failure Patterns
+
+### The Deck Starts With Abstract Concept
+
+Fix: start with a behavior, scene, question, screenshot, or contradiction. Define the concept only after the audience feels the problem.
+
+### There Is No Evidence
+
+Fix: ask for or locate screenshots, reports, customer examples, product interfaces, metrics, or demo recordings. If none exist, label the point as a hypothesis or create a clearly marked simulation.
+
+### Two Pages Look The Same But Mean Different Things
+
+Fix: change the layout role. Use a bold opener, a report slice, a diagram, a comparison, or a workflow instead of repeating the same card pattern.
+
+### The Case Page Is Just A Screenshot Dump
+
+Fix: crop the screenshot, add a title, mark the decisive area, and write the implication.
+
+### The Sales Part Arrives Too Early
+
+Fix: move pricing and service pages after diagnosis, mechanism, proof, and operating system.
+
+### The Interaction Requires A Mouse
+
+Fix: convert reveals into the global next-action sequence so a clicker can operate them.
+
+### The HTML Opens But Images Are Missing On Another Computer
+
+Fix: copy all assets into the output folder, rewrite paths to relative paths, and create a zip containing the whole folder.
+
+### The Speaker Notes Sound Like Written Text
+
+Fix: rewrite as spoken transitions and simple explanations. Keep page language short; let the speaker notes carry the live explanation.
+
+### The Redesign Still Looks Like A Normal Business Report
+
+Symptoms:
+
+- Every page is title + cards.
+- The composition is evenly centered and low-risk.
+- The palette is tuned, but the page has no visual metaphor.
+- The source page structure is still visible under the redesign.
+- There are no stage moments, oversized claims, evidence reveals, or strong focal points.
+
+Fix:
+
+1. Stop changing colors.
+2. Rewrite the page role sequence.
+3. Create a subject-specific visual metaphor.
+4. Pick 3-5 recurring motifs.
+5. Recompose the pages around focal scenes, not containers.
+6. Keep original source pages as evidence, not as the main layout.
+
+### The Reference Style Was Copied As A Palette Only
+
+Fix: re-run the design DNA extraction. Copy composition, hierarchy, motifs, source treatment, and motion grammar. A reference deck's style is usually created by layout behavior, not hex values.
+
+## 14. Minimal Delivery Template
+
+When the user asks for a complete deck/report, produce:
+
+- Final deck file.
+- Asset folder.
+- Speaker notes.
+- Optional portable zip.
+- Brief change summary.
+- Verification summary.
+
+When the user asks only for strategy, produce:
+
+- Recommended story spine.
+- Section-by-section page plan.
+- Evidence needed.
+- Design direction.
+- Risks or open questions.

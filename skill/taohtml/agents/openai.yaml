@@ -1,0 +1,4 @@
+interface:
+  display_name: "TaoHtml"
+  short_description: "Build high-design HTML decks and roadshow reports"
+  default_prompt: "Use $taohtml to turn my outline, PDF, screenshots, or materials into a polished HTML presentation, choosing between faithful migration and high-design roadshow redesign as needed."

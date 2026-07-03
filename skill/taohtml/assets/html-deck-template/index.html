@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HTML Deck Template</title>
+  <style>
+    :root {
+      --bg: #f5f5ee;
+      --ink: #050505;
+      --muted: #656a6d;
+      --line: rgba(0, 0, 0, .13);
+      --dark: #050505;
+      --dark-2: #151719;
+      --signal: #d8ff19;
+      --signal-2: #c7e136;
+      --risk: #ff6500;
+      --white: #fffdf5;
+      --shadow: 8px 10px 0 rgba(0, 0, 0, .18);
+      --ease: cubic-bezier(.2, .8, .2, 1);
+      font-family: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #12161a;
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    .deck {
+      position: relative;
+      width: min(100vw, calc(100vh * 16 / 9));
+      aspect-ratio: 16 / 9;
+      background: var(--bg);
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .42);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      padding: 58px 68px;
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        var(--bg);
+      background-size: 40px 40px;
+      overflow: hidden;
+    }
+
+    .slide.active { display: block; }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      left: 28px;
+      top: 44px;
+      bottom: 44px;
+      border-left: 1px dashed rgba(0, 0, 0, .24);
+    }
+
+    .slide.dark {
+      background:
+        radial-gradient(circle at 75% 20%, rgba(216, 255, 25, .18), transparent 36%),
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        var(--dark);
+      background-size: auto, 40px 40px, 40px 40px, auto;
+      color: var(--white);
+    }
+
+    .kicker {
+      position: relative;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0;
+      z-index: 2;
+    }
+
+    .dark .kicker { color: rgba(255, 255, 255, .72); }
+
+    .kicker::before {
+      content: "";
+      width: 28px;
+      height: 3px;
+      background: var(--signal);
+    }
+
+    h1 {
+      position: relative;
+      margin: 84px 0 0;
+      font-size: 72px;
+      line-height: .94;
+      font-weight: 950;
+      letter-spacing: 0;
+      z-index: 2;
+    }
+
+    .lede {
+      position: relative;
+      max-width: 660px;
+      margin-top: 28px;
+      font-size: 26px;
+      line-height: 1.35;
+      font-weight: 700;
+      color: #303437;
+      z-index: 2;
+    }
+
+    .dark .lede { color: rgba(255, 255, 255, .78); }
+
+    .signal-disc {
+      position: absolute;
+      width: 470px;
+      height: 470px;
+      border-radius: 50%;
+      right: -130px;
+      top: -150px;
+      background: var(--signal-2);
+      z-index: 0;
+    }
+
+    .black-slab {
+      position: absolute;
+      left: 68px;
+      right: 68px;
+      bottom: 84px;
+      min-height: 150px;
+      padding: 28px 34px;
+      background: var(--dark);
+      color: var(--white);
+      border-left: 12px solid var(--signal);
+      box-shadow: var(--shadow);
+      z-index: 2;
+    }
+
+    .black-slab b { color: var(--signal); }
+
+    .grid-2 {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 34px;
+      margin-top: 46px;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, .72);
+      border: 1px solid rgba(0, 0, 0, .28);
+      padding: 28px;
+      min-height: 260px;
+      box-shadow: 7px 8px 0 rgba(0, 0, 0, .14);
+    }
+
+    .dark .panel {
+      background: rgba(255, 255, 255, .06);
+      border-color: rgba(255, 255, 255, .22);
+      box-shadow: 7px 8px 0 rgba(216, 255, 25, .22);
+    }
+
+    .panel h2 {
+      margin: 0 0 18px;
+      font-size: 34px;
+      line-height: 1.05;
+      font-weight: 950;
+    }
+
+    .panel p, .panel li {
+      font-size: 19px;
+      line-height: 1.42;
+      font-weight: 650;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      background: var(--signal);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .risk { background: var(--risk); color: #fff; }
+
+    .footer {
+      position: absolute;
+      left: 68px;
+      right: 68px;
+      bottom: 34px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 800;
+      z-index: 5;
+    }
+
+    .dark .footer { color: rgba(255, 255, 255, .58); }
+
+    .progress {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 4px;
+      width: 0;
+      background: linear-gradient(90deg, var(--signal), var(--risk));
+      z-index: 20;
+      transition: width .28s var(--ease);
+    }
+
+    .nav {
+      position: absolute;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 30;
+    }
+
+    .nav button,
+    .source-btn,
+    .modal button {
+      border: 0;
+      background: rgba(0, 0, 0, .62);
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .nav button {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 20px;
+    }
+
+    .source-btn {
+      position: absolute;
+      top: 54px;
+      right: 68px;
+      min-height: 34px;
+      padding: 0 14px;
+      border-radius: 0;
+      z-index: 12;
+    }
+
+    .fragment {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity .48s var(--ease), transform .48s var(--ease);
+    }
+
+    .fragment.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .modal {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      place-items: center;
+      background: rgba(0, 0, 0, .78);
+      padding: 48px;
+    }
+
+    .modal.open { display: grid; }
+
+    .modal-card {
+      position: relative;
+      width: min(1280px, 92%);
+      max-height: 86%;
+      background: var(--white);
+      border: 4px solid var(--dark);
+      box-shadow: 14px 16px 0 rgba(216, 255, 25, .55);
+      overflow: auto;
+    }
+
+    .modal-card img,
+    .modal-card video {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .modal button {
+      position: absolute;
+      top: -42px;
+      right: 0;
+      min-height: 34px;
+      padding: 0 14px;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck">
+    <section class="slide active" data-title="Cover">
+      <div class="signal-disc"></div>
+      <div class="kicker">SECTION LABEL</div>
+      <h1>Replace With<br>Strong Thesis</h1>
+      <p class="lede">Use this slide as a poster-like opener. One sentence should name the shift, tension, or offer.</p>
+      <div class="black-slab fragment">
+        <span class="tag">POINT</span>
+        <p><b>Replace this slab with the first decisive proof or promise.</b> Keep it short enough to read from the back of the room.</p>
+      </div>
+      <div class="footer"><span>Deck footer</span><span class="page-no"></span></div>
+    </section>
+
+    <section class="slide dark" data-title="Evidence">
+      <button class="source-btn" data-source="assets/source-pages/page-01.png">Source</button>
+      <div class="kicker">EVIDENCE</div>
+      <h1>Evidence Should<br>Carry The Page</h1>
+      <div class="grid-2">
+        <article class="panel fragment">
+          <span class="tag">SOURCE</span>
+          <h2>Artifact</h2>
+          <p>Place a screenshot, report slice, customer message, chart, or recording here. Do not make source material decorative.</p>
+        </article>
+        <article class="panel fragment">
+          <span class="tag risk">IMPLICATION</span>
+          <h2>Meaning</h2>
+          <p>Use short interpretation and exact callouts. Keep dense explanation in speaker notes.</p>
+        </article>
+      </div>
+      <div class="footer"><span>Evidence page</span><span class="page-no"></span></div>
+    </section>
+
+    <div class="progress" id="progress"></div>
+    <div class="nav">
+      <button id="prev" aria-label="Previous slide">&lsaquo;</button>
+      <button id="next" aria-label="Next slide">&rsaquo;</button>
+    </div>
+
+    <div class="modal" id="modal" aria-hidden="true">
+      <div class="modal-card">
+        <button id="modalClose">Close</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const slides = [...document.querySelectorAll('.slide')];
+    const progress = document.getElementById('progress');
+    const modal = document.getElementById('modal');
+    const modalBody = document.getElementById('modalBody');
+    let index = 0;
+    let stage = 0;
+
+    function fragments(slide) {
+      return [...slide.querySelectorAll('.fragment')];
+    }
+
+    function setStage(slide, nextStage) {
+      stage = Math.max(0, nextStage);
+      fragments(slide).forEach((el, i) => {
+        el.classList.toggle('visible', i < stage);
+      });
+    }
+
+    function show(nextIndex, reset = true) {
+      index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+      slides.forEach((slide, i) => {
+        if (i !== index) setStage(slide, 0);
+      });
+      if (reset) setStage(slides[index], 0);
+      document.querySelectorAll('.page-no').forEach((el, i) => {
+        el.textContent = `${String(i + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      });
+      progress.style.width = `${((index + 1) / slides.length) * 100}%`;
+      history.replaceState(null, '', `#${index + 1}`);
+    }
+
+    function forward() {
+      const slide = slides[index];
+      const count = fragments(slide).length;
+      if (stage < count) {
+        setStage(slide, stage + 1);
+        return;
+      }
+      show(index + 1);
+    }
+
+    function back() {
+      if (stage > 0) {
+        setStage(slides[index], stage - 1);
+        return;
+      }
+      show(index - 1);
+    }
+
+    function openSource(src) {
+      modalBody.innerHTML = '';
+      const isVideo = /\.(mp4|webm|mov)$/i.test(src);
+      const el = document.createElement(isVideo ? 'video' : 'img');
+      el.src = src;
+      if (isVideo) {
+        el.controls = true;
+        el.autoplay = true;
+      }
+      modalBody.appendChild(el);
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      modalBody.querySelectorAll('video').forEach(video => video.pause());
+      modalBody.innerHTML = '';
+    }
+
+    document.getElementById('next').addEventListener('click', forward);
+    document.getElementById('prev').addEventListener('click', back);
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.querySelectorAll('.source-btn').forEach(button => {
+      button.addEventListener('click', event => {
+        event.stopPropagation();
+        openSource(button.dataset.source);
+      });
+    });
+    document.addEventListener('click', event => {
+      if (event.target.closest('button') || modal.classList.contains('open')) return;
+      forward();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && modal.classList.contains('open')) return closeModal();
+      if (modal.classList.contains('open')) return;
+      if (['ArrowRight', 'PageDown', ' '].includes(event.key)) forward();
+      if (['ArrowLeft', 'PageUp'].includes(event.key)) back();
+      if (event.key === 'Home') show(0);
+      if (event.key === 'End') show(slides.length - 1);
+    });
+
+    const hashIndex = Number(location.hash.replace('#', '')) - 1;
+    show(Number.isFinite(hashIndex) ? hashIndex : 0);
+  </script>
+</body>
+</html>
