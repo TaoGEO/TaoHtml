@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HTML Deck Template</title>
+  <link rel="icon" href="data:,">
   <style>
     :root {
       --bg: #f5f5ee;
@@ -300,10 +301,20 @@
       height: auto;
     }
 
+    .source-error {
+      margin: 0;
+      padding: 36px;
+      border: 1px solid var(--risk);
+      color: var(--ink);
+      font-size: 22px;
+      line-height: 1.45;
+    }
+
     .modal button {
       position: absolute;
-      top: -42px;
-      right: 0;
+      top: 16px;
+      right: 16px;
+      z-index: 2;
       min-height: 34px;
       padding: 0 14px;
     }
@@ -324,7 +335,7 @@
     </section>
 
     <section class="slide dark" data-title="Evidence">
-      <button class="source-btn" data-source="assets/source-pages/page-01.png">Source</button>
+      <button class="source-btn" data-source="assets/source-pages/page-01.svg" data-source-label="Example source page">Source</button>
       <div class="kicker">EVIDENCE</div>
       <h1>Evidence Should<br>Carry The Page</h1>
       <div class="grid-2">
@@ -348,7 +359,7 @@
       <button id="next" aria-label="Next slide">&rsaquo;</button>
     </div>
 
-    <div class="modal" id="modal" aria-hidden="true">
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Source evidence" aria-hidden="true">
       <div class="modal-card">
         <button id="modalClose">Close</button>
         <div id="modalBody"></div>
@@ -407,15 +418,25 @@
       show(index - 1);
     }
 
-    function openSource(src) {
+    function openSource(src, label = 'Source evidence') {
       modalBody.innerHTML = '';
+      delete modalBody.dataset.mediaError;
       const isVideo = /\.(mp4|webm|mov)$/i.test(src);
       const el = document.createElement(isVideo ? 'video' : 'img');
       el.src = src;
       if (isVideo) {
         el.controls = true;
         el.autoplay = true;
+      } else {
+        el.alt = label;
       }
+      el.addEventListener('error', () => {
+        modalBody.dataset.mediaError = src;
+        const notice = document.createElement('p');
+        notice.className = 'source-error';
+        notice.textContent = `Source asset failed to load: ${src}`;
+        modalBody.replaceChildren(notice);
+      });
       modalBody.appendChild(el);
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
@@ -426,6 +447,7 @@
       modal.setAttribute('aria-hidden', 'true');
       modalBody.querySelectorAll('video').forEach(video => video.pause());
       modalBody.innerHTML = '';
+      delete modalBody.dataset.mediaError;
     }
 
     document.getElementById('next').addEventListener('click', forward);
@@ -434,7 +456,7 @@
     document.querySelectorAll('.source-btn').forEach(button => {
       button.addEventListener('click', event => {
         event.stopPropagation();
-        openSource(button.dataset.source);
+        openSource(button.dataset.source, button.dataset.sourceLabel);
       });
     });
     document.addEventListener('click', event => {
@@ -450,8 +472,13 @@
       if (event.key === 'End') show(slides.length - 1);
     });
 
-    const hashIndex = Number(location.hash.replace('#', '')) - 1;
-    show(Number.isFinite(hashIndex) ? hashIndex : 0);
+    function indexFromHash() {
+      const parsed = Number.parseInt(location.hash.replace('#', ''), 10);
+      return Number.isInteger(parsed) ? parsed - 1 : 0;
+    }
+
+    window.addEventListener('hashchange', () => show(indexFromHash()));
+    show(indexFromHash());
   </script>
 </body>
 </html>

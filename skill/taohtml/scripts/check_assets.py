@@ -10,12 +10,25 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 
-ATTR_RE = re.compile(r"""(?:src|href|poster)\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
+ATTR_RE = re.compile(
+    r"""(?:src|href|poster|data-source)\s*=\s*["']([^"']+)["']""",
+    re.IGNORECASE,
+)
+SRCSET_RE = re.compile(r"""srcset\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
 CSS_URL_RE = re.compile(r"""url\((?:["']?)([^"')]+)(?:["']?)\)""", re.IGNORECASE)
 
 
 def is_remote(value: str) -> bool:
-    return value.startswith(("http://", "https://", "data:", "mailto:", "tel:", "#"))
+    parsed = urlparse(value)
+    return value.startswith(("//", "#")) or parsed.scheme.lower() in {
+        "blob",
+        "data",
+        "http",
+        "https",
+        "javascript",
+        "mailto",
+        "tel",
+    }
 
 
 def is_absolute_local(value: str) -> bool:
@@ -25,6 +38,18 @@ def is_absolute_local(value: str) -> bool:
     return bool(re.match(r"^[a-zA-Z]:[\\/]", value) or value.startswith(("/", "\\")))
 
 
+def extract_refs(text: str) -> set[str]:
+    refs = set(ATTR_RE.findall(text)) | set(CSS_URL_RE.findall(text))
+    for srcset in SRCSET_RE.findall(text):
+        if srcset.strip().startswith("data:"):
+            continue
+        for candidate in srcset.split(","):
+            value = candidate.strip().split(maxsplit=1)[0]
+            if value:
+                refs.add(value)
+    return refs
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check asset paths in an HTML deck.")
     parser.add_argument("html", type=Path, help="HTML file to inspect.")
@@ -32,7 +57,7 @@ def main() -> int:
 
     text = args.html.read_text(encoding="utf-8")
     base = args.html.parent
-    refs = set(ATTR_RE.findall(text)) | set(CSS_URL_RE.findall(text))
+    refs = extract_refs(text)
     missing: list[str] = []
     absolute: list[str] = []
     remote: list[str] = []
