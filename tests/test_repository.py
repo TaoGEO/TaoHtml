@@ -50,6 +50,17 @@ class RepositoryMetadataTests(unittest.TestCase):
         self.assertIn("explicit confirmation of the current brief", skill_text)
         self.assertIn("A previous \"agree\"", skill_text)
 
+    def test_production_requires_an_early_runnable_artifact(self) -> None:
+        skill_dir = ROOT / "skill" / "taohtml"
+        skill_text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        playbook_text = (skill_dir / "references" / "process-playbook.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("first runnable artifact", skill_text)
+        self.assertIn("Land The First Runnable Artifact Early", playbook_text)
+        self.assertIn("save a complete runnable `index.html`", playbook_text)
+        self.assertIn("Do not add unrequested pages", playbook_text)
+
     def test_runtime_exposes_the_core_contract(self) -> None:
         template = (
             ROOT / "skill" / "taohtml" / "assets" / "html-deck-template" / "index.html"

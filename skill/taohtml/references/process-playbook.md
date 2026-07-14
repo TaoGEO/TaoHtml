@@ -280,6 +280,21 @@ Recommended local tool flow:
 5. Create a contact sheet with `scripts/build_contact_sheet.py`.
 6. Package the folder with `scripts/package_deck.py`.
 
+### 8A. Land The First Runnable Artifact Early
+
+After the brief is confirmed, production should become visible quickly. Do not spend a long uninterrupted phase repeatedly reconsidering layouts, assets, or optional features before any runnable file exists.
+
+Use this sequence:
+
+1. Write a concise page plan: page role, core claim, evidence, layout family, and staged-state count where relevant.
+2. Lock one design thesis and the recurring visual motifs. Reopen that decision only when implementation exposes a concrete failure.
+3. Instantiate `assets/html-deck-template/` and save a complete runnable `index.html` with every planned page, navigation, and essential content present. A simple but coherent first pass is preferred to a half-built high-detail page.
+4. Add evidence and visual refinement in bounded passes. Embed or render only the source pages needed to support the visible claims; do not package the entire source by default.
+5. Run asset and browser QA as soon as the runnable artifact exists. Fix objective failures before adding optional polish.
+6. Stop when the confirmed scope, visual direction, runtime contract, and delivery gate are satisfied. Do not add unrequested pages, controls, or runtime features during refinement.
+
+The first runnable artifact is not the final quality bar. It is the production checkpoint that keeps the work inspectable, testable, and recoverable while design quality is improved.
+
 ## 9. Write Speaker Notes After Structure Stabilizes
 
 Speaker notes should follow the slide, not replace it.

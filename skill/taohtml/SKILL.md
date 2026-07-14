@@ -39,7 +39,7 @@ For Word/PDF work, follow this sequence without skipping confirmation gates:
 5. When several report structures are genuinely reasonable, present 2-3 chapter-level options and let the user choose.
 6. Read `references/design-brief-template.md` and produce one adaptive Report Design Brief.
 7. Wait for explicit confirmation of the current brief. A previous "agree", "continue", or request to use TaoHtml is not production authorization.
-8. After confirmation, read `references/process-playbook.md` and produce the HTML directly. Do not insert a separate full prose manuscript step.
+8. After confirmation, read `references/process-playbook.md` and produce the HTML directly. Do not insert a separate full prose manuscript step. Follow its **first runnable artifact** cadence: lock a concise page plan, save a complete runnable `index.html`, then refine and QA in bounded passes.
 9. Implement only the runtime capabilities documented in `references/runtime-contract.md` unless the user separately authorizes new runtime engineering.
 10. Run asset and browser QA, fix objective failures, and report the files, checks, and production-stage judgment calls.
 
