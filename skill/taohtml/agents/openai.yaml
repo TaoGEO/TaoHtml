@@ -1,4 +1,6 @@
 interface:
   display_name: "TaoHtml"
-  short_description: "Build high-design HTML decks and roadshow reports"
-  default_prompt: "Use $taohtml to turn my outline, PDF, screenshots, or materials into a polished HTML presentation, choosing between faithful migration and high-design roadshow redesign as needed."
+  short_description: "Turn source material into polished offline HTML"
+  default_prompt: "Use $taohtml to understand this Word or PDF, confirm a report design brief with me, then create an offline HTML report."
+policy:
+  allow_implicit_invocation: false

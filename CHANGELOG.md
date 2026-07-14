@@ -2,6 +2,20 @@
 
 TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` form.
 
+## [Unreleased]
+
+### Added
+
+- Add the first Word/PDF vertical-slice workflow with material-summary and design-brief confirmation gates.
+- Add a documented minimal runtime contract for reading and single-screen presentation.
+- Add strict offline asset validation and runtime behavior checks.
+
+### Changed
+
+- Separate presentation steps from whole-page navigation and preserve per-page reveal state.
+- Add reading/presentation switching, fullscreen control, page count, and auto-hiding controls to the template.
+- Run browser QA at three target viewports in CI.
+
 ## [0.1.0] - 2026-07-13
 
 ### Added

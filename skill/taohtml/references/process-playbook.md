@@ -2,6 +2,8 @@
 
 This playbook generalizes a complete collaborative process for turning loose materials, screenshots, demos, and business intent into a polished PPT-like report or HTML presentation.
 
+Use it only after the current Report Design Brief has been confirmed. Intake, material-summary, and confirmation rules live in `intake-workflow.md` and `material-understanding.md`; do not restart those questions here.
+
 It is not tied to any single topic. Use it for salon decks, training courseware, sales proposals, consulting reports, diagnostic reports, product presentations, investor-style narratives, internal strategy decks, and other slide-based reports.
 
 ## 1. Start With The Real Objective
@@ -17,7 +19,7 @@ Clarify:
 - What do they misunderstand?
 - What proof would change their mind?
 - What action should they take next?
-- How much time will the presenter have?
+- What time or depth constraint is already recorded in the brief, if any?
 
 For a live talk, the deck should support rhythm and persuasion. For a report sent after the meeting, it should support independent reading. For a product proposal, it should reduce buying risk. These are different documents even when the topic is the same.
 
@@ -25,7 +27,7 @@ For a live talk, the deck should support rhythm and persuasion. For a report sen
 
 Do not begin by filling pages. First create a story spine.
 
-A strong spine usually follows this movement:
+A persuasive commercial spine often follows this movement:
 
 1. **Current behavior**: something in the audience's world has changed.
 2. **Visible example**: show that change through a concrete case.
@@ -38,6 +40,8 @@ A strong spine usually follows this movement:
 9. **Offer**: show how the presenter can help.
 10. **Boundary**: clarify what is promised and what is not.
 11. **Closing action**: give the audience a clear next step.
+
+Do not force offer, pricing, sales, or CTA pages into research, internal, educational, or neutral reports. Select the roles that serve the confirmed goal.
 
 When a user gives a rough outline, preserve the intent but test whether the order earns the conclusion. If the conclusion appears before the proof, move it later or add evidence earlier.
 
@@ -230,7 +234,7 @@ Avoid:
 - A modal that auto-plays before the presenter is ready.
 - Pages that jump to the next slide before the final stage is visible.
 
-For video:
+For video, only when the user separately authorizes video work and the output runtime implements it:
 
 - Default to a poster or still frame.
 - Open the video in a modal when clicked or when the staged reveal reaches it.
@@ -245,7 +249,7 @@ For report previews:
 
 ## 8. Implement HTML Decks Safely
 
-HTML decks are useful when the presentation needs rich motion, simulations, embedded videos, report previews, or interactive staged reveals.
+HTML decks are useful when the presentation needs rich motion, simulations, report previews, or interactive staged reveals. The current standard runtime does not promise video behavior.
 
 Implementation rules:
 
@@ -254,16 +258,16 @@ Implementation rules:
 - Avoid external dependencies unless there is a clear reason.
 - Use CSS variables for visual system consistency.
 - Use stable 16:9 slide dimensions.
-- Test at 1600x900 and at the user's actual browser scale when possible.
+- Test at 1366x768, 1600x900, and 1920x1080, plus the user's actual browser scale when needed.
 - Preserve keyboard navigation and hash定位.
-- Make staged content reset when returning to a slide.
+- Preserve each slide's staged state when leaving and returning.
 - Keep page count accurate.
 - Do not break existing navigation while adding slide-specific behavior.
 
 Asset rules:
 
 - Do not leave references pointing to random Desktop, WeChat cache, temp, or absolute local paths if the deck must travel.
-- Copy images, videos, posters, and report files into a local `assets/` folder.
+- Copy images, posters, and report files into a local `assets/` folder.
 - Prefer relative paths.
 - Create a portable zip when the user wants to use another computer.
 
@@ -353,22 +357,22 @@ Interaction:
 - Can the whole deck be operated with a clicker?
 - Do staged reveals advance in the right order?
 - Does a staged page show its final complete state before leaving?
-- Do animations reset when returning?
-- Do videos open at the correct ratio and stop when closed?
+- Do pages restore their prior reveal state when returning?
+- Do step navigation and whole-page navigation remain distinct?
 
 Technical:
 
-- Does the deck render at 1600x900?
+- Does the deck render at 1366x768, 1600x900, and 1920x1080?
 - Is the page count correct?
-- Are hash links and progress indicators correct?
+- Are hash links and page indicators correct?
 - Are there missing assets?
 - Does the portable zip work on a different path?
 
-High-design score:
+Optional high-design diagnosis when the user requests it:
 
 - Does the deck clear all hard gates in `design-quality-rubric.md`?
-- Does the deck score at least 80 before delivery?
-- If the user explicitly asks for a premium or reference-level deck, does it score 90 or above on story, composition, evidence, and motion combined?
+- Which weak dimensions in `design-quality-rubric.md` should be revised first?
+- Do not treat a numeric aesthetic score as production authorization or as a substitute for objective QA.
 
 ## 13. Common Failure Patterns
 

@@ -34,6 +34,38 @@ class RepositoryMetadataTests(unittest.TestCase):
             {"display_name", "short_description", "default_prompt"},
         )
         self.assertIn("$taohtml", agent_metadata["interface"]["default_prompt"])
+        self.assertFalse(agent_metadata["policy"]["allow_implicit_invocation"])
+
+    def test_skill_routes_to_existing_references(self) -> None:
+        skill_dir = ROOT / "skill" / "taohtml"
+        skill_text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        references = set(re.findall(r"`(references/[^`]+\.md)`", skill_text))
+        self.assertTrue(references)
+        for reference in references:
+            self.assertTrue((skill_dir / reference).is_file(), reference)
+
+    def test_skill_has_summary_and_design_brief_gates(self) -> None:
+        skill_text = (ROOT / "skill" / "taohtml" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Material Understanding Summary", skill_text)
+        self.assertIn("explicit confirmation of the current brief", skill_text)
+        self.assertIn("A previous \"agree\"", skill_text)
+
+    def test_runtime_exposes_the_core_contract(self) -> None:
+        template = (
+            ROOT / "skill" / "taohtml" / "assets" / "html-deck-template" / "index.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("window.TaoHtmlRuntime", template)
+        for method in (
+            "getState",
+            "setMode",
+            "showPage",
+            "nextStep",
+            "previousStep",
+            "nextPage",
+            "previousPage",
+            "toggleFullscreen",
+        ):
+            self.assertRegex(template, rf"\b{method}\b")
 
 
 if __name__ == "__main__":

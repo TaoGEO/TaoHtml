@@ -12,9 +12,9 @@ CHECK_ASSETS = ROOT / "skill" / "taohtml" / "scripts" / "check_assets.py"
 TEMPLATE = ROOT / "skill" / "taohtml" / "assets" / "html-deck-template" / "index.html"
 
 
-def run_check(html: Path) -> subprocess.CompletedProcess[str]:
+def run_check(html: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(CHECK_ASSETS), str(html)],
+        [sys.executable, str(CHECK_ASSETS), str(html), *extra_args],
         check=False,
         capture_output=True,
         text=True,
@@ -57,6 +57,25 @@ class CheckAssetsTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("REMOTE_ASSETS", result.stdout)
+
+    def test_remote_assets_fail_in_strict_offline_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text('<img src="https://example.com/evidence.png">', encoding="utf-8")
+            result = run_check(html, "--strict-offline")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("REMOTE_ASSETS", result.stdout)
+
+    def test_external_hyperlinks_are_allowed_in_strict_offline_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text('<a href="https://example.com/source">Source</a>', encoding="utf-8")
+            result = run_check(html, "--strict-offline")
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("REMOTE_LINKS", result.stdout)
+        self.assertIn("ASSET_CHECK_OK", result.stdout)
 
 
 if __name__ == "__main__":

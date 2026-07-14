@@ -213,17 +213,6 @@
 
     .dark .footer { color: rgba(255, 255, 255, .58); }
 
-    .progress {
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      height: 4px;
-      width: 0;
-      background: linear-gradient(90deg, var(--signal), var(--risk));
-      z-index: 20;
-      transition: width .28s var(--ease);
-    }
-
     .nav {
       position: absolute;
       left: 50%;
@@ -232,6 +221,15 @@
       display: flex;
       gap: 10px;
       z-index: 30;
+    }
+
+    .controls {
+      transition: opacity .22s var(--ease);
+    }
+
+    .deck.controls-hidden .controls {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .nav button,
@@ -249,6 +247,66 @@
       height: 36px;
       border-radius: 50%;
       font-size: 20px;
+    }
+
+    .more {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      z-index: 40;
+    }
+
+    .more > button,
+    .more-menu button {
+      min-height: 36px;
+      border: 0;
+      background: rgba(0, 0, 0, .72);
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .more > button {
+      width: 40px;
+      border-radius: 50%;
+      font-size: 20px;
+    }
+
+    .more-menu {
+      position: absolute;
+      top: 46px;
+      right: 0;
+      display: grid;
+      gap: 8px;
+      width: 190px;
+      padding: 10px;
+      background: rgba(18, 22, 26, .94);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .34);
+    }
+
+    .more-menu[hidden] { display: none; }
+
+    .more-menu button {
+      width: 100%;
+      padding: 9px 12px;
+      text-align: left;
+    }
+
+    .page-indicator {
+      position: absolute;
+      right: 24px;
+      bottom: 24px;
+      z-index: 30;
+      min-width: 72px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .deck[data-mode="reading"] .fragment {
+      opacity: 1;
+      transform: none;
     }
 
     .source-btn {
@@ -327,11 +385,11 @@
       <div class="kicker">SECTION LABEL</div>
       <h1>Replace With<br>Strong Thesis</h1>
       <p class="lede">Use this slide as a poster-like opener. One sentence should name the shift, tension, or offer.</p>
-      <div class="black-slab fragment">
+      <div class="black-slab fragment" data-step="1">
         <span class="tag">POINT</span>
         <p><b>Replace this slab with the first decisive proof or promise.</b> Keep it short enough to read from the back of the room.</p>
       </div>
-      <div class="footer"><span>Deck footer</span><span class="page-no"></span></div>
+      <div class="footer"><span>Deck footer</span></div>
     </section>
 
     <section class="slide dark" data-title="Evidence">
@@ -339,25 +397,34 @@
       <div class="kicker">EVIDENCE</div>
       <h1>Evidence Should<br>Carry The Page</h1>
       <div class="grid-2">
-        <article class="panel fragment">
+        <article class="panel fragment" data-step="1">
           <span class="tag">SOURCE</span>
           <h2>Artifact</h2>
           <p>Place a screenshot, report slice, customer message, chart, or recording here. Do not make source material decorative.</p>
         </article>
-        <article class="panel fragment">
+        <article class="panel fragment" data-step="2">
           <span class="tag risk">IMPLICATION</span>
           <h2>Meaning</h2>
           <p>Use short interpretation and exact callouts. Keep dense explanation in speaker notes.</p>
         </article>
       </div>
-      <div class="footer"><span>Evidence page</span><span class="page-no"></span></div>
+      <div class="footer"><span>Evidence page</span></div>
     </section>
 
-    <div class="progress" id="progress"></div>
-    <div class="nav">
-      <button id="prev" aria-label="Previous slide">&lsaquo;</button>
-      <button id="next" aria-label="Next slide">&rsaquo;</button>
+    <div class="nav controls">
+      <button id="prev" aria-label="Previous page">&lsaquo;</button>
+      <button id="next" aria-label="Next page">&rsaquo;</button>
     </div>
+
+    <div class="more controls">
+      <button id="moreToggle" aria-label="More options" aria-expanded="false">&hellip;</button>
+      <div class="more-menu" id="moreMenu" hidden>
+        <button id="modeToggle">Switch to reading mode</button>
+        <button id="fullscreenToggle">Enter fullscreen</button>
+      </div>
+    </div>
+
+    <div class="page-indicator" id="pageIndicator" aria-live="polite"></div>
 
     <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Source evidence" aria-hidden="true">
       <div class="modal-card">
@@ -369,53 +436,142 @@
 
   <script>
     const slides = [...document.querySelectorAll('.slide')];
-    const progress = document.getElementById('progress');
+    const deck = document.getElementById('deck');
+    const pageIndicator = document.getElementById('pageIndicator');
     const modal = document.getElementById('modal');
     const modalBody = document.getElementById('modalBody');
-    let index = 0;
-    let stage = 0;
+    const moreToggle = document.getElementById('moreToggle');
+    const moreMenu = document.getElementById('moreMenu');
+    const modeToggle = document.getElementById('modeToggle');
+    const fullscreenToggle = document.getElementById('fullscreenToggle');
 
     function fragments(slide) {
       return [...slide.querySelectorAll('.fragment')];
     }
 
-    function setStage(slide, nextStage) {
-      stage = Math.max(0, nextStage);
-      fragments(slide).forEach((el, i) => {
-        el.classList.toggle('visible', i < stage);
+    function normalizeSteps(slide) {
+      let nextImplicitStep = 0;
+      fragments(slide).forEach(el => {
+        const explicitStep = Number.parseInt(el.dataset.step || '', 10);
+        if (Number.isInteger(explicitStep) && explicitStep > 0) {
+          el.dataset.taohtmlStep = String(explicitStep);
+          nextImplicitStep = Math.max(nextImplicitStep, explicitStep);
+        } else {
+          nextImplicitStep += 1;
+          el.dataset.taohtmlStep = String(nextImplicitStep);
+        }
       });
     }
 
-    function show(nextIndex, reset = true) {
-      index = Math.max(0, Math.min(slides.length - 1, nextIndex));
-      slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+    slides.forEach(normalizeSteps);
+
+    const state = {
+      mode: deck.dataset.mode === 'reading' ? 'reading' : 'presentation',
+      index: 0,
+      stages: slides.map(() => 0),
+    };
+    let controlsTimer;
+
+    function stepCount(slide) {
+      return fragments(slide).reduce(
+        (maximum, el) => Math.max(maximum, Number.parseInt(el.dataset.taohtmlStep || '0', 10)),
+        0,
+      );
+    }
+
+    function snapshot() {
+      return {
+        mode: state.mode,
+        index: state.index,
+        stages: [...state.stages],
+      };
+    }
+
+    function emitState() {
+      window.dispatchEvent(new CustomEvent('taohtml:statechange', { detail: snapshot() }));
+    }
+
+    function setStage(slideIndex, nextStage) {
+      const count = stepCount(slides[slideIndex]);
+      state.stages[slideIndex] = Math.max(0, Math.min(count, nextStage));
+      slides[slideIndex].dataset.stepIndex = String(state.stages[slideIndex]);
+      fragments(slides[slideIndex]).forEach(el => {
+        const elementStep = Number.parseInt(el.dataset.taohtmlStep || '0', 10);
+        el.classList.toggle('visible', elementStep <= state.stages[slideIndex]);
+      });
+    }
+
+    function render() {
+      deck.dataset.mode = state.mode;
       slides.forEach((slide, i) => {
-        if (i !== index) setStage(slide, 0);
+        slide.classList.toggle('active', i === state.index);
+        setStage(i, state.stages[i]);
       });
-      if (reset) setStage(slides[index], 0);
-      document.querySelectorAll('.page-no').forEach((el, i) => {
-        el.textContent = `${String(i + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
-      });
-      progress.style.width = `${((index + 1) / slides.length) * 100}%`;
-      history.replaceState(null, '', `#${index + 1}`);
+      pageIndicator.textContent = `${String(state.index + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      modeToggle.textContent = state.mode === 'reading'
+        ? 'Switch to presentation mode'
+        : 'Switch to reading mode';
+      history.replaceState(null, '', `#${state.index + 1}`);
+      emitState();
     }
 
-    function forward() {
-      const slide = slides[index];
-      const count = fragments(slide).length;
-      if (stage < count) {
-        setStage(slide, stage + 1);
-        return;
-      }
-      show(index + 1);
+    function showPage(nextIndex) {
+      state.index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+      closeModal();
+      render();
     }
 
-    function back() {
-      if (stage > 0) {
-        setStage(slides[index], stage - 1);
+    function nextPage() {
+      showPage(state.index + 1);
+    }
+
+    function previousPage() {
+      showPage(state.index - 1);
+    }
+
+    function nextStep() {
+      if (state.mode === 'reading') return nextPage();
+      const count = stepCount(slides[state.index]);
+      if (state.stages[state.index] < count) {
+        setStage(state.index, state.stages[state.index] + 1);
+        emitState();
         return;
       }
-      show(index - 1);
+      nextPage();
+    }
+
+    function previousStep() {
+      if (state.mode === 'reading') return previousPage();
+      if (state.stages[state.index] > 0) {
+        setStage(state.index, state.stages[state.index] - 1);
+        emitState();
+      }
+    }
+
+    function setMode(mode) {
+      if (!['reading', 'presentation'].includes(mode) || mode === state.mode) return;
+      state.mode = mode;
+      if (mode === 'presentation') state.stages[state.index] = 0;
+      moreMenu.hidden = true;
+      moreToggle.setAttribute('aria-expanded', 'false');
+      render();
+      wakeControls();
+    }
+
+    async function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen?.();
+      } else {
+        await document.exitFullscreen?.();
+      }
+    }
+
+    function wakeControls() {
+      deck.classList.remove('controls-hidden');
+      clearTimeout(controlsTimer);
+      if (moreMenu.hidden) {
+        controlsTimer = setTimeout(() => deck.classList.add('controls-hidden'), 3000);
+      }
     }
 
     function openSource(src, label = 'Source evidence') {
@@ -450,9 +606,21 @@
       delete modalBody.dataset.mediaError;
     }
 
-    document.getElementById('next').addEventListener('click', forward);
-    document.getElementById('prev').addEventListener('click', back);
+    document.getElementById('next').addEventListener('click', nextPage);
+    document.getElementById('prev').addEventListener('click', previousPage);
     document.getElementById('modalClose').addEventListener('click', closeModal);
+    moreToggle.addEventListener('click', () => {
+      moreMenu.hidden = !moreMenu.hidden;
+      moreToggle.setAttribute('aria-expanded', String(!moreMenu.hidden));
+      wakeControls();
+    });
+    modeToggle.addEventListener('click', () => {
+      setMode(state.mode === 'reading' ? 'presentation' : 'reading');
+    });
+    fullscreenToggle.addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', () => {
+      fullscreenToggle.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen';
+    });
     document.querySelectorAll('.source-btn').forEach(button => {
       button.addEventListener('click', event => {
         event.stopPropagation();
@@ -460,16 +628,25 @@
       });
     });
     document.addEventListener('click', event => {
-      if (event.target.closest('button') || modal.classList.contains('open')) return;
-      forward();
+      if (
+        event.target.closest('button, a, input, textarea, select, [contenteditable="true"], .controls') ||
+        modal.classList.contains('open')
+      ) return;
+      nextStep();
     });
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && modal.classList.contains('open')) return closeModal();
       if (modal.classList.contains('open')) return;
-      if (['ArrowRight', 'PageDown', ' '].includes(event.key)) forward();
-      if (['ArrowLeft', 'PageUp'].includes(event.key)) back();
-      if (event.key === 'Home') show(0);
-      if (event.key === 'End') show(slides.length - 1);
+      if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const handledKeys = ['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', ' ', 'Home', 'End'];
+      if (handledKeys.includes(event.key)) event.preventDefault();
+      if (['ArrowRight', ' '].includes(event.key)) nextStep();
+      if (event.key === 'ArrowLeft') previousStep();
+      if (event.key === 'PageDown') nextPage();
+      if (event.key === 'PageUp') previousPage();
+      if (event.key === 'Home') showPage(0);
+      if (event.key === 'End') showPage(slides.length - 1);
+      wakeControls();
     });
 
     function indexFromHash() {
@@ -477,8 +654,24 @@
       return Number.isInteger(parsed) ? parsed - 1 : 0;
     }
 
-    window.addEventListener('hashchange', () => show(indexFromHash()));
-    show(indexFromHash());
+    window.TaoHtmlRuntime = Object.freeze({
+      getState: snapshot,
+      setMode,
+      showPage,
+      nextStep,
+      previousStep,
+      nextPage,
+      previousPage,
+      toggleFullscreen,
+    });
+
+    ['mousemove', 'pointerdown'].forEach(eventName => {
+      document.addEventListener(eventName, wakeControls, { passive: true });
+    });
+    window.addEventListener('hashchange', () => showPage(indexFromHash()));
+    state.index = Math.max(0, Math.min(slides.length - 1, indexFromHash()));
+    render();
+    wakeControls();
   </script>
 </body>
 </html>
