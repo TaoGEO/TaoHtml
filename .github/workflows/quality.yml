@@ -56,6 +56,7 @@ jobs:
         run: |
           short_sha="${GITHUB_SHA::7}"
           python skill/taohtml/scripts/package_deck.py skill/taohtml/assets/html-deck-template ".artifacts/taohtml-template-ci-${short_sha}.zip"
+          python scripts/package_plugin_marketplace.py ".artifacts/taohtml-marketplace-ci-${short_sha}.zip"
 
       - name: Upload QA artifacts
         uses: actions/upload-artifact@v7

@@ -545,20 +545,28 @@
       if (state.stages[state.index] > 0) {
         setStage(state.index, state.stages[state.index] - 1);
         emitState();
+        return;
       }
+      previousPage();
+    }
+
+    function closeMoreMenu() {
+      moreMenu.hidden = true;
+      moreToggle.setAttribute('aria-expanded', 'false');
     }
 
     function setMode(mode) {
       if (!['reading', 'presentation'].includes(mode) || mode === state.mode) return;
       state.mode = mode;
       if (mode === 'presentation') state.stages[state.index] = 0;
-      moreMenu.hidden = true;
-      moreToggle.setAttribute('aria-expanded', 'false');
+      closeMoreMenu();
       render();
       wakeControls();
     }
 
     async function toggleFullscreen() {
+      closeMoreMenu();
+      wakeControls();
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen?.();
       } else {
@@ -619,7 +627,9 @@
     });
     fullscreenToggle.addEventListener('click', toggleFullscreen);
     document.addEventListener('fullscreenchange', () => {
+      closeMoreMenu();
       fullscreenToggle.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen';
+      wakeControls();
     });
     document.querySelectorAll('.source-btn').forEach(button => {
       button.addEventListener('click', event => {

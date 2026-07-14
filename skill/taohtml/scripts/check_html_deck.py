@@ -134,16 +134,47 @@ def main() -> int:
                 .every(el => getComputedStyle(el).opacity === '1')"""
             )
             reading_state = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.evaluate("() => window.TaoHtmlRuntime.showPage(1)")
+            page.keyboard.press("ArrowLeft")
+            reading_after_left = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.evaluate("() => window.TaoHtmlRuntime.showPage(1)")
             page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
             presentation_state = page.evaluate("() => window.TaoHtmlRuntime.getState()")
             page.keyboard.press("ArrowLeft")
             after_left_at_zero = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+            page.evaluate("() => window.TaoHtmlRuntime.showPage(0)")
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
+            page.keyboard.press("ArrowLeft")
+            after_left_at_first_page = page.evaluate("() => window.TaoHtmlRuntime.getState()")
             control_before = page.evaluate("() => window.TaoHtmlRuntime.getState()")
             page.locator("#moreToggle").focus()
             page.keyboard.press("Space")
             control_after = page.evaluate("() => window.TaoHtmlRuntime.getState()")
             control_menu_open = page.locator("#moreMenu:not([hidden])").count() == 1
-            page.locator("#moreToggle").click()
+            page.wait_for_timeout(3200)
+            menu_stays_open = page.locator("#moreMenu:not([hidden])").count() == 1
+            page.locator("#fullscreenToggle").click()
+            page.wait_for_function("() => Boolean(document.fullscreenElement)")
+            fullscreen_entered = page.evaluate(
+                """() => ({
+                  menuHidden: document.querySelector('#moreMenu').hidden,
+                  expanded: document.querySelector('#moreToggle').getAttribute('aria-expanded'),
+                  controlsHidden: document.querySelector('#deck').classList.contains('controls-hidden'),
+                })"""
+            )
+            page.wait_for_timeout(3200)
+            fullscreen_idle_hidden = page.locator("#deck.controls-hidden").count() == 1
+            page.mouse.move(args.width // 2, args.height // 2)
+            fullscreen_pointer_revealed = page.locator("#deck:not(.controls-hidden)").count() == 1
+            page.evaluate("() => document.exitFullscreen()")
+            page.wait_for_function("() => !document.fullscreenElement")
+            fullscreen_exited = page.evaluate(
+                """() => ({
+                  menuHidden: document.querySelector('#moreMenu').hidden,
+                  expanded: document.querySelector('#moreToggle').getAttribute('aria-expanded'),
+                })"""
+            )
             grouped_step = page.evaluate(
                 """() => {
                   const targetIndex = [...document.querySelectorAll('.slide')]
@@ -174,12 +205,21 @@ def main() -> int:
                 "after_return": after_return,
                 "reading_state": reading_state,
                 "reading_visible": reading_visible,
+                "reading_after_left": reading_after_left,
                 "presentation_state": presentation_state,
                 "after_left_at_zero": after_left_at_zero,
+                "after_left_at_first_page": after_left_at_first_page,
                 "control_keyboard": {
                     "before": control_before,
                     "after": control_after,
                     "menu_open": control_menu_open,
+                    "menu_stays_open": menu_stays_open,
+                },
+                "fullscreen": {
+                    "entered": fullscreen_entered,
+                    "idle_hidden": fullscreen_idle_hidden,
+                    "pointer_revealed": fullscreen_pointer_revealed,
+                    "exited": fullscreen_exited,
                 },
                 "grouped_step": grouped_step,
             }
@@ -191,12 +231,22 @@ def main() -> int:
                 failures.append("Returning to a page did not restore its presentation stage.")
             if reading_state["mode"] != "reading" or not reading_visible:
                 failures.append("Reading mode did not expose all current-page fragments.")
-            if presentation_state["mode"] != "presentation" or presentation_state["stages"][0] != 0:
+            if reading_after_left["mode"] != "reading" or reading_after_left["index"] != 0:
+                failures.append("ArrowLeft did not move to the previous page in reading mode.")
+            if presentation_state["mode"] != "presentation" or presentation_state["stages"][1] != 0:
                 failures.append("Switching from reading to presentation did not reset the current page.")
-            if after_left_at_zero["index"] != 0 or after_left_at_zero["stages"][0] != 0:
-                failures.append("ArrowLeft at step zero must not perform whole-page navigation.")
-            if control_after != control_before or not control_menu_open:
+            if after_left_at_zero["index"] != 0 or after_left_at_zero["stages"][0] != expected_stage:
+                failures.append("ArrowLeft at step zero did not return to the previous page and preserve its stage.")
+            if after_left_at_first_page["index"] != 0 or after_left_at_first_page["stages"][0] != 0:
+                failures.append("ArrowLeft at the first page underflowed the deck boundary.")
+            if control_after != control_before or not control_menu_open or not menu_stays_open:
                 failures.append("Focused controls did not consume Space without advancing the report.")
+            if fullscreen_entered != {"menuHidden": True, "expanded": "false", "controlsHidden": False}:
+                failures.append("Entering fullscreen did not close the more menu and expose controls cleanly.")
+            if not fullscreen_idle_hidden or not fullscreen_pointer_revealed:
+                failures.append("Fullscreen controls did not auto-hide on idle and reappear on pointer movement.")
+            if fullscreen_exited != {"menuHidden": True, "expanded": "false"}:
+                failures.append("Exiting fullscreen left stale more-menu state behind.")
             if grouped_step["tested"] and grouped_step["visible"] != grouped_step["total"]:
                 failures.append("Elements sharing one data-step did not reveal together.")
         results["runtime_behavior"] = runtime_behavior

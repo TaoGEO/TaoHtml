@@ -1,6 +1,6 @@
 # Report Design Brief Template
 
-Generate this brief only after the material summary is confirmed and the project passes the design-ready gate in `intake-workflow.md`.
+Generate this brief only after the route-appropriate source gate and the design-ready gate in `intake-workflow.md` both pass. Word/PDF requires a confirmed Material Understanding Summary; an idea-only route does not. If any high-risk gap remains, use the blocked-intake output instead of this template.
 
 Keep it readable by the customer. Include only fields that affect this project. Do not emit a separate JSON configuration and do not pre-design every page.
 
@@ -8,7 +8,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 # 报告设计简报
 
 ## 项目定义
-- 输入入口：Word / PDF
+- 输入入口：只有想法 / Word / PDF / 已有 PPT / HTML
 - 使用模式：阅读 / 现场演讲
 - 内容长度：精简 / 标准 / 详细
 - 预计页数：根据当前材料动态估算
@@ -44,7 +44,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 离线、画布、浏览器、素材和附件要求
 
 ## 待确认项
-- TaoHtml 的自动推断：...
+- TaoHtml 的自动推断及依据：...
 - 补全内容：...
 - 数据修正及原因：...
 - 其他会影响成品的判断：...
@@ -58,7 +58,8 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - If the user supplied a clear visual reference, record whether it should be closely reproduced or treated as design DNA.
 - If TaoHtml recommends a visual direction, explain why it suits the topic, audience, and use mode.
-- Put every automatic inference, content addition, and data correction in `待确认项`, even when confidence is high.
+- Put every automatic inference and its basis, content addition, and data correction in `待确认项`, even when confidence is high. This is where all `inferred` ledger items receive unified confirmation.
+- Never disguise a high-risk unresolved decision as an inference. Return to the blocked-intake output in `intake-workflow.md` instead.
 - Keep source records in the brief whether or not the final pages visibly cite them.
 - Do not split content into slide copy, speaker notes, and appendix at this stage; production makes that allocation from the confirmed mode.
 

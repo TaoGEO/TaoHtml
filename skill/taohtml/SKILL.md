@@ -22,7 +22,7 @@ Prefer explicit invocation. Use the host agent's real skill syntax, such as `$ta
 
 Identify one route before continuing:
 
-1. **Idea only**: help the user clarify the report before producing a brief.
+1. **Idea only**: build the report definition from the conversation, then produce a brief only when it is design-ready.
 2. **Word / PDF**: extract and confirm the material before design. This is the fully specified reference route.
 3. **Existing PPT / HTML**: confirm whether to preserve the structure or reorganize it while keeping all core viewpoints.
 
@@ -30,40 +30,29 @@ Never ask for information already present in the conversation or source files.
 
 ## Required State Flow
 
-For Word/PDF work, follow this sequence without skipping confirmation gates:
+Follow this route-aware sequence without skipping confirmation gates:
 
-1. Identify the route, then determine reading or presentation mode and concise, standard, or detailed length. Skip any choice the user already made.
-2. Read `references/material-understanding.md`, inspect the source, and output a Material Understanding Summary. Do not design pages yet.
-3. Wait for the user to confirm or correct that summary.
-4. Read `references/intake-workflow.md`. Fill only the missing decisions that would change structure, evidence, visual direction, or delivery.
-5. When several report structures are genuinely reasonable, present 2-3 chapter-level options and let the user choose.
-6. Read `references/design-brief-template.md` and produce one adaptive Report Design Brief.
-7. Wait for explicit confirmation of the current brief. A previous "agree", "continue", or request to use TaoHtml is not production authorization.
-8. After confirmation, read `references/process-playbook.md` and produce the HTML directly. Do not insert a separate full prose manuscript step. Follow its **first runnable artifact** cadence: lock a concise page plan, save a complete runnable `index.html`, then refine and QA in bounded passes.
-9. Implement only the runtime capabilities documented in `references/runtime-contract.md` unless the user separately authorizes new runtime engineering.
-10. Run asset and browser QA, fix objective failures, and report the files, checks, and production-stage judgment calls.
+1. Identify the route, use mode, and length. When more than one is missing, compress these startup choices into one short interaction; skip known choices.
+2. For Word/PDF, read `references/material-understanding.md`, inspect the source, show a Material Understanding Summary, and wait for confirmation or correction. For an idea-only input, do not invent a source-summary gate.
+3. Read `references/intake-workflow.md`. Resolve only the current largest missing decision that would change the report design. Stop according to its readiness, repetition, information-gain, risk, and question-budget rules.
+4. When several report structures are genuinely reasonable, present 2-3 chapter-level options and let the user choose or delegate. Do not ask about structure when one option clearly follows from the confirmed goal and evidence.
+5. After the applicable source gate passes and no high-risk gap remains, read `references/design-brief-template.md` and produce one adaptive Report Design Brief. Put every safe inference in its confirmation section.
+6. Wait for explicit confirmation of the current brief. This confirmation does not count toward the clarification-question budget. A previous "agree", "continue", or request to use TaoHtml is not production authorization.
+7. After confirmation, read `references/process-playbook.md` and produce the HTML directly. Do not insert a separate full prose manuscript step. Follow its **first runnable artifact** cadence: lock a concise page plan, save a complete runnable `index.html`, then refine and QA in bounded passes.
+8. Implement only the runtime capabilities documented in `references/runtime-contract.md` unless the user separately authorizes new runtime engineering.
+9. Run asset and browser QA, fix objective failures, and report the files, checks, and production-stage judgment calls.
 
 If the user adds source material or changes a core viewpoint after confirming the brief, update the brief and request confirmation again. Local copy, color, layout, or motion revisions after delivery do not require a new brief unless they change the report's core meaning or structure.
 
 ## Question Discipline
 
-Maintain an internal ledger with four buckets:
+Maintain the `known | confirmed | inferred | missing` ledger defined in `references/intake-workflow.md`. Re-read the conversation, sources, and prior answers before every question; never ask the user to repeat known or safely inferable information.
 
-```text
-known | confirmed | inferred | missing
-```
+Ask one decision question per round: the current largest missing item whose answer could change the report design. Closely related items may be combined only when they decide the same thing; the compact startup choice is the explicit exception. Do not turn the intake into a fixed questionnaire.
 
-Before asking anything:
+A clear input may need 0 clarification questions; ordinary intake should usually finish in 3-5; never exceed 6 agent-initiated clarification questions in one intake cycle. Ask about the same key gap at most twice, changing the second attempt to a concrete example or 2-3 real options. Stop questioning after three consecutive rounds without actionable new information.
 
-- Re-read the conversation, material summary, and prior answers.
-- Extract answers from the source instead of asking the user to repeat them.
-- Ask one question at a time.
-- Ask only when the answer changes structure, evidence, visual direction, or delivery.
-- Offer 2-3 choices only when a real tradeoff exists, and explain the difference briefly.
-- Treat "decide for me", "not important", or equivalent wording as authorization to use a reasonable default; do not ask the same question again.
-- Stop asking as soon as the project is design-ready.
-
-Do not use a fixed questionnaire. `references/intake-workflow.md` defines readiness and the confirmation gates.
+Infer low-risk gaps transparently and place them in the brief for confirmation. If a high-risk gap remains, do not fabricate a brief or start production; use the blocked-intake output in `references/intake-workflow.md`. Treat "decide for me", "not important", or equivalent wording as delegation. A user-initiated change to the core goal or scope starts a new intake cycle rather than a seventh question.
 
 ## Source And Meaning Protection
 

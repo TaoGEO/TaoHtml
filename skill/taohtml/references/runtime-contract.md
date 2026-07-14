@@ -54,7 +54,7 @@ Page-specific design may add classes and data attributes, but must not remove th
 ### Presentation mode
 
 - `ArrowRight`, Space, or a blank-page click advances one fragment; after the last fragment, it moves to the next page.
-- `ArrowLeft` reverses one fragment; at the initial state, it stays on the current page.
+- `ArrowLeft` reverses one fragment; at the initial state, it moves to the previous page. The first page safely remains at the first page.
 - `PageDown` moves to the next page immediately without completing remaining fragments.
 - `PageUp` moves to the previous page immediately.
 - Returning to a page restores its prior fragment stage.
@@ -66,6 +66,12 @@ Page-specific design may add classes and data attributes, but must not remove th
 - Switching from reading to presentation resets the current page to its first presentation state.
 
 Buttons, links, inputs, and open modals must consume their own events rather than advancing the page.
+
+### Controls and fullscreen
+
+- Opening the more menu keeps controls visible and suspends the auto-hide timer.
+- Entering or exiting fullscreen closes the more menu, sets its toggle to `aria-expanded="false"`, and restarts the auto-hide timer after `fullscreenchange`.
+- Pointer movement reveals the controls again. Fullscreen and non-fullscreen states must not retain a stale menu overlay.
 
 ## Public API
 
@@ -103,7 +109,8 @@ Before delivery, verify:
 - Step and whole-page keys have different behavior.
 - Elements that share `data-step` change together.
 - Whole-page jumps work before all fragments are revealed.
+- `ArrowLeft` returns to the previous page from stage 0 while preserving that page's prior stage; the first page does not underflow.
 - Returning to a page restores its stage.
 - Hash routes and page numbers match the active page.
-- Controls and fullscreen actions do not advance the report.
+- Controls and fullscreen actions do not advance the report; fullscreen closes the more menu and controls auto-hide again after idle time.
 - Asset, console, and visible-bound checks pass at the target viewport.

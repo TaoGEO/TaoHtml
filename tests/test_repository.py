@@ -89,6 +89,53 @@ class RepositoryMetadataTests(unittest.TestCase):
         ):
             self.assertRegex(template, rf"\b{method}\b")
 
+    def test_runtime_previous_step_and_fullscreen_control_contract(self) -> None:
+        skill_dir = ROOT / "skill" / "taohtml"
+        template = (
+            skill_dir / "assets" / "html-deck-template" / "index.html"
+        ).read_text(encoding="utf-8")
+        contract = (skill_dir / "references" / "runtime-contract.md").read_text(
+            encoding="utf-8"
+        )
+        qa_script = (skill_dir / "scripts" / "check_html_deck.py").read_text(
+            encoding="utf-8"
+        )
+
+        previous_step = re.search(
+            r"function previousStep\(\) \{(?P<body>.*?)\n    \}",
+            template,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(previous_step)
+        self.assertIn("previousPage();", previous_step.group("body"))
+        self.assertRegex(
+            previous_step.group("body"),
+            r"(?s)setStage\(state\.index, state\.stages\[state\.index\] - 1\);.*?return;.*?previousPage\(\);",
+        )
+
+        self.assertIn("function closeMoreMenu()", template)
+        self.assertRegex(
+            template,
+            r"async function toggleFullscreen\(\) \{\s+closeMoreMenu\(\);\s+wakeControls\(\);",
+        )
+        self.assertRegex(
+            template,
+            r"(?s)document\.addEventListener\('fullscreenchange', \(\) => \{\s+closeMoreMenu\(\);.*?wakeControls\(\);",
+        )
+
+        self.assertIn("at the initial state, it moves to the previous page", contract)
+        self.assertNotIn("at the initial state, it stays on the current page", contract)
+        self.assertIn("restarts the auto-hide timer after `fullscreenchange`", contract)
+        self.assertNotIn(
+            "ArrowLeft at step zero must not perform whole-page navigation", qa_script
+        )
+        self.assertIn(
+            "ArrowLeft at step zero did not return to the previous page and preserve its stage",
+            qa_script,
+        )
+        self.assertIn("fullscreen_idle_hidden", qa_script)
+        self.assertIn("fullscreen_pointer_revealed", qa_script)
+
 
 if __name__ == "__main__":
     unittest.main()

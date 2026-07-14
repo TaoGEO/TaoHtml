@@ -86,9 +86,19 @@ TaoHtml/
 skill/taohtml
 ```
 
-## 安装方式
+## 安装与更新
 
-将 `skill/taohtml` 复制到你的 Codex skills 目录。
+`skill/taohtml` 是唯一的 Skill 源码真源。仓库不维护第二份 `SKILL.md`；正式 Release 的插件 / marketplace 附件由打包脚本从该目录生成。
+
+| 方式 | 是否自动更新 | 更新方法 |
+|---|---|---|
+| 通用 Agent Skill 原始分发 | 否 | 下载最新 GitHub Release 源码包，用新的 `skill/taohtml` 整目录替换本地副本 |
+| Codex 本地 marketplace 附件 | 不承诺 | 替换解压目录后重新执行 `codex plugin add taohtml@taohtml` |
+| Claude 第三方 marketplace 附件 | 默认否 | 执行 `claude plugin marketplace update taohtml` 和 `claude plugin update taohtml@taohtml`；只有用户主动开启该 marketplace 的自动更新后才会自动检查 |
+
+### 安装原始 Agent Skill
+
+下载并解压最新 GitHub Release 的源码包，再将 `skill/taohtml` 复制到客户端的 skills 目录。Codex 示例：
 
 Windows PowerShell:
 
@@ -102,7 +112,27 @@ macOS / Linux:
 cp -R ./skill/taohtml ~/.codex/skills/taohtml
 ```
 
-然后重启 Codex，或新开一个线程，让 skill 列表刷新。
+更新时不要只覆盖单个文件；备份需要保留的本地修改后，用新版 `taohtml` 整目录替换旧目录。然后重启客户端或新开一个任务，让 Skill 列表刷新。
+
+### 安装 Codex / Claude 插件附件
+
+正式 Release 将提供 `taohtml-marketplace-vX.Y.Z.zip`。把它解压到一个不随更新变化的本地目录，然后选择对应客户端：
+
+Codex：
+
+```bash
+codex plugin marketplace add /absolute/path/to/taohtml-marketplace
+codex plugin add taohtml@taohtml
+```
+
+Claude Code：
+
+```bash
+claude plugin marketplace add /absolute/path/to/taohtml-marketplace
+claude plugin install taohtml@taohtml
+```
+
+更新时把新 Release 附件解压并替换同一目录，再执行上表的更新命令。Codex 更新后新开一个任务；Claude Code 更新后执行 `/reload-plugins` 或重启。详见 [Codex 插件文档](https://developers.openai.com/codex/plugins/) 与 [Claude Code marketplace 文档](https://code.claude.com/docs/en/discover-plugins)。
 
 ## 快速使用
 
@@ -117,7 +147,7 @@ cp -R ./skill/taohtml ~/.codex/skills/taohtml
 TaoHtml 不会立刻写 HTML。标准流程是：
 
 1. 确认阅读或现场演讲模式，以及精简、标准或详细长度。
-2. 输出材料理解摘要，等待确认或修正。
+2. 按入口完成来源理解；Word / PDF 输出材料理解摘要并等待确认或修正，只有想法则直接从对话建立决策账本。
 3. 只追问仍会改变设计结果的信息。
 4. 输出《报告设计简报》。
 5. 用户针对当前简报回复“确认”后，才开始制作 HTML。
@@ -126,10 +156,10 @@ TaoHtml 不会立刻写 HTML。标准流程是：
 ## TaoHtml 的工作流
 
 ```text
-输入材料
+想法或输入材料
   ↓
-材料理解摘要
-  ↓ 用户确认
+按入口完成来源理解
+  ↓ Word / PDF 用户确认摘要
 补齐设计决策
   ↓
 报告设计简报
@@ -179,6 +209,7 @@ python -m unittest discover -s tests -v
 python -m py_compile skill/taohtml/scripts/*.py
 python skill/taohtml/scripts/check_assets.py skill/taohtml/assets/html-deck-template/index.html --strict-offline
 python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa
+python scripts/package_plugin_marketplace.py .artifacts/taohtml-marketplace.zip
 ```
 
 每个版本的可见变化记录在 `CHANGELOG.md`。不要直接在 `main` 上开发，也不要在质量检查通过前创建版本 tag。
