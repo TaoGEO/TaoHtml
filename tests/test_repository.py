@@ -61,6 +61,17 @@ class RepositoryMetadataTests(unittest.TestCase):
         self.assertIn("save a complete runnable `index.html`", playbook_text)
         self.assertIn("Do not add unrequested pages", playbook_text)
 
+    def test_delivery_requires_brief_to_output_traceability(self) -> None:
+        skill_dir = ROOT / "skill" / "taohtml"
+        skill_text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        playbook_text = (skill_dir / "references" / "process-playbook.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("brief-to-output traceability ledger", skill_text)
+        self.assertIn("every conjunct in compound requirements", skill_text)
+        self.assertIn("brief-to-output traceability check", playbook_text)
+        self.assertIn("responsibility boundary", playbook_text)
+
     def test_runtime_exposes_the_core_contract(self) -> None:
         template = (
             ROOT / "skill" / "taohtml" / "assets" / "html-deck-template" / "index.html"

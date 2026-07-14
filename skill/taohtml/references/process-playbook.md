@@ -357,6 +357,8 @@ Content:
 - Does every section open and close cleanly?
 - Does each slide have one job?
 - Are major claims backed by evidence?
+- Does a brief-to-output traceability check map every confirmed core viewpoint, correction, evidence gap, and decision boundary to a visible output location?
+- Do compound requirements preserve every required part, such as "SLA, responsibility boundary, and API dictionary" rather than compressing the list into a narrower substitute?
 - Is the offer introduced only after the problem and method are credible?
 
 Design:

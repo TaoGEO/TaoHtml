@@ -100,7 +100,7 @@ The standard template supports paged reading and single-screen presentation. It 
 
 Before delivery:
 
-- Verify confirmed core viewpoints against the source and brief.
+- Build a brief-to-output traceability ledger and verify every confirmed core viewpoint, correction, evidence gap, and decision boundary against a visible output location. Check every conjunct in compound requirements; a source screenshot may support a point but must not silently replace it in the designed narrative.
 - Check all local and remote asset references.
 - Exercise reading and presentation modes, step navigation, whole-page navigation, return-state preservation, and hash routes.
 - Check console errors and visible bounds at the target viewport.
