@@ -77,6 +77,27 @@ class CheckAssetsTests(unittest.TestCase):
         self.assertIn("REMOTE_LINKS", result.stdout)
         self.assertIn("ASSET_CHECK_OK", result.stdout)
 
+    def test_remote_stylesheet_fails_in_strict_offline_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text(
+                '<link rel="stylesheet" href="https://cdn.example.com/theme.css">',
+                encoding="utf-8",
+            )
+            result = run_check(html, "--strict-offline")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("REMOTE_ASSETS", result.stdout)
+
+    def test_protocol_relative_script_fails_in_strict_offline_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text('<script src="//cdn.example.com/app.js"></script>', encoding="utf-8")
+            result = run_check(html, "--strict-offline")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("REMOTE_ASSETS", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

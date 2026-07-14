@@ -138,6 +138,12 @@ def main() -> int:
             presentation_state = page.evaluate("() => window.TaoHtmlRuntime.getState()")
             page.keyboard.press("ArrowLeft")
             after_left_at_zero = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            control_before = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.locator("#moreToggle").focus()
+            page.keyboard.press("Space")
+            control_after = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            control_menu_open = page.locator("#moreMenu:not([hidden])").count() == 1
+            page.locator("#moreToggle").click()
             grouped_step = page.evaluate(
                 """() => {
                   const targetIndex = [...document.querySelectorAll('.slide')]
@@ -170,6 +176,11 @@ def main() -> int:
                 "reading_visible": reading_visible,
                 "presentation_state": presentation_state,
                 "after_left_at_zero": after_left_at_zero,
+                "control_keyboard": {
+                    "before": control_before,
+                    "after": control_after,
+                    "menu_open": control_menu_open,
+                },
                 "grouped_step": grouped_step,
             }
             if after_step["stages"][0] != expected_stage:
@@ -184,9 +195,12 @@ def main() -> int:
                 failures.append("Switching from reading to presentation did not reset the current page.")
             if after_left_at_zero["index"] != 0 or after_left_at_zero["stages"][0] != 0:
                 failures.append("ArrowLeft at step zero must not perform whole-page navigation.")
+            if control_after != control_before or not control_menu_open:
+                failures.append("Focused controls did not consume Space without advancing the report.")
             if grouped_step["tested"] and grouped_step["visible"] != grouped_step["total"]:
                 failures.append("Elements sharing one data-step did not reveal together.")
         results["runtime_behavior"] = runtime_behavior
+        page.reload(wait_until="load")
 
         for i in range(slide_count):
             console_start = 0 if i == 0 else len(console_errors)

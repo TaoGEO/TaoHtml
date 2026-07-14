@@ -637,7 +637,7 @@
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && modal.classList.contains('open')) return closeModal();
       if (modal.classList.contains('open')) return;
-      if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (event.target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
       const handledKeys = ['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', ' ', 'Home', 'End'];
       if (handledKeys.includes(event.key)) event.preventDefault();
       if (['ArrowRight', ' '].includes(event.key)) nextStep();

@@ -6,16 +6,54 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 
-ATTR_RE = re.compile(
-    r"""(src|href|poster|data-source)\s*=\s*["']([^"']+)["']""",
+CSS_URL_RE = re.compile(r"""url\((?:["']?)([^"')]+)(?:["']?)\)""", re.IGNORECASE)
+CSS_IMPORT_RE = re.compile(
+    r"""@import\s+(?:url\()?(?:["']?)([^"')\s;]+)""",
     re.IGNORECASE,
 )
-SRCSET_RE = re.compile(r"""srcset\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
-CSS_URL_RE = re.compile(r"""url\((?:["']?)([^"')]+)(?:["']?)\)""", re.IGNORECASE)
+
+
+def parse_srcset(value: str) -> set[str]:
+    if value.strip().startswith("data:"):
+        return set()
+    refs: set[str] = set()
+    for candidate in value.split(","):
+        ref = candidate.strip().split(maxsplit=1)[0]
+        if ref:
+            refs.add(ref)
+    return refs
+
+
+class ReferenceParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.refs: set[str] = set()
+        self.resource_refs: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag = tag.lower()
+        for attribute, value in attrs:
+            if not value:
+                continue
+            attribute = attribute.lower()
+            if attribute in {"src", "poster", "data-source"}:
+                self.refs.add(value)
+                self.resource_refs.add(value)
+            elif attribute == "href":
+                self.refs.add(value)
+                if tag in {"base", "link"}:
+                    self.resource_refs.add(value)
+            elif attribute == "srcset":
+                candidates = parse_srcset(value)
+                self.refs.update(candidates)
+                self.resource_refs.update(candidates)
+
+    handle_startendtag = handle_starttag
 
 
 def is_remote(value: str) -> bool:
@@ -39,31 +77,16 @@ def is_absolute_local(value: str) -> bool:
 
 
 def extract_refs(text: str) -> set[str]:
-    refs = {value for _, value in ATTR_RE.findall(text)} | set(CSS_URL_RE.findall(text))
-    refs.update(extract_srcset_refs(text))
-    return refs
-
-
-def extract_srcset_refs(text: str) -> set[str]:
-    refs: set[str] = set()
-    for srcset in SRCSET_RE.findall(text):
-        if srcset.strip().startswith("data:"):
-            continue
-        for candidate in srcset.split(","):
-            value = candidate.strip().split(maxsplit=1)[0]
-            if value:
-                refs.add(value)
+    parser = ReferenceParser()
+    parser.feed(text)
+    refs = parser.refs | set(CSS_URL_RE.findall(text)) | set(CSS_IMPORT_RE.findall(text))
     return refs
 
 
 def extract_resource_refs(text: str) -> set[str]:
-    refs = {
-        value
-        for attribute, value in ATTR_RE.findall(text)
-        if attribute.lower() != "href"
-    }
-    refs.update(CSS_URL_RE.findall(text))
-    refs.update(extract_srcset_refs(text))
+    parser = ReferenceParser()
+    parser.feed(text)
+    refs = parser.resource_refs | set(CSS_URL_RE.findall(text)) | set(CSS_IMPORT_RE.findall(text))
     return refs
 
 
@@ -91,7 +114,7 @@ def main() -> int:
         if not value or value.startswith("--"):
             continue
         if is_remote(value):
-            if value.startswith(("http://", "https://")):
+            if value.startswith(("//", "http://", "https://")):
                 if raw in resource_refs:
                     remote.append(value)
                 else:
