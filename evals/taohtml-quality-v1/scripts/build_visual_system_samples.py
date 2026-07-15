@@ -14,6 +14,7 @@ from types import ModuleType
 BENCHMARK_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = BENCHMARK_ROOT.parents[1]
 FIXTURE = BENCHMARK_ROOT / "fixtures" / "visual-systems-content.json"
+EVIDENCE_FIXTURE = BENCHMARK_ROOT / "fixtures" / "visual-systems-evidence.svg"
 RENDERER_PATH = REPOSITORY_ROOT / "skill" / "taohtml" / "scripts" / "render_visual_system.py"
 
 
@@ -59,7 +60,7 @@ a{{display:inline-block;margin-top:12px;color:#111;font-weight:700}}@media(max-w
 def build(output_root: Path) -> tuple[list[Path], Path]:
     renderer = load_renderer()
     content = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    samples = renderer.render_all(content, output_root / "samples")
+    samples = renderer.render_all(content, output_root / "samples", EVIDENCE_FIXTURE)
     return samples, build_overview(renderer, output_root)
 
 

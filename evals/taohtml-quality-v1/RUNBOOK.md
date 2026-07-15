@@ -83,4 +83,4 @@ python3 -m venv .venv
   .artifacts/visual-systems-v1
 ```
 
-固定内容位于 `fixtures/visual-systems-content.json`。脚本只调用仓库内的确定性渲染器，不调用真实模型 API。生成的 HTML、浏览器截图、QA 报告和联系表全部留在 `.artifacts/`，不提交。
+固定内容位于 `fixtures/visual-systems-content.json`，样张专用的合成证据位于 `fixtures/visual-systems-evidence.svg`。builder 仅在 eval 边界显式把该 fixture 传给生产渲染器，它不属于分发 Skill 资产。脚本不调用真实模型 API。生成的 HTML、浏览器截图、QA 报告和联系表全部留在 `.artifacts/`，不提交。

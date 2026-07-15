@@ -82,7 +82,7 @@ Use the bundled scripts where relevant:
 - `scripts/check_html_deck.py`: exercise routes, reveal states, runtime behavior, media, console errors, bounds, and screenshots.
 - `scripts/build_contact_sheet.py`: build a visual QA overview.
 - `scripts/package_deck.py`: package HTML plus local assets when a single file is not appropriate.
-- `scripts/render_visual_system.py`: render deterministic content through one built-in system while retaining the shared runtime shell.
+- `scripts/render_visual_system.py`: render content through one built-in system while retaining the shared runtime shell. Always pass `--source-image` with a verified local evidence image; the script validates and embeds it for offline use, and fails instead of inventing or substituting evidence.
 
 ## Current Runtime Boundary
 

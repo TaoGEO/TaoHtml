@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import subprocess
+import sys
 import tempfile
 import unittest
 from collections import Counter
@@ -15,6 +17,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL_ROOT = ROOT / "skill" / "taohtml"
 SYSTEMS_ROOT = SKILL_ROOT / "assets" / "visual-systems"
 FIXTURE = ROOT / "evals" / "taohtml-quality-v1" / "fixtures" / "visual-systems-content.json"
+EVIDENCE_FIXTURE = (
+    ROOT / "evals" / "taohtml-quality-v1" / "fixtures" / "visual-systems-evidence.svg"
+)
+CHECK_ASSETS = SKILL_ROOT / "scripts" / "check_assets.py"
 EXPECTED = {
     "black-white-fluorescent-cards": ("黑白荧光卡片", "高反差、模块卡片、大标题，适合路演和强表达"),
     "rigorous-consulting-report": ("严谨咨询报告", "白底、结论式标题、高信息密度、严谨图表"),
@@ -126,6 +132,16 @@ class VisualSystemAssetTests(unittest.TestCase):
                 css + templates + preview, r"(?:src|href)=[\"']https?://"
             )
 
+    def test_production_skill_contains_no_evaluation_evidence(self) -> None:
+        forbidden = ("固定内容样张", "合成证据记录")
+        text_suffixes = {".css", ".html", ".json", ".md", ".py", ".svg", ".yaml", ".yml"}
+        for path in SKILL_ROOT.rglob("*"):
+            if not path.is_file() or path.suffix.lower() not in text_suffixes:
+                continue
+            text = path.read_text(encoding="utf-8")
+            for marker in forbidden:
+                self.assertNotIn(marker, text, msg=f"{marker} leaked into {path}")
+
 
 class VisualSystemRoutingTests(unittest.TestCase):
     def test_skill_routes_progressively_to_visual_systems(self) -> None:
@@ -165,7 +181,7 @@ class VisualSystemRenderingTests(unittest.TestCase):
     def test_fixed_content_renders_four_structurally_distinct_offline_decks(self) -> None:
         content = RENDERER.load_content(FIXTURE)
         with tempfile.TemporaryDirectory() as temp_dir:
-            outputs = RENDERER.render_all(content, Path(temp_dir))
+            outputs = RENDERER.render_all(content, Path(temp_dir), EVIDENCE_FIXTURE)
             self.assertEqual(len(outputs), 4)
             texts: list[Counter[str]] = []
             layout_signatures: list[tuple[str, ...]] = []
@@ -190,6 +206,75 @@ class VisualSystemRenderingTests(unittest.TestCase):
             self.assertTrue(all(text == texts[0] for text in texts[1:]))
             self.assertEqual(len(set(layout_signatures)), 4)
             self.assertTrue(all(len(signature) == 5 for signature in layout_signatures))
+
+    def test_production_renderer_fails_closed_without_explicit_evidence(self) -> None:
+        content = RENDERER.load_content(FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "report.html"
+            with self.assertRaisesRegex(ValueError, "--source-image"):
+                RENDERER.render_theme(
+                    content,
+                    "black-white-fluorescent-cards",
+                    output,
+                )
+            self.assertFalse(output.exists())
+
+    def test_local_image_is_embedded_and_passes_strict_offline_check(self) -> None:
+        from PIL import Image
+
+        content = RENDERER.load_content(FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "verified-evidence.png"
+            Image.new("RGB", (12, 8), color=(23, 32, 42)).save(source)
+            output = root / "report.html"
+            RENDERER.render_theme(
+                content,
+                "black-white-fluorescent-cards",
+                output,
+                source,
+            )
+            html_text = output.read_text(encoding="utf-8")
+            self.assertIn("data:image/png;base64,", html_text)
+            self.assertNotIn(str(source), html_text)
+            check = subprocess.run(
+                [sys.executable, str(CHECK_ASSETS), str(output), "--strict-offline"],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(check.returncode, 0, msg=check.stdout + check.stderr)
+            self.assertIn("ASSET_CHECK_OK", check.stdout)
+
+    def test_invalid_local_evidence_is_rejected(self) -> None:
+        content = RENDERER.load_content(FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            unsupported = root / "evidence.txt"
+            unsupported.write_text("not an image", encoding="utf-8")
+            corrupt = root / "evidence.png"
+            corrupt.write_bytes(b"not a png")
+            external_svg = root / "external.svg"
+            external_svg.write_text(
+                '<svg xmlns="http://www.w3.org/2000/svg"><image href="other.png"/></svg>',
+                encoding="utf-8",
+            )
+            missing = root / "missing.svg"
+            for source, message in (
+                (unsupported, "Unsupported source image type"),
+                (corrupt, "not a readable PNG"),
+                (external_svg, "non-offline external reference"),
+                (missing, "does not exist"),
+            ):
+                with self.subTest(source=source.name):
+                    with self.assertRaisesRegex(ValueError, message):
+                        RENDERER.render_theme(
+                            content,
+                            "black-white-fluorescent-cards",
+                            root / f"{source.stem}.html",
+                            source,
+                        )
 
     def test_benchmark_builder_outputs_samples_and_offline_overview(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

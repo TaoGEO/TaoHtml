@@ -33,7 +33,17 @@ Use `preview.svg` only when presenting the choice. Do not load all four manifest
 
 Treat `assets/html-deck-template/index.html` as the runtime shell and the selected system as the presentation layer. Replace content sections and inject theme CSS, but keep runtime controls, navigation, hash routing, reveal state, fullscreen behavior, and offline constraints unchanged. A theme switch must never add a new state machine or require a remote asset.
 
-Use `scripts/render_visual_system.py` when a deterministic starting point helps. It injects selected templates and CSS into the shared shell without changing the runtime script.
+Use the production renderer only with explicit, verified local evidence:
+
+```bash
+python scripts/render_visual_system.py \
+  --content /absolute/path/to/content.json \
+  --theme black-white-fluorescent-cards \
+  --source-image /absolute/path/to/verified-evidence.png \
+  --output /absolute/path/to/report.html
+```
+
+`--source-image` is required. The renderer accepts readable PNG, JPEG, WebP, or safe SVG files, validates the file contents, and embeds the bytes as an offline `data:` URI. If the evidence is missing, unsupported, unreadable, active, or remotely linked, rendering fails. Never replace missing customer evidence with generated, demonstration, or evaluation material.
 
 ## Deviation Rule
 

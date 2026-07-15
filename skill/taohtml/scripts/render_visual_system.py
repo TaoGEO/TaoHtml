@@ -9,6 +9,7 @@ import html
 import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -24,6 +25,20 @@ THEME_IDS = (
 START_MARKER = "    <!-- TAOHTML_SLIDES_START -->"
 END_MARKER = "    <!-- TAOHTML_SLIDES_END -->"
 PLACEHOLDER = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
+RASTER_MIME_TYPES = {
+    ".png": ("PNG", "image/png"),
+    ".jpg": ("JPEG", "image/jpeg"),
+    ".jpeg": ("JPEG", "image/jpeg"),
+    ".webp": ("WEBP", "image/webp"),
+}
+SVG_EXTERNAL_REFERENCE = re.compile(
+    rb"(?:href|xlink:href|src)\s*=\s*['\"]\s*(?!#|data:)[^'\"]+"
+    rb"|url\(\s*['\"]?\s*(?!#|data:)[^)]+|@import\b",
+    re.IGNORECASE,
+)
+SVG_ACTIVE_CONTENT = re.compile(
+    rb"<\s*(?:script|foreignObject)\b|\son[a-z]+\s*=", re.IGNORECASE
+)
 
 
 def load_content(path: Path) -> dict[str, str]:
@@ -46,27 +61,64 @@ def load_manifest(theme_id: str) -> dict[str, object]:
     return manifest
 
 
-def source_data_uri() -> str:
-    svg = """<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
-<rect width="1200" height="760" fill="#f6f3e8"/><rect x="64" y="56" width="1072" height="648" rx="24" fill="#ffffff" stroke="#17202a" stroke-width="3"/>
-<text x="112" y="132" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#17202a">固定内容样张 · 合成证据记录</text>
-<text x="112" y="184" font-family="Arial,sans-serif" font-size="20" fill="#53606d">用于比较四套视觉系统，不代表真实客户数据</text>
-<line x1="112" y1="226" x2="1088" y2="226" stroke="#c7ced6" stroke-width="2"/>
-<text x="112" y="294" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#17202a">证据条目</text>
-<text x="112" y="344" font-family="Arial,sans-serif" font-size="20" fill="#17202a">案例归档：12 个项目，统一字段后可检索</text>
-<text x="112" y="390" font-family="Arial,sans-serif" font-size="20" fill="#17202a">引用准备：8 个案例完成来源与结论绑定</text>
-<text x="112" y="436" font-family="Arial,sans-serif" font-size="20" fill="#17202a">销售复用：6 个案例进入提案与复盘场景</text>
-<rect x="112" y="500" width="976" height="112" rx="12" fill="#17202a"/>
-<text x="152" y="550" font-family="Arial,sans-serif" font-size="18" fill="#b9c2cc">结论</text>
-<text x="152" y="586" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#ffffff">证据必须同时保留来源、语境、结论与可复用入口。</text>
-</svg>"""
-    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
-    return f"data:image/svg+xml;base64,{encoded}"
+def source_data_uri(source_image: Path | None) -> str:
+    if source_image is None:
+        raise ValueError(
+            "Verified local evidence is required: pass --source-image with a readable PNG, JPEG, WebP, or SVG file."
+        )
+    try:
+        path = source_image.expanduser().resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise ValueError(f"Source image does not exist: {source_image}") from exc
+    if not path.is_file():
+        raise ValueError(f"Source image is not a file: {path}")
+
+    suffix = path.suffix.lower()
+    if suffix not in {*RASTER_MIME_TYPES, ".svg"}:
+        raise ValueError(
+            f"Unsupported source image type '{suffix or '<none>'}'; use PNG, JPEG, WebP, or SVG."
+        )
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"Source image is not readable: {path}") from exc
+    if not payload:
+        raise ValueError(f"Source image is empty: {path}")
+
+    if suffix == ".svg":
+        try:
+            root = ET.fromstring(payload)
+        except ET.ParseError as exc:
+            raise ValueError(f"Source SVG is not readable XML: {path}") from exc
+        if root.tag.rsplit("}", 1)[-1].lower() != "svg":
+            raise ValueError(f"Source SVG has no <svg> root: {path}")
+        if SVG_EXTERNAL_REFERENCE.search(payload):
+            raise ValueError(f"Source SVG contains a non-offline external reference: {path}")
+        if SVG_ACTIVE_CONTENT.search(payload):
+            raise ValueError(f"Source SVG contains active content: {path}")
+        mime_type = "image/svg+xml"
+    else:
+        try:
+            from PIL import Image
+
+            with Image.open(path) as image:
+                actual_format = image.format
+                image.verify()
+        except (ImportError, OSError, ValueError) as exc:
+            raise ValueError(f"Source image is not a readable {suffix[1:].upper()} file: {path}") from exc
+        expected_format, mime_type = RASTER_MIME_TYPES[suffix]
+        if actual_format != expected_format:
+            raise ValueError(
+                f"Source image extension and content disagree: expected {expected_format}, found {actual_format or 'unknown'}."
+            )
+
+    encoded = base64.b64encode(payload).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
 
 
-def render_sections(template: str, content: dict[str, str]) -> str:
+def render_sections(template: str, content: dict[str, str], source_uri: str) -> str:
     values = {key: html.escape(value, quote=True) for key, value in content.items()}
-    values["SOURCE_URI"] = source_data_uri()
+    values["SOURCE_URI"] = html.escape(source_uri, quote=True)
     required = set(PLACEHOLDER.findall(template))
     missing = sorted(required - values.keys())
     if missing:
@@ -79,12 +131,12 @@ def render_sections(template: str, content: dict[str, str]) -> str:
     return rendered.strip()
 
 
-def render_theme(content: dict[str, str], theme_id: str, output: Path) -> Path:
+def _render_theme(content: dict[str, str], theme_id: str, output: Path, source_uri: str) -> Path:
     manifest = load_manifest(theme_id)
     theme_dir = SYSTEMS_ROOT / theme_id
     css = (theme_dir / "theme.css").read_text(encoding="utf-8").strip()
     sections = render_sections(
-        (theme_dir / "templates.html").read_text(encoding="utf-8"), content
+        (theme_dir / "templates.html").read_text(encoding="utf-8"), content, source_uri
     )
     if "</style>" in css.lower():
         raise ValueError(f"Theme CSS contains a closing style tag: {theme_id}")
@@ -122,18 +174,38 @@ def render_theme(content: dict[str, str], theme_id: str, output: Path) -> Path:
     return output
 
 
-def render_all(content: dict[str, str], output_root: Path) -> list[Path]:
+def render_theme(
+    content: dict[str, str],
+    theme_id: str,
+    output: Path,
+    source_image: Path | None = None,
+) -> Path:
+    return _render_theme(content, theme_id, output, source_data_uri(source_image))
+
+
+def render_all(
+    content: dict[str, str],
+    output_root: Path,
+    source_image: Path | None = None,
+) -> list[Path]:
+    source_uri = source_data_uri(source_image)
     return [
-        render_theme(content, theme_id, output_root / theme_id / "index.html")
+        _render_theme(content, theme_id, output_root / theme_id / "index.html", source_uri)
         for theme_id in THEME_IDS
     ]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Render deterministic content through TaoHtml's built-in visual systems."
+        description="Render content and verified local evidence through TaoHtml's built-in visual systems."
     )
     parser.add_argument("--content", type=Path, required=True, help="Flat JSON content object.")
+    parser.add_argument(
+        "--source-image",
+        type=Path,
+        required=True,
+        help="Verified local PNG, JPEG, WebP, or SVG evidence image to validate and embed for offline use.",
+    )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--theme", choices=THEME_IDS)
     mode.add_argument("--all", action="store_true")
@@ -146,11 +218,18 @@ def main() -> int:
         if args.theme:
             if args.output is None:
                 parser.error("--output is required with --theme")
-            outputs = [render_theme(content, args.theme, args.output.resolve())]
+            outputs = [
+                render_theme(
+                    content,
+                    args.theme,
+                    args.output.resolve(),
+                    args.source_image,
+                )
+            ]
         else:
             if args.output_root is None:
                 parser.error("--output-root is required with --all")
-            outputs = render_all(content, args.output_root.resolve())
+            outputs = render_all(content, args.output_root.resolve(), args.source_image)
     except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as exc:
         print(f"RENDER_FAILED: {exc}", file=sys.stderr)
         return 1

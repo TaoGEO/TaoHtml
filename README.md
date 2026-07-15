@@ -278,7 +278,7 @@ HTML 制作 + 模块化 Runtime
 - `check_html_deck.py`：用 Playwright 检查 Runtime 契约、阅读/演讲模式、步级与页级导航、状态恢复、hash 路由、证据弹窗、控制台错误和可见区域边界。
 - `build_contact_sheet.py`：把 QA 截图合成总览图。
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
-- `render_visual_system.py`：把确定性内容注入选中主题，同时保留共享 runtime shell。
+- `render_visual_system.py`：把内容注入选中主题，同时保留共享 runtime shell。生产调用必须通过 `--source-image` 显式提供已核验的本地 PNG/JPEG/WebP/SVG 证据图；脚本校验并内嵌为离线 data URI，缺失或无效时直接失败，不生成、替代或伪造证据。
 
 ## 开发、验证与版本管理
 
