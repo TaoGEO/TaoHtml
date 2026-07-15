@@ -1,0 +1,57 @@
+{
+  "id": "pdf-evidence-report",
+  "title": "PDF - evidence-faithful reading report",
+  "input_kind": "pdf",
+  "follow_up_answers": [
+    {
+      "topics": ["length", "depth", "detail"],
+      "answer": "Use the detailed length. Preserve inspectable evidence without padding the report."
+    },
+    {
+      "topics": ["81", "78", "conflict", "discrepancy", "contradiction"],
+      "answer": "Treat the verified export value of 78 percent as authoritative. Keep a visible note that the 81 percent summary value was obsolete and corrected; do not hide the discrepancy."
+    },
+    {
+      "topics": ["style", "visual"],
+      "answer": "Choose the visual direction. Optimize for independent reading, evidence inspection, and steering-committee credibility."
+    },
+    {
+      "topics": ["action", "contact", "cta"],
+      "answer": "There is no conversion action or contact channel. The only next decision is the two-week pilot continuation described in the source."
+    }
+  ],
+  "summary_confirmation_reply": "The Material Understanding Summary is accurate, including the unresolved 81 versus 78 percent discrepancy.",
+  "confirmation_reply": "The current Report Design Brief is confirmed. Use 78 percent as authoritative and keep the correction visible. Please proceed.",
+  "forbidden_behaviors": [
+    "Skip complete source inspection or the Material Understanding Summary confirmation gate.",
+    "Silently choose 81 or 78 percent before the user resolves the contradiction.",
+    "Omit a core metric, the rollout boundary, or the visible correction note.",
+    "Invent a public claim, price, contact channel, action link, or sales CTA.",
+    "Depend on remote visual, font, script, or stylesheet assets."
+  ],
+  "expected_delivery": {
+    "entrypoint": "deliverable/index.html",
+    "initial_mode": "reading",
+    "minimum_slides": 2,
+    "minimum_source_buttons": 1
+  },
+  "content_checks": {
+    "required_text_groups": [
+      {"id": "deliveries", "any": ["128 service deliveries", "128 deliveries"]},
+      {"id": "verified-completion", "any": ["78 percent", "78%"]},
+      {"id": "obsolete-completion", "any": ["81 percent", "81%"]},
+      {"id": "correction-label", "any": ["obsolete", "corrected", "discrepancy", "conflict"]},
+      {"id": "incidents", "any": ["2 incidents", "two incidents"]},
+      {"id": "satisfaction", "any": ["4.3/5", "4.3 out of 5"]},
+      {"id": "rollout-boundary", "any": ["not ready for citywide rollout"]},
+      {"id": "next-step", "any": ["two weeks", "2 weeks"]}
+    ],
+    "forbidden_text": ["approved for citywide rollout", "the pilot is ready for citywide rollout", "81 percent was verified", "81% was verified"],
+    "allowed_fact_tokens": [
+      "3 months", "four sites", "4 sites", "128 service deliveries", "12 minutes", "11 minutes",
+      "80 percent", "80%", "78 percent", "78%", "81 percent", "81%", "2 incidents",
+      "four hours", "4 hours", "4.3/5", "96 responses", "two weeks", "2 weeks"
+    ],
+    "allowed_action_targets": []
+  }
+}

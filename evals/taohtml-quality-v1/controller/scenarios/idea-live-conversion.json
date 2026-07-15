@@ -1,0 +1,68 @@
+{
+  "id": "idea-live-conversion",
+  "title": "Idea only - conversion-oriented live talk",
+  "input_kind": "idea_only",
+  "follow_up_answers": [
+    {
+      "topics": ["audience", "listener", "受众", "听众"],
+      "answer": "听众是约 50 位独立顾问和小型咨询团队负责人，他们已经有零散案例，但无法稳定地用于销售沟通。"
+    },
+    {
+      "topics": ["length", "depth", "篇幅", "长度"],
+      "answer": "标准篇幅。"
+    },
+    {
+      "topics": ["duration", "time", "时长", "时间"],
+      "answer": "如果确实需要时长约束，按 8 分钟现场演讲设计。"
+    },
+    {
+      "topics": ["action", "contact", "cta", "行动", "联系", "入口"],
+      "answer": "唯一经确认的合成行动入口是 mailto:taohtml-benchmark@example.com?subject=Case%20Evidence%20Audit ，展示文案用“预约一次案例证据盘点”。该入口会打开邮件客户端，收件地址是专为合成评测保留的示例地址。"
+    },
+    {
+      "topics": ["evidence", "case", "data", "证据", "案例", "数据"],
+      "answer": "没有可对外宣称的客户数据或真实案例。可用清楚标注为“示意”或“模拟”的场景，不得写成已验证事实。"
+    },
+    {
+      "topics": ["style", "visual", "风格", "视觉"],
+      "answer": "视觉方向交给你决定，以现场讲解清晰和完成度为准。"
+    }
+  ],
+  "confirmation_reply": "已确认当前的 Report Design Brief，请开始制作。",
+  "forbidden_behaviors": [
+    "Begin production before explicit confirmation of the current brief.",
+    "Ask more than six clarification questions or ask known information again.",
+    "Invent customer results, prices, cases, guarantees, or an action channel.",
+    "Present a simulation as real evidence.",
+    "Depend on remote visual, font, script, or stylesheet assets."
+  ],
+  "expected_delivery": {
+    "entrypoint": "deliverable/index.html",
+    "initial_mode": "presentation",
+    "minimum_slides": 2,
+    "minimum_source_buttons": 0
+  },
+  "content_checks": {
+    "required_text_groups": [
+      {
+        "id": "core-thesis",
+        "any": ["先把案例变成可调用证据，再谈扩大获客", "先将案例变成可调用证据，再谈扩大获客" ]
+      },
+      {
+        "id": "audience-problem",
+        "any": ["案例散落", "零散案例", "证据链"]
+      },
+      {
+        "id": "simulation-label",
+        "any": ["示意", "模拟", "合成示例", "合成案例", "synthetic", "illustrative", "composite example", "composite case"]
+      },
+      {
+        "id": "confirmed-cta",
+        "any": ["mailto:taohtml-benchmark@example.com?subject=Case%20Evidence%20Audit"]
+      }
+    ],
+    "forbidden_text": ["已帮助上百位客户", "真实客户成功案例", "保证获客", "100% 成功"],
+    "allowed_fact_tokens": ["50 位", "8 分钟"],
+    "allowed_action_targets": ["mailto:taohtml-benchmark@example.com?subject=Case%20Evidence%20Audit"]
+  }
+}

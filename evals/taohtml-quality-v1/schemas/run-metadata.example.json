@@ -1,0 +1,33 @@
+{
+  "id": "20260715-codex-model-scenario-01",
+  "scenario_id": "idea-live-conversion",
+  "client": "Codex",
+  "agent": "Codex default agent",
+  "model": "unavailable",
+  "skill": {
+    "version": "0.2.0",
+    "commit": "c4463b0"
+  },
+  "started_at": "2026-07-15T10:00:00+08:00",
+  "ended_at": "2026-07-15T10:20:00+08:00",
+  "question_count": 0,
+  "token_usage": {
+    "availability": "unavailable",
+    "source": "unavailable",
+    "input_tokens": null,
+    "output_tokens": null,
+    "cache_tokens": null,
+    "total_tokens": null
+  },
+  "billing_usage": {
+    "availability": "unavailable",
+    "source": "unavailable",
+    "workbuddy_points": null,
+    "balance_before": null,
+    "balance_after": null
+  },
+  "duration": {
+    "status": "unavailable",
+    "seconds": null
+  }
+}

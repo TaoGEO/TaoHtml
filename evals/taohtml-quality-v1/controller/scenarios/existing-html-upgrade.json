@@ -1,0 +1,46 @@
+{
+  "id": "existing-html-upgrade",
+  "title": "Existing HTML - content-locked visual and Runtime upgrade",
+  "input_kind": "html",
+  "follow_up_answers": [
+    {
+      "topics": ["style", "visual"],
+      "answer": "Choose the visual direction. Use the existing signal-and-operator language as the design cue."
+    },
+    {
+      "topics": ["audience", "duration", "length", "content"],
+      "answer": "Do not add content. The five existing pages are the fixed scope; optimize them for a short live operator briefing."
+    },
+    {
+      "topics": ["action", "contact", "cta"],
+      "answer": "There is no action channel or sales CTA."
+    }
+  ],
+  "confirmation_reply": "The current Report Design Brief is confirmed. Preserve the five pages exactly and proceed with the visual and Runtime upgrade.",
+  "forbidden_behaviors": [
+    "Add, remove, rewrite, translate, or reorder visible page content.",
+    "Invent data, evidence, a CTA, contact channel, price, or extra page.",
+    "Deliver a static restyle without the TaoHtml Runtime contract.",
+    "Depend on remote visual, font, script, or stylesheet assets."
+  ],
+  "expected_delivery": {
+    "entrypoint": "deliverable/index.html",
+    "initial_mode": "presentation",
+    "minimum_slides": 5,
+    "maximum_slides": 5,
+    "minimum_source_buttons": 0
+  },
+  "content_checks": {
+    "exact_slide_text": [
+      "Signal Garden An operator briefing",
+      "A quiet alert is still an alert. Silence in the room does not remove risk from the system.",
+      "Observe Verify Act Three states: observe, verify, act.",
+      "Escalation rule Escalation starts only after two independent signals.",
+      "Decision boundary The operator owns the final decision."
+    ],
+    "required_text_groups": [],
+    "forbidden_text": [],
+    "allowed_fact_tokens": [],
+    "allowed_action_targets": []
+  }
+}

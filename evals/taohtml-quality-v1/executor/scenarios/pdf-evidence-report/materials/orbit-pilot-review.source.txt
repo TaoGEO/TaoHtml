@@ -1,0 +1,34 @@
+ORBIT URBAN PILOT REVIEW
+Synthetic evaluation material - no real organization or customer data
+
+Purpose
+This three-month pilot tested whether the Orbit service model was stable enough for a citywide rollout decision.
+
+Executive summary
+Four sites completed 128 service deliveries. The summary draft states that first-visit completion reached 81 percent. The steering committee should decide whether to expand now or continue observation.
+
+---PAGE---
+VERIFIED OPERATIONS EXPORT
+
+Measurement                         Target              Verified result
+Median wait time                    12 minutes or less  11 minutes
+First-visit completion              80 percent or more  78 percent
+Service incidents                   0                   2 incidents
+Incident recovery time              -                   within 4 hours
+Participant satisfaction            -                   4.3/5 from 96 responses
+
+Data note
+The verified export reports 78 percent first-visit completion, while the executive summary draft reports 81 percent. The discrepancy must be resolved before using the number as evidence.
+
+---PAGE---
+CONCLUSION AND NEXT DECISION
+
+The pilot is not ready for citywide rollout.
+
+The wait-time result met its target, but first-visit completion missed its target and two incidents occurred. Both incidents recovered within four hours.
+
+Recommended next step
+Continue the pilot for two weeks, investigate the completion gap, and return to the steering committee with a reconciled export.
+
+Boundary
+This material supports a readiness decision only. It does not contain a sales offer, public claim, price, contact channel, or conversion action.
