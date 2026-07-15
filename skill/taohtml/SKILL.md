@@ -32,7 +32,7 @@ Never ask for information already present in the conversation or source files.
 
 Follow this route-aware sequence without skipping confirmation gates:
 
-1. Identify the route, use mode, and length. When more than one is missing, compress these startup choices into one short interaction; skip known choices.
+1. Identify the route, use mode, and content length one decision at a time; skip every known choice. For presentation mode, treat a user-provided hard duration as a constraint, but never require duration to start.
 2. For Word/PDF, read `references/material-understanding.md`, inspect the source, show a Material Understanding Summary, and wait for confirmation or correction. For an idea-only input, do not invent a source-summary gate.
 3. Read `references/intake-workflow.md`. Resolve only the current largest missing decision that would change the report design. For an external conversion goal, distinguish the desired action from its verified real action path; do not impose this requirement on non-conversion reports. Stop according to the reference's readiness, repetition, information-gain, risk, and question-budget rules.
 4. When several report structures are genuinely reasonable, present 2-3 chapter-level options and let the user choose or delegate. Do not ask about structure when one option clearly follows from the confirmed goal and evidence.
@@ -48,9 +48,9 @@ If the user adds source material or changes a core viewpoint after confirming th
 
 Maintain the `known | confirmed | inferred | missing` ledger defined in `references/intake-workflow.md`. Re-read the conversation, sources, and prior answers before every question; never ask the user to repeat known or safely inferable information.
 
-Ask one decision question per round: the current largest missing item whose answer could change the report design. Closely related items may be combined only when they decide the same thing; the compact startup choice is the explicit exception. Do not turn the intake into a fixed questionnaire.
+Ask one decision question per round: the current largest missing item whose answer could change the report design. Do not bundle independent startup choices or turn the intake into a fixed questionnaire.
 
-A clear input may need 0 clarification questions; ordinary intake should usually finish in 3-5; never exceed 6 agent-initiated clarification questions in one intake cycle. Ask about the same key gap at most twice, changing the second attempt to a concrete example or 2-3 real options. Stop questioning after three consecutive rounds without actionable new information.
+A clear input may need 0 clarification questions; ordinary intake should usually finish in 3-5; even the most complex idea-only intake must never exceed 6 agent-initiated clarification questions in one intake cycle. Ask about the same key gap at most twice, changing the second attempt to a concrete example or 2-3 real options. Stop as soon as the project is design-ready, and stop questioning after three consecutive rounds without actionable new information.
 
 Infer low-risk gaps transparently and place them in the brief for confirmation. If a high-risk gap remains, do not fabricate a brief or start production; use the blocked-intake output in `references/intake-workflow.md`. Treat "decide for me", "not important", or equivalent wording as delegation. A user-initiated change to the core goal or scope starts a new intake cycle rather than a seventh question.
 
