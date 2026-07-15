@@ -28,7 +28,17 @@
     "initial_mode": "presentation",
     "minimum_slides": 5,
     "maximum_slides": 5,
-    "minimum_source_buttons": 0
+    "minimum_source_buttons": 0,
+    "verification_handoff": {
+      "required": true,
+      "title_any": ["待核实内容清单", "Pending Verification List"],
+      "required_field_groups": [
+        {"id": "location", "any": ["页面/内容", "page/content", "location"]},
+        {"id": "supplement_type", "any": ["补充类型", "supplement type"]},
+        {"id": "source_status", "any": ["来源状态", "source status"]},
+        {"id": "suggested_action", "any": ["建议动作", "suggested action"]}
+      ]
+    }
   },
   "content_checks": {
     "exact_slide_text": [
@@ -40,6 +50,7 @@
     ],
     "required_text_groups": [],
     "forbidden_text": [],
+    "fact_policy": "source_locked",
     "allowed_fact_tokens": [],
     "allowed_action_targets": []
   }

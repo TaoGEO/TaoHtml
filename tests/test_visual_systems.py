@@ -207,15 +207,30 @@ class VisualSystemRenderingTests(unittest.TestCase):
             self.assertEqual(len(set(layout_signatures)), 4)
             self.assertTrue(all(len(signature) == 5 for signature in layout_signatures))
 
-    def test_production_renderer_fails_closed_without_explicit_evidence(self) -> None:
+    def test_production_renderer_uses_labeled_illustration_without_evidence(self) -> None:
         content = RENDERER.load_content(FIXTURE)
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "report.html"
-            with self.assertRaisesRegex(ValueError, "--source-image"):
+            RENDERER.render_theme(
+                content,
+                "black-white-fluorescent-cards",
+                output,
+            )
+            html_text = output.read_text(encoding="utf-8")
+            self.assertIn('data-source-kind="illustrative"', html_text)
+            self.assertIn("示意 / 待核实", html_text)
+            self.assertIn("示意内容图片（待核实）", html_text)
+
+    def test_verified_source_kind_still_fails_closed_without_image(self) -> None:
+        content = RENDERER.load_content(FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "report.html"
+            with self.assertRaisesRegex(ValueError, "requires --source-image"):
                 RENDERER.render_theme(
                     content,
                     "black-white-fluorescent-cards",
                     output,
+                    source_kind="verified",
                 )
             self.assertFalse(output.exists())
 
@@ -236,6 +251,8 @@ class VisualSystemRenderingTests(unittest.TestCase):
             )
             html_text = output.read_text(encoding="utf-8")
             self.assertIn("data:image/png;base64,", html_text)
+            self.assertIn('data-source-kind="verified"', html_text)
+            self.assertIn("来源证据图片（已核实）", html_text)
             self.assertNotIn(str(source), html_text)
             check = subprocess.run(
                 [sys.executable, str(CHECK_ASSETS), str(output), "--strict-offline"],

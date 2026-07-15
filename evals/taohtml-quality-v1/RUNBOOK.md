@@ -42,7 +42,7 @@ python3 -m venv .venv
 
 [官方 WorkBuddy 文档](https://www.workbuddy.cn/docs/workbuddy/Usage) 说明：用户可在 WorkBuddy 官网点击右上角头像，进入“个人主页 → 套餐与用量”查看积分使用历史和当前用量。是否能得到单任务精确值，仍取决于平台在当次运行中是否暴露任务明细或可用的平台余额。执行 Agent 未看到单任务积分时，必须记录 `unavailable`。
 
-用 `controller/HUMAN_RUBRIC.md` 审阅后，复制并填写 `schemas/human-review.example.json`。如果尚未人审，可先不传 `--human-review`，结果会明确记录 `pending`/`unavailable`。
+把 Agent 最终交付消息原样保存为该次 `.artifacts/` 目录下的 `handoff.md`，不要补写或替 Agent 修复；其中应包含《待核实内容清单》。用 `controller/HUMAN_RUBRIC.md` 审阅后，复制并填写 `schemas/human-review.example.json`。如果尚未人审，可先不传 `--human-review`，结果会明确记录 `pending`/`unavailable`。
 
 ## 4. 运行客观判定
 
@@ -54,10 +54,11 @@ python3 -m venv .venv
   .artifacts/taohtml-evals/<run-id>/workspace \
   .artifacts/taohtml-evals/<run-id>/run-metadata.json \
   .artifacts/taohtml-evals/<run-id>/result.json \
+  --handoff .artifacts/taohtml-evals/<run-id>/handoff.md \
   --human-review .artifacts/taohtml-evals/<run-id>/human-review.json
 ```
 
-`--skip-browser` 只供开发脚本时使用；它会把浏览器项记为 `unavailable`，该次运行不可比。生成的截图、QA 报告、HTML、模型输出和 result 都留在 `.artifacts/`，不提交。
+`PASS` 表示成品与交付披露都完整；`CONDITIONAL` 表示成品通过但《待核实内容清单》缺失、结构不足或漏列普通生成数字，命令仍返回 0 以保持旧自动化兼容；`FAIL` 表示硬边界或成品门槛失败。`--skip-browser` 只供开发脚本时使用；它会把浏览器项记为 `unavailable`，该次运行不可比。生成的截图、QA 报告、HTML、模型输出和 result 都留在 `.artifacts/`，不提交。
 
 ## 5. 聚合多次运行
 
@@ -68,7 +69,7 @@ python3 -m venv .venv
   --output .artifacts/taohtml-evals/summary.md
 ```
 
-默认按场景、客户端、Agent、模型、Skill 版本和提交分组，避免用不同场景混合比较模型。输出可比运行成功率、问题数中位数/范围、硬失败数、token 可获取率、WorkBuddy 积分可获取率、可用数值的中位数/范围、每个人工维度的中位数/范围、人工修改次数以及旧 9 页视觉底线的分布。缺失用量只进入可获取率分母，不得当作 0 进入中位数或范围。也可重复 `--group-by model --group-by skill.commit` 自定义比较轴。目录输入只读取 `result.json` 或 `*-result.json`，不会把 metadata/人审草稿误当结果。脚本不调用任何真实模型 API。
+默认按场景、客户端、Agent、模型、Skill 版本和提交分组，避免用不同场景混合比较模型。输出完整工作流 PASS 率、CONDITIONAL 率、成品可用率、问题数中位数/范围、硬失败数、token 可获取率、WorkBuddy 积分可获取率、可用数值的中位数/范围、每个人工维度的中位数/范围、人工修改次数以及旧 9 页视觉底线的分布。缺失用量只进入可获取率分母，不得当作 0 进入中位数或范围。也可重复 `--group-by model --group-by skill.commit` 自定义比较轴。目录输入只读取 `result.json` 或 `*-result.json`，不会把 metadata/人审草稿误当结果。脚本不调用任何真实模型 API。
 
 建议每个“客户端 x Agent/模型 x TaoHtml 提交 x 场景”至少运行 3 次，在查看失败样本前完成同一批次，避免主控在批次中途改口径。
 

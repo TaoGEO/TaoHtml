@@ -60,7 +60,12 @@ a{{display:inline-block;margin-top:12px;color:#111;font-weight:700}}@media(max-w
 def build(output_root: Path) -> tuple[list[Path], Path]:
     renderer = load_renderer()
     content = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    samples = renderer.render_all(content, output_root / "samples", EVIDENCE_FIXTURE)
+    samples = renderer.render_all(
+        content,
+        output_root / "samples",
+        EVIDENCE_FIXTURE,
+        source_kind="verified",
+    )
     return samples, build_overview(renderer, output_root)
 
 

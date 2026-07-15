@@ -35,7 +35,29 @@ FACT_PATTERNS = (
         r"\b\d+(?:\.\d+)?\s*(?:months?|sites?|service deliveries|deliveries|minutes?|incidents?|hours?|responses?|respondents?|weeks?|signals?)\b",
         re.IGNORECASE,
     ),
-    re.compile(r"\d+(?:\.\d+)?\s*(?:\u4e2a\u6708|\u4e2a\u7ad9\u70b9|\u6b21\u670d\u52a1|\u5206\u949f|\u5c0f\u65f6|\u5468|\u8d77\u4e8b\u4ef6|\u4efd\u54cd\u5e94|\u4e2a\u4fe1\u53f7|\u4f4d)"),
+    re.compile(r"\d+(?:\.\d+)?\s*(?:\u4e2a\u6708|\u4e2a\u7ad9\u70b9|\u4e2a\u9879\u76ee|\u6bb5\u5bf9\u8bdd|\u4e2a\u7ebf\u7d22|\u6b21\u670d\u52a1|\u79d2|\u5206\u949f|\u5c0f\u65f6|\u5468|\u8d77\u4e8b\u4ef6|\u4efd\u54cd\u5e94|\u4e2a\u4fe1\u53f7|\u4f4d)"),
+)
+CREATIVE_STATUS_MARKERS = (
+    "创作性补全",
+    "推演",
+    "示意",
+    "模拟",
+    "待核实",
+    "creative supplement",
+    "projected",
+    "illustrative",
+    "simulation",
+    "pending verification",
+)
+VERIFIED_STATUS_MARKERS = (
+    "用户已提供",
+    "来源材料",
+    "公开来源已核实",
+    "真实数据",
+    "已核实",
+    "user-provided",
+    "source material",
+    "verified source",
 )
 
 
@@ -117,12 +139,18 @@ def make_check(
     evidence: Any,
     *,
     hard_failure: bool = True,
+    scope: str = "artifact",
 ) -> dict[str, Any]:
+    if status not in {"pass", "warning", "fail", "unavailable"}:
+        raise ValueError(f"Unknown check status: {status}")
+    if scope not in {"artifact", "workflow"}:
+        raise ValueError(f"Unknown check scope: {scope}")
     return {
         "id": check_id,
         "category": category,
         "status": status,
         "hard_failure": hard_failure,
+        "scope": scope,
         "summary": summary,
         "evidence": evidence,
     }
@@ -210,13 +238,30 @@ def inspect_content(html: Path, scenario: dict[str, Any]) -> tuple[DeckParser, l
     unexpected_facts = sorted(
         token for token in found_fact_tokens if normalize_token(token) not in allowed_fact_tokens
     )
+    fact_policy = content.get("fact_policy", "source_locked")
+    if fact_policy not in {"source_locked", "creative_handoff"}:
+        raise ValueError(f"Unknown fact_policy: {fact_policy}")
+    fact_status = (
+        "fail"
+        if unexpected_facts and fact_policy == "source_locked"
+        else "pass"
+    )
+    fact_summary = (
+        "Detected numeric factual claims stay within the source allowlist."
+        if fact_policy == "source_locked"
+        else "Ordinary generated numeric claims are treated as creative supplements pending delivery-handoff coverage."
+    )
     checks.append(
         make_check(
             "content.source-bounded-facts",
             "unsupported_claims",
-            "pass" if not unexpected_facts else "fail",
-            "Detected numeric factual claims stay within the source allowlist.",
-            {"unexpected": unexpected_facts, "detected": sorted(found_fact_tokens)},
+            fact_status,
+            fact_summary,
+            {
+                "policy": fact_policy,
+                "unexpected": unexpected_facts,
+                "detected": sorted(found_fact_tokens),
+            },
         )
     )
 
@@ -246,6 +291,136 @@ def inspect_content(html: Path, scenario: dict[str, Any]) -> tuple[DeckParser, l
         )
     )
     return parser, checks
+
+
+def inspect_verification_handoff(
+    handoff_text: str | None,
+    scenario: dict[str, Any],
+    creative_fact_tokens: list[str],
+) -> list[dict[str, Any]]:
+    config = scenario.get("expected_delivery", {}).get("verification_handoff")
+    if not config:
+        return []
+
+    text = handoff_text or ""
+    normalized = normalize_text(text)
+    compact = normalize_token(text)
+    title_candidates = config.get("title_any", ["待核实内容清单"])
+    missing_fields = []
+    for field in config.get("required_field_groups", []):
+        if not any(normalize_text(candidate) in normalized for candidate in field["any"]):
+            missing_fields.append(field["id"])
+    has_title = any(normalize_text(candidate) in normalized for candidate in title_candidates)
+    empty_markers = config.get(
+        "empty_any",
+        ["无；本报告未新增待客户核实的事实性内容", "no creative supplements added"],
+    )
+    declares_empty = any(normalize_text(candidate) in normalized for candidate in empty_markers)
+    structured = bool(text.strip()) and has_title and (not missing_fields or declares_empty)
+    checks = [
+        make_check(
+            "delivery.verification-handoff",
+            "verification_handoff",
+            "pass" if structured else "warning",
+            "Delivery includes a structured pending-verification list with location, supplement type, source status, and suggested action.",
+            {
+                "provided": bool(text.strip()),
+                "title_present": has_title,
+                "declares_empty": declares_empty,
+                "missing_fields": [] if declares_empty else missing_fields,
+            },
+            hard_failure=False,
+            scope="workflow",
+        )
+    ]
+
+    missing_creative_facts = [
+        token
+        for token in creative_fact_tokens
+        if normalize_token(token) not in compact
+    ]
+    checks.append(
+        make_check(
+            "handoff.creative-fact-coverage",
+            "verification_handoff",
+            "pass" if structured and not missing_creative_facts else "warning",
+            "Generated numeric claims are locatable in the pending-verification list.",
+            {
+                "creative_fact_tokens": creative_fact_tokens,
+                "missing": missing_creative_facts,
+            },
+            hard_failure=False,
+            scope="workflow",
+        )
+    )
+
+    protected_tokens = {
+        *scenario.get("content_checks", {}).get("protected_handoff_tokens", []),
+        *scenario.get("content_checks", {}).get("allowed_fact_tokens", []),
+        *scenario.get("content_checks", {}).get("allowed_action_targets", []),
+    }
+    creative_markers = tuple(normalize_text(item) for item in CREATIVE_STATUS_MARKERS)
+    verified_markers = tuple(normalize_text(item) for item in VERIFIED_STATUS_MARKERS)
+    misclassified = []
+    for line in text.splitlines():
+        normalized_line = normalize_text(line)
+        compact_line = normalize_token(line)
+        if not any(marker in normalized_line for marker in creative_markers):
+            continue
+        if any(marker in normalized_line for marker in verified_markers):
+            continue
+        for token in protected_tokens:
+            if normalize_token(token) in compact_line:
+                misclassified.append({"token": token, "line": line.strip()})
+    checks.append(
+        make_check(
+            "handoff.protected-source-classification",
+            "source_integrity",
+            "pass" if not misclassified else "fail",
+            "Confirmed source data and action channels keep their real provenance in the delivery handoff.",
+            {"misclassified": misclassified},
+            scope="workflow",
+        )
+    )
+    return checks
+
+
+def classify_checks(checks: list[dict[str, Any]]) -> dict[str, Any]:
+    hard_failure_count = sum(
+        check["status"] == "fail" and check["hard_failure"] for check in checks
+    )
+    warning_count = sum(check["status"] == "warning" for check in checks)
+    artifact_checks = [check for check in checks if check.get("scope", "artifact") == "artifact"]
+    artifact_unavailable = any(
+        check["status"] == "unavailable" and check["hard_failure"]
+        for check in artifact_checks
+    )
+    artifact_failed = any(
+        check["status"] == "fail" and check["hard_failure"]
+        for check in artifact_checks
+    )
+    artifact_status = (
+        "unavailable" if artifact_unavailable else ("fail" if artifact_failed else "pass")
+    )
+    hard_unavailable = any(
+        check["status"] == "unavailable" and check["hard_failure"] for check in checks
+    )
+    workflow_status = (
+        "unavailable"
+        if hard_unavailable
+        else (
+            "fail"
+            if hard_failure_count
+            else ("conditional" if warning_count else "pass")
+        )
+    )
+    return {
+        "status": workflow_status,
+        "artifact_status": artifact_status,
+        "hard_failure_count": hard_failure_count,
+        "warning_count": warning_count,
+        "hard_unavailable": hard_unavailable,
+    }
 
 
 def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -572,6 +747,7 @@ def judge(
     human_review: dict[str, Any] | None,
     *,
     skip_browser: bool = False,
+    handoff_text: str | None = None,
 ) -> dict[str, Any]:
     scenario = load_scenario(scenario_id)
     validate_metadata(metadata, scenario_id)
@@ -585,6 +761,7 @@ def judge(
             "pass" if metadata["question_count"] <= maximum_questions else "fail",
             "Agent-initiated clarification questions stay within the scenario cap.",
             {"actual": metadata["question_count"], "maximum": maximum_questions},
+            scope="workflow",
         )
     )
     if not expected_entrypoint.is_file():
@@ -626,16 +803,24 @@ def judge(
         )
         _, content_checks = inspect_content(expected_entrypoint, scenario)
         checks.extend(content_checks)
+        creative_fact_tokens: list[str] = []
+        for check in content_checks:
+            if check["id"] == "content.source-bounded-facts" and check["evidence"].get(
+                "policy"
+            ) == "creative_handoff":
+                creative_fact_tokens = check["evidence"].get("unexpected", [])
+                break
+        checks.extend(
+            inspect_verification_handoff(
+                handoff_text,
+                scenario,
+                creative_fact_tokens,
+            )
+        )
         checks.append(asset_check(workspace, expected_entrypoint))
         checks.extend(browser_checks(workspace, expected_entrypoint, skip_browser))
 
-    hard_failure_count = sum(
-        check["status"] == "fail" and check["hard_failure"] for check in checks
-    )
-    hard_unavailable = any(
-        check["status"] == "unavailable" and check["hard_failure"] for check in checks
-    )
-    objective_status = "unavailable" if hard_unavailable else ("fail" if hard_failure_count else "pass")
+    classification = classify_checks(checks)
     review = human_review or pending_human_review()
     validate_human_review(review)
     failure_samples = [
@@ -646,23 +831,27 @@ def judge(
             "evidence": check["evidence"],
         }
         for check in checks
-        if check["status"] in {"fail", "unavailable"}
+        if check["status"] in {"warning", "fail", "unavailable"}
     ]
     failure_samples.extend(review.get("failure_samples", []))
     return {
         "schema_version": "1.0",
         "run": metadata,
         "objective": {
-            "status": objective_status,
-            "hard_failure_count": hard_failure_count,
+            "status": classification["status"],
+            "artifact_status": classification["artifact_status"],
+            "hard_failure_count": classification["hard_failure_count"],
+            "warning_count": classification["warning_count"],
             "checks": checks,
         },
         "human": review,
         "failure_samples": failure_samples,
         "comparison": {
-            "comparable": not hard_unavailable,
-            "benchmark_success": not hard_unavailable and hard_failure_count == 0,
-            "note": "Human dimension scores describe visual differences; they do not override hard failures or grant production permission.",
+            "comparable": not classification["hard_unavailable"],
+            "benchmark_success": classification["status"] == "pass",
+            "artifact_usable": classification["artifact_status"] == "pass",
+            "workflow_status": classification["status"],
+            "note": "Artifact usability and full-workflow disclosure are reported separately. Human dimension scores do not override hard failures or grant production permission.",
         },
     }
 
@@ -674,6 +863,11 @@ def main() -> int:
     parser.add_argument("metadata", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--human-review", type=Path)
+    parser.add_argument(
+        "--handoff",
+        type=Path,
+        help="UTF-8 file containing the Agent's final delivery message, including 《待核实内容清单》.",
+    )
     parser.add_argument(
         "--skip-browser",
         action="store_true",
@@ -687,12 +881,14 @@ def main() -> int:
             if args.human_review
             else None
         )
+        handoff_text = args.handoff.read_text(encoding="utf-8") if args.handoff else None
         result = judge(
             args.scenario,
             args.workspace.resolve(),
             metadata,
             review,
             skip_browser=args.skip_browser,
+            handoff_text=handoff_text,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"JUDGE_FAILED: {exc}", file=sys.stderr)
@@ -700,7 +896,9 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"JUDGE_{result['objective']['status'].upper()} {args.output}")
-    return {"pass": 0, "fail": 1, "unavailable": 2}[result["objective"]["status"]]
+    return {"pass": 0, "conditional": 0, "fail": 1, "unavailable": 2}[
+        result["objective"]["status"]
+    ]
 
 
 if __name__ == "__main__":

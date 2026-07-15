@@ -10,10 +10,10 @@ Move through these states in order:
 |---|---|---|
 | S0 Startup | Idea, Word/PDF, or PPT/HTML plus reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
-| S2 Design completion | Only outcome-changing gaps are resolved | The project passes the design-ready gate, or intake stops as blocked |
+| S2 Design completion | Only outcome-changing decisions and hard-boundary gaps are resolved | The project passes the design-ready gate, or intake stops on a minimum hard boundary |
 | S3 Design brief | One customer-readable brief is shown | The user explicitly confirms the current brief |
 | S4 Production | HTML, visual system, motion, and objective QA are completed | Objective failures are fixed |
-| S5 Delivery | Files, checks, and production assumptions are reported | Deliverables are usable |
+| S5 Delivery | Files, checks, and a structured verification handoff are reported | Deliverables are usable and creative supplements are easy for the customer to review |
 
 Apply the source gate as follows:
 
@@ -21,7 +21,7 @@ Apply the source gate as follows:
 - **Word/PDF**: show the Material Understanding Summary defined in `material-understanding.md` and wait for confirmation or correction.
 - **PPT/HTML**: inspect the available artifact and preserve its confirmed core viewpoints; resolve faithful migration versus reorganization only if both remain reasonable.
 
-Never write a Report Design Brief while a high-risk gap remains. Never write HTML before the current brief is explicitly confirmed.
+Never write a Report Design Brief while a minimum hard-boundary gap remains. Never write HTML before the current brief is explicitly confirmed. Ordinary absent facts are not a reason to stop: plan reasonable creative supplements, finish the report, and disclose the generated details at delivery.
 
 ## Decision Ledger
 
@@ -33,10 +33,12 @@ known | confirmed | inferred | missing
 
 - **known**: stated in the current conversation or directly supported by the source.
 - **confirmed**: explicitly accepted or corrected by the user.
-- **inferred**: a low-risk decision TaoHtml can make from context or user delegation; record its basis and expose it in the brief.
-- **missing**: not yet known and not safe to infer.
+- **inferred**: a reversible design decision TaoHtml can make from context or user delegation; record its basis and expose it in the brief.
+- **missing**: an outcome-changing decision or hard-boundary fact that is not yet known and cannot be safely delegated.
 
 Rebuild the ledger after reading each source and update it after every answer. Move information instead of copying it across buckets. Treat a stated route, use mode, audience, desired outcome, content length, real action path, or hard presentation duration as `known`; do not ask for or confirm the same information again. Do not ask about any other `known`, `confirmed`, or safely `inferred` item.
+
+The design ledger is not the delivery verification list. During production, maintain a separate creative-supplement ledger with `page/content | supplement type | source status | suggested action`. A missing ordinary scene, number, viewpoint, or expression may enter this ledger directly instead of becoming another intake question. Customer-provided and independently verified facts stay in `known` or `confirmed`; never relabel them as creative supplements.
 
 ## Desired Action And Real Action Path
 
@@ -119,26 +121,28 @@ Count agent-initiated clarification prompts within the current intake cycle. Cou
 - Track whether each response produces actionable new information: it resolves or narrows a missing decision, corrects the ledger, supplies evidence, or clearly delegates a decision.
 - Stop questioning immediately after **three consecutive rounds without actionable new information**. Then infer all remaining low-risk gaps and either issue the brief or use the blocked-intake output.
 
-Stop immediately when the design-ready gate passes; never continue asking to approach a target or maximum. At the hard maximum, apply the same resolution: infer low-risk gaps and stop; never use the budget pressure as permission to invent a high-risk decision.
+Stop immediately when the design-ready gate passes; never continue asking to approach a target or maximum. At the hard maximum, apply the same resolution: infer reversible design decisions, route ordinary missing content to the creative-supplement ledger, and stop. Never use budget pressure as permission to cross a minimum hard boundary.
 
 If the user initiates a change to the core goal or scope, invalidate any affected brief and start a new intake cycle with fresh counters. Preserve reusable facts in the ledger, but do not count the first question of the new cycle as question seven of the old one. Local wording, color, layout, or motion revisions do not start a new cycle unless they change the report's meaning or scope.
 
-## Risk Rules
+## Output-First And Hard-Boundary Rules
 
-Infer a gap only when a reasonable choice is reversible during brief confirmation and cannot materially change the report's promise, scope, central meaning, factual integrity, or main conclusion. Record the inference and its basis in `待确认项`.
+Infer an outcome-changing design decision only when a reasonable choice is reversible during brief confirmation and cannot materially change the report's promise, scope, central meaning, factual integrity, or main conclusion. Record the inference and its basis in `待确认项`.
 
-Treat a gap as high risk when guessing could:
+Ordinary information gaps do not automatically create a block. TaoHtml may add plausible scenes, numbers, viewpoints, comparisons, examples, and expression as creative supplements when they help complete a useful report. These are pending-verification generated content, not source facts and not automatic errors. Track the exact additions for the delivery list. Put an adjacent `示意 / 模拟 / 待核实` label in the HTML only when a simulated chart, fictional customer case, generated evidence-like artifact, or numeric display could reasonably be mistaken for real proof; keep ordinary projections in the delivery note so risk disclosure does not damage the presentation.
 
-- choose the wrong audience outcome or core viewpoint;
-- change the report's promised scope or responsibility boundary;
-- reverse or materially distort the main conclusion;
-- create an unsupported factual, quantitative, legal, safety, or outcome claim; or
-- claim that an audience can complete a conversion action without a verified real action path; or
-- silently choose between structures that embody different goals or conclusions.
+The minimum hard boundaries are:
+
+- never invent a real customer or company identity, quotation, citation, literature, or source;
+- never state that an illustrative or fictional case is an achieved customer result;
+- explicitly verify legal, medical, financial, safety, and similar high-risk facts before presenting them as guidance or fact;
+- never replace, reinterpret as generated, or silently alter a confirmed real source, data point, quotation, or action channel;
+- never claim that an audience can complete a conversion action without a verified real action path; and
+- never silently choose between goals, conclusions, or structures that materially change the promised outcome or responsibility boundary.
 
 When a conversion objective's real action path remains missing at a stop condition, do not generate a Report Design Brief or begin production. Use the blocked-intake output below, unless the user has explicitly downgraded the goal to one that does not require direct action. Never replace the missing channel with a slogan, a generic process such as “choose material → hand it over → see the result,” or an implied future entry point.
 
-When any high-risk gap remains after its second attempt, the six-question maximum, or the three-no-gain stop, do not generate a Report Design Brief and do not begin production. Output only:
+When a minimum hard-boundary gap remains after its second attempt, the six-question maximum, or the three-no-gain stop, do not generate a Report Design Brief and do not begin production. Ordinary missing support belongs in the creative-supplement ledger and must not trigger this block. Output only:
 
 ```markdown
 # 问诊暂停
@@ -167,14 +171,14 @@ Treat a project as design-ready when:
 
 - The audience outcome is clear enough to choose a narrative.
 - The core viewpoint or core question and scope are clear.
-- Evidence required by the report type is present, explicitly bounded, or safely deferred without inventing a conclusion.
+- Evidence required by the report type is present, explicitly bounded, or separated from planned creative supplements without presenting those supplements as verified proof.
 - No unresolved conflict can reverse the main conclusion.
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
 - Visual direction is known or safely delegated to TaoHtml.
 - The visual source is recorded as a user reference or one selected built-in visual system; any necessary deviation is explicit.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
-- No high-risk item remains in `missing`.
+- No minimum hard-boundary item remains in `missing`; ordinary creative supplements may remain pending customer verification.
 
 Stop asking as soon as these conditions are met. A clear idea can therefore proceed directly to a brief with zero clarification questions.
 
@@ -192,4 +196,4 @@ Show one current Report Design Brief and end with:
 
 Only a reply that clearly confirms this displayed brief opens production. Earlier approval to discuss, use TaoHtml, or begin intake does not count. Brief confirmation is authorization, not clarification, so it remains required even when the clarification counter is already six.
 
-If the user adds source material or changes a core viewpoint after confirmation, invalidate the brief, update it, and ask for confirmation again. During production, resolve non-core omissions with a reasonable default and list the decision at delivery rather than repeatedly interrupting the user.
+If the user adds source material or changes a core viewpoint after confirmation, invalidate the brief, update it, and ask for confirmation again. During production, resolve non-core omissions with a reasonable default or creative supplement, add the exact item to the delivery verification ledger, and continue instead of repeatedly interrupting the user.

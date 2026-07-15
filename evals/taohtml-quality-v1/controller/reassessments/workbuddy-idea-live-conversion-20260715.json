@@ -1,0 +1,20 @@
+{
+  "id": "workbuddy-idea-live-conversion-20260715-output-first-reassessment",
+  "scenario_id": "idea-live-conversion",
+  "source_record_policy": "The sealed WorkBuddy RAR remains unchanged; this file records only the new product-semantics reassessment.",
+  "observed_creative_supplements": [
+    "几十个项目",
+    "几百段对话",
+    "3 秒",
+    "5 分钟",
+    "每个线索都能高效转化"
+  ],
+  "artifact_status": "pass",
+  "workflow_status": "conditional",
+  "reasons": [
+    "Visual quality, intake flow, Runtime behavior, question count, and delivered HTML quality passed the prior forward review.",
+    "The listed claims are ordinary creative supplements under the output-first contract; lack of user-supplied provenance does not make the artifact a hard failure.",
+    "The delivery did not proactively include a structured pending-verification list locating these supplements and offering customer actions."
+  ],
+  "required_follow_up": "Keep the artifact verdict PASS and mark the full workflow CONDITIONAL until delivery includes 《待核实内容清单》 with page/content, supplement type, source status, and suggested action."
+}
