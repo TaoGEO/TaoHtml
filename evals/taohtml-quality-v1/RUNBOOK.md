@@ -71,3 +71,16 @@ python3 -m venv .venv
 默认按场景、客户端、Agent、模型、Skill 版本和提交分组，避免用不同场景混合比较模型。输出可比运行成功率、问题数中位数/范围、硬失败数、token 可获取率、WorkBuddy 积分可获取率、可用数值的中位数/范围、每个人工维度的中位数/范围、人工修改次数以及旧 9 页视觉底线的分布。缺失用量只进入可获取率分母，不得当作 0 进入中位数或范围。也可重复 `--group-by model --group-by skill.commit` 自定义比较轴。目录输入只读取 `result.json` 或 `*-result.json`，不会把 metadata/人审草稿误当结果。脚本不调用任何真实模型 API。
 
 建议每个“客户端 x Agent/模型 x TaoHtml 提交 x 场景”至少运行 3 次，在查看失败样本前完成同一批次，避免主控在批次中途改口径。
+
+## 6. 内置视觉系统的确定性样张
+
+内置视觉系统 v1 堆叠依赖 `codex/quality-benchmark-v1`：沿用同一 `.artifacts/` 隔离边界、离线资产检查、浏览器 QA 和总览图脚本，但不进入 Agent 执行样本，也不读取或修改 controller 基准答案。
+
+用同一份固定内容生成四套样张与横向总览：
+
+```bash
+.venv/bin/python evals/taohtml-quality-v1/scripts/build_visual_system_samples.py \
+  .artifacts/visual-systems-v1
+```
+
+固定内容位于 `fixtures/visual-systems-content.json`。脚本只调用仓库内的确定性渲染器，不调用真实模型 API。生成的 HTML、浏览器截图、QA 报告和联系表全部留在 `.artifacts/`，不提交。

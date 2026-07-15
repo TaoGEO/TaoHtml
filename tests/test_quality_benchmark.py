@@ -149,7 +149,19 @@ class PrepareRunTests(unittest.TestCase):
             self.assertIn("input/prompt.md", relative_files)
             self.assertIn("skill/taohtml/SKILL.md", relative_files)
             self.assertFalse(any("controller" in path for path in relative_files))
-            self.assertFalse(any(path.endswith(".json") for path in relative_files))
+            json_files = {path for path in relative_files if path.endswith(".json")}
+            self.assertEqual(
+                json_files,
+                {
+                    f"skill/taohtml/assets/visual-systems/{theme_id}/theme.json"
+                    for theme_id in (
+                        "black-white-fluorescent-cards",
+                        "rigorous-consulting-report",
+                        "corporate-annual-report",
+                        "editorial-collage",
+                    )
+                },
+            )
 
     def test_pdf_is_generated_as_small_three_page_material(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

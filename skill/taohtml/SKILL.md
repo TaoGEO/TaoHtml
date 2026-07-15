@@ -36,11 +36,12 @@ Follow this route-aware sequence without skipping confirmation gates:
 2. For Word/PDF, read `references/material-understanding.md`, inspect the source, show a Material Understanding Summary, and wait for confirmation or correction. For an idea-only input, do not invent a source-summary gate.
 3. Read `references/intake-workflow.md`. Resolve only the current largest missing decision that would change the report design. For an external conversion goal, distinguish the desired action from its verified real action path; do not impose this requirement on non-conversion reports. Stop according to the reference's readiness, repetition, information-gain, risk, and question-budget rules.
 4. When several report structures are genuinely reasonable, present 2-3 chapter-level options and let the user choose or delegate. Do not ask about structure when one option clearly follows from the confirmed goal and evidence.
-5. After the applicable source gate passes and no high-risk gap remains, read `references/design-brief-template.md` and produce one adaptive Report Design Brief. For a conversion goal, record the desired action, exact verified path, provenance and verification status, and final display method. Put every safe inference in its confirmation section.
-6. Wait for explicit confirmation of the current brief. This confirmation does not count toward the clarification-question budget. A previous "agree", "continue", or request to use TaoHtml is not production authorization.
-7. After confirmation, read `references/process-playbook.md` and produce the HTML directly. Do not insert a separate full prose manuscript step. Follow its **first runnable artifact** cadence: lock a concise page plan, save a complete runnable `index.html`, then refine and QA in bounded passes.
-8. Implement only the runtime capabilities documented in `references/runtime-contract.md` unless the user separately authorizes new runtime engineering.
-9. Run asset and browser QA, fix objective failures, and report the files, checks, and production-stage judgment calls.
+5. After content and structure are clear, resolve the visual source. If the user supplied a clear reference, use it directly and do not force an internal theme. Otherwise read `references/visual-systems.md`, recommend 2-3 suitable built-in systems with name, description, and preview, then accept the user's selection or delegation. Stay inside the existing clarification-question budget; when the budget is exhausted or the user delegates, select one and disclose the choice.
+6. After the applicable source gate passes and no high-risk gap remains, read `references/design-brief-template.md` and produce one adaptive Report Design Brief. Record the visual source, selected built-in system when applicable, and any necessary deviation. For a conversion goal, record the desired action, exact verified path, provenance and verification status, and final display method. Put every safe inference in its confirmation section.
+7. Wait for explicit confirmation of the current brief. This confirmation does not count toward the clarification-question budget. A previous "agree", "continue", or request to use TaoHtml is not production authorization.
+8. After confirmation, read `references/process-playbook.md` and produce the HTML directly. Do not insert a separate full prose manuscript step. Follow its **first runnable artifact** cadence: lock a concise page plan, save a complete runnable `index.html`, then refine and QA in bounded passes.
+9. Implement only the runtime capabilities documented in `references/runtime-contract.md` unless the user separately authorizes new runtime engineering.
+10. Run asset and browser QA, fix objective failures, and report the files, checks, and production-stage judgment calls.
 
 If the user adds source material or changes a core viewpoint after confirming the brief, update the brief and request confirmation again. Local copy, color, layout, or motion revisions after delivery do not require a new brief unless they change the report's core meaning or structure.
 
@@ -69,6 +70,7 @@ After brief confirmation, load only what the task needs:
 
 - `references/process-playbook.md`: story, evidence, visual, production, and delivery workflow.
 - `references/layout-pattern-library.md`: layout selection for composed presentation pages.
+- `references/visual-systems.md`: built-in system routing and selection policy; after selection, load only that system's `theme.json`, `theme.css`, and `templates.html` under `assets/visual-systems/`.
 - `references/design-quality-rubric.md`: optional diagnosis when the user asks for a design review or says the result feels ordinary; do not use a fixed aesthetic score as the production authorization gate.
 - `references/runtime-contract.md`: implemented DOM, controls, state, modes, and extension boundary.
 - `assets/html-deck-template/`: dependency-free 16:9 starting shell for paged reading and single-screen presentations.
@@ -80,6 +82,7 @@ Use the bundled scripts where relevant:
 - `scripts/check_html_deck.py`: exercise routes, reveal states, runtime behavior, media, console errors, bounds, and screenshots.
 - `scripts/build_contact_sheet.py`: build a visual QA overview.
 - `scripts/package_deck.py`: package HTML plus local assets when a single file is not appropriate.
+- `scripts/render_visual_system.py`: render deterministic content through one built-in system while retaining the shared runtime shell.
 
 ## Current Runtime Boundary
 

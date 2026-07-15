@@ -45,6 +45,7 @@ TaoHtml 的核心原则是：
 - 先输出材料理解摘要，让用户纠正 Agent 对 Word / PDF 的理解。
 - 通过一次一个关键问题，补齐真正影响报告设计的信息。
 - 在制作前生成客户可读的《报告设计简报》，并设置明确确认门。
+- 提供四套可执行的内置视觉系统，让构图、层级、证据、图片、图表和动效不再只依赖模型临场发挥。
 - 允许重组结构和优化表达，同时保留全部确认过的核心观点。
 - 将内容设计成阅读模式或现场演讲模式。
 - 提供模块化 HTML Runtime：阅读/演讲切换、动效步进、整页翻页、页状态保存、全屏与页码。
@@ -55,6 +56,25 @@ TaoHtml 的核心原则是：
 - 只有想法：逐步梳理目标、观点、证据和结构。
 - Word / PDF：先确认材料理解，再重组为 HTML。这是当前完整定义的标准闭环。
 - 已有 PPT / HTML：选择保留原结构，或在核心表达不变的前提下重组和升级。
+
+## 四套内置视觉系统
+
+内置主题不是换色皮肤，而是可复用的版式资产。每套都包含 tokens、画布与构图规则、页面和组件变体、图表/表格/证据卡/图片处理、动效语法、禁用模式以及可直接复制的 HTML 模板片段。
+
+| 视觉系统 | 具体画面描述 |
+|---|---|
+| 黑白荧光卡片 | 高反差、模块卡片、大标题，适合路演和强表达 |
+| 严谨咨询报告 | 白底、结论式标题、高信息密度、严谨图表 |
+| 稳重企业年报 | 稳重配色、图文平衡、品牌化版面、适度留白 |
+| 杂志图文拼贴 | 图片切片、错位排版、大字标题和编辑杂志感 |
+
+选择流程遵循参考优先：
+
+- 用户提供明确视觉参考时，直接以参考为准，并在设计简报中记录是贴近复现还是只提取设计 DNA；不强迫选择内置主题。
+- 没有明确参考时，等内容与结构清楚后，TaoHtml 从四套中推荐 2–3 套，展示“名称 + 简述 + 预览”，由用户选择或授权 TaoHtml 决定。
+- 不做开放式审美盘问，不重复提问，也不突破现有澄清问题上限。达到上限或用户授权决定时，TaoHtml 选择最匹配的一套，并在设计简报中披露所选主题和必要偏离。
+
+轻量预览和可执行资产位于 `skill/taohtml/assets/visual-systems/`；选择后只加载命中的一套。主题只负责页面表现，翻页、分步动效状态、全屏和离线约束继续由同一个 runtime shell 负责。
 
 ## 项目结构
 
@@ -76,6 +96,8 @@ TaoHtml/
       ├─ SKILL.md
       ├─ agents/
       ├─ assets/
+      │  ├─ html-deck-template/
+      │  └─ visual-systems/
       ├─ references/
       └─ scripts/
 ```
@@ -210,9 +232,10 @@ TaoHtml 不会立刻写 HTML。标准流程是：
 1. 确认阅读或现场演讲模式，以及精简、标准或详细长度。
 2. 按入口完成来源理解；Word / PDF 输出材料理解摘要并等待确认或修正，只有想法则直接从对话建立决策账本。
 3. 只追问仍会改变设计结果的信息。
-4. 输出《报告设计简报》。
-5. 用户针对当前简报回复“确认”后，才开始制作 HTML。
-6. 完成 Runtime、资产与浏览器 QA 后交付。
+4. 有明确视觉参考时直接采用；否则从四套内置视觉系统推荐 2–3 套并完成选择或代理决策。
+5. 输出准确记录视觉来源、所选主题和必要偏离的《报告设计简报》。
+6. 用户针对当前简报回复“确认”后，才开始制作 HTML。
+7. 完成 Runtime、资产与浏览器 QA 后交付。
 
 ## TaoHtml 的工作流
 
@@ -222,6 +245,8 @@ TaoHtml 不会立刻写 HTML。标准流程是：
 按入口完成来源理解
   ↓ Word / PDF 用户确认摘要
 补齐设计决策
+  ↓
+视觉参考优先 / 内置主题选择
   ↓
 报告设计简报
   ↓ 用户确认
@@ -239,10 +264,12 @@ HTML 制作 + 模块化 Runtime
 - `process-playbook.md`：完整课件 / 报告生产流程。
 - `design-quality-rubric.md`：100 分高设计评分标准和硬性失败门槛。
 - `layout-pattern-library.md`：12 类高设计版式母型。
+- `visual-systems.md`：四套内置视觉系统的选择、按需加载和 runtime 解耦规则。
 
 ### HTML 模板
 
 - `assets/html-deck-template/index.html`：本地 16:9 HTML 壳，包含阅读/演讲模式、分步动效、整页翻页、页状态保存、全屏、页码和原始页弹窗。
+- `assets/visual-systems/<theme>/`：每套视觉系统的机器可读规则、CSS tokens、可复制页面模板和轻量 SVG 预览。
 
 ### 脚本
 
@@ -251,6 +278,7 @@ HTML 制作 + 模块化 Runtime
 - `check_html_deck.py`：用 Playwright 检查 Runtime 契约、阅读/演讲模式、步级与页级导航、状态恢复、hash 路由、证据弹窗、控制台错误和可见区域边界。
 - `build_contact_sheet.py`：把 QA 截图合成总览图。
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
+- `render_visual_system.py`：把确定性内容注入选中主题，同时保留共享 runtime shell。
 
 ## 开发、验证与版本管理
 
@@ -276,6 +304,7 @@ python -m unittest discover -s tests -v
 python -m py_compile skill/taohtml/scripts/*.py
 python skill/taohtml/scripts/check_assets.py skill/taohtml/assets/html-deck-template/index.html --strict-offline
 python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa
+python evals/taohtml-quality-v1/scripts/build_visual_system_samples.py .artifacts/visual-systems-v1
 python scripts/package_plugin_marketplace.py .artifacts/taohtml-marketplace.zip
 ```
 

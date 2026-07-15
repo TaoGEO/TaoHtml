@@ -1,0 +1,40 @@
+# Built-In Visual Systems
+
+Use this router only after content and chapter structure are clear. Its purpose is to choose a reusable visual grammar without turning intake into an aesthetic interview.
+
+## Reference Precedence
+
+When the user provides a clear reference, use it directly. Extract its composition, hierarchy, image treatment, module language, evidence treatment, and motion grammar; do not force one of the built-in systems or reduce the reference to colors.
+
+When no clear reference exists, recommend 2-3 systems from the table. Show the exact name, description, and bundled preview. Let the user choose once or delegate. Never ask an open-ended taste question. Theme selection shares the existing six-question budget; at the cap, after three no-gain rounds, or under delegation, choose the lowest-risk fit and disclose it in the Report Design Brief.
+
+## Customer-Facing Route Table
+
+| System | Exact description | Best fit | Preview |
+|---|---|---|---|
+| 黑白荧光卡片 | 高反差、模块卡片、大标题，适合路演和强表达 | Pitch, launch, manifesto, decisive sales story | `assets/visual-systems/black-white-fluorescent-cards/preview.svg` |
+| 严谨咨询报告 | 白底、结论式标题、高信息密度、严谨图表 | Strategy, diagnosis, research, evidence-heavy internal decision | `assets/visual-systems/rigorous-consulting-report/preview.svg` |
+| 稳重企业年报 | 稳重配色、图文平衡、品牌化版面、适度留白 | Board update, annual review, corporate narrative, ESG | `assets/visual-systems/corporate-annual-report/preview.svg` |
+| 杂志图文拼贴 | 图片切片、错位排版、大字标题和编辑杂志感 | Brand story, culture, editorial feature, image-led thought leadership | `assets/visual-systems/editorial-collage/preview.svg` |
+
+Customer-facing naming always follows a familiar layout or visual name plus one concrete picture description. Preserve the four names and descriptions exactly.
+
+## Load Only The Selected System
+
+After selection, load only these files from the selected directory:
+
+1. `theme.json` for identity, tokens, canvas, component, evidence, image, motion, and forbidden rules.
+2. `theme.css` for executable tokens and component/layout styling.
+3. `templates.html` for copyable page variants and low-capability-model examples.
+
+Use `preview.svg` only when presenting the choice. Do not load all four manifests or templates into the production context.
+
+## Runtime Isolation
+
+Treat `assets/html-deck-template/index.html` as the runtime shell and the selected system as the presentation layer. Replace content sections and inject theme CSS, but keep runtime controls, navigation, hash routing, reveal state, fullscreen behavior, and offline constraints unchanged. A theme switch must never add a new state machine or require a remote asset.
+
+Use `scripts/render_visual_system.py` when a deterministic starting point helps. It injects selected templates and CSS into the shared shell without changing the runtime script.
+
+## Deviation Rule
+
+Preserve the selected system across composition, hierarchy, image treatment, cards/modules, chart and evidence treatment, and motion. Deviate only when the source material, accessibility, or confirmed brand constraint requires it. Record the exact deviation and reason in the Report Design Brief.
