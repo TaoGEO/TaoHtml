@@ -88,35 +88,96 @@ skill/taohtml
 
 ## 安装与更新
 
-`skill/taohtml` 是唯一的 Skill 源码真源。仓库不维护第二份 `SKILL.md`；正式 Release 的插件 / marketplace 附件由打包脚本从该目录生成。
+`skill/taohtml` 是唯一的 Skill 源码真源。仓库不维护第二份 `SKILL.md`；GitHub marketplace 和正式 Release 的离线附件都引用或从该目录生成。
 
 | 方式 | 是否自动更新 | 更新方法 |
 |---|---|---|
-| 通用 Agent Skill 原始分发 | 否 | 下载最新 GitHub Release 源码包，用新的 `skill/taohtml` 整目录替换本地副本 |
-| Codex 本地 marketplace 附件 | 不承诺 | 替换解压目录后重新执行 `codex plugin add taohtml@taohtml` |
-| Claude 第三方 marketplace 附件 | 默认否 | 执行 `claude plugin marketplace update taohtml` 和 `claude plugin update taohtml@taohtml`；只有用户主动开启该 marketplace 的自动更新后才会自动检查 |
+| Claude GitHub marketplace | 第三方源默认关闭 | 手动执行 marketplace update + plugin update；也可在 Claude Code 的 Marketplaces 界面为 TaoHtml 开启自动更新 |
+| Codex 原始 Skill | 否 | 使用官方 `$HOME/.agents/skills` 路径，备份后整目录替换 |
+| 其他 Agent 原始 Skill | 否 | 按各客户端自己的目录安装；下载新源码后整目录替换 |
+| Release ZIP | 否 | 离线 / 手动备选；替换解压目录并重新安装，不是远程更新渠道 |
 
-### 安装原始 Agent Skill
+### Claude Code：GitHub 远程安装与更新
 
-下载并解压最新 GitHub Release 的源码包，再将 `skill/taohtml` 复制到客户端的 skills 目录。Codex 示例：
+合并到 GitHub 默认分支后，直接添加仓库 marketplace 并安装插件：
+
+```bash
+claude plugin marketplace add TaoGEO/TaoHtml
+claude plugin install taohtml@taohtml
+```
+
+手动更新：
+
+```bash
+claude plugin marketplace update taohtml
+claude plugin update taohtml@taohtml
+```
+
+TaoHtml 的 Claude 插件不固定 `version` 字段，Git 托管 marketplace 会用提交 SHA 判断是否有新版本。第三方 marketplace 的自动更新默认关闭；如需自动检查，在 `/plugin` 的 **Marketplaces** 页选择 TaoHtml 并启用 auto-update。更新写入磁盘后执行 `/reload-plugins`，或在下次启动时加载。
+
+### Codex：当前远程更新边界
+
+Codex 官方支持 Git marketplace 的 `marketplace upgrade`，刷新后仍需重新执行 `plugin add` 才能更新已安装插件，并不提供自动更新承诺。但 TaoHtml 当前不发布 Codex GitHub marketplace：Codex 的当前插件 validator 要求插件使用实际的 `skills/` 组件目录，而本仓库的唯一真源固定在 `skill/taohtml`。在不复制 Skill、不使用 symlink、也不进行重大目录迁移的前提下，无法同时满足这一布局。
+
+因此 Codex 请使用下方的官方原始 Skill 路径；Release ZIP 只保留为本地 marketplace 的离线 / 手动备选。不要把 Claude 的 `TaoGEO/TaoHtml` marketplace 命令用于 Codex。
+
+### 原始 Skill：首次安装
+
+下载并解压源码后，将 `skill/taohtml` 安装到对应客户端。Codex 官方用户级 Skill 目录是 `$HOME/.agents/skills`；下面的命令会在目标已存在时停止，避免生成 `taohtml/taohtml`。
 
 Windows PowerShell:
 
 ```powershell
-Copy-Item -Recurse -Force .\skill\taohtml $env:USERPROFILE\.codex\skills\taohtml
+$source = (Resolve-Path ".\skill\taohtml").Path
+$target = Join-Path $HOME ".agents\skills\taohtml"
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+if (Test-Path -LiteralPath $target) { throw "Target already exists: $target. Use the update command instead." }
+Copy-Item -Recurse -LiteralPath $source -Destination $target
 ```
 
 macOS / Linux:
 
 ```bash
-cp -R ./skill/taohtml ~/.codex/skills/taohtml
+source="$PWD/skill/taohtml"
+target="$HOME/.agents/skills/taohtml"
+mkdir -p "$(dirname "$target")"
+test ! -e "$target" || { echo "Target already exists: $target. Use the update command instead." >&2; exit 1; }
+cp -R "$source" "$target"
 ```
 
-更新时不要只覆盖单个文件；备份需要保留的本地修改后，用新版 `taohtml` 整目录替换旧目录。然后重启客户端或新开一个任务，让 Skill 列表刷新。
+`~/.codex/skills` 只作为旧版 / 兼容路径说明：如果你的既有 Codex 安装仍从这里读取 Skill，可以把上述 `$target` 改为 `$HOME/.codex/skills/taohtml`，但它不是当前官方默认路径。其他 Agent 的安装目录和调用语法可能不同，不要假设它们共用 Codex 的目录。
 
-### 安装 Codex / Claude 插件附件
+### 原始 Skill：更新
 
-正式 Release 将提供 `taohtml-marketplace-vX.Y.Z.zip`。把它解压到一个不随更新变化的本地目录，然后选择对应客户端：
+先备份需要保留的本地修改。下面的命令把整个旧目录移动成带时间戳的备份，再复制新目录；新版已删除的旧文件不会残留，也不会产生嵌套目录。
+
+Windows PowerShell:
+
+```powershell
+$source = (Resolve-Path ".\skill\taohtml").Path
+$target = Join-Path $HOME ".agents\skills\taohtml"
+$backup = "$target.backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+if (Test-Path -LiteralPath $target) { Move-Item -LiteralPath $target -Destination $backup }
+Copy-Item -Recurse -LiteralPath $source -Destination $target
+```
+
+macOS / Linux:
+
+```bash
+source="$PWD/skill/taohtml"
+target="$HOME/.agents/skills/taohtml"
+backup="${target}.backup-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$(dirname "$target")"
+if [ -e "$target" ]; then mv "$target" "$backup"; fi
+cp -R "$source" "$target"
+```
+
+完成后重启客户端或新开任务，让 Skill 列表刷新。
+
+### Release ZIP：离线 / 手动备选
+
+正式 Release 可提供 `taohtml-marketplace-vX.Y.Z.zip`，用于无法直接访问 GitHub marketplace 的环境。把它解压到固定本地目录后安装：
 
 Codex：
 
@@ -132,7 +193,7 @@ claude plugin marketplace add /absolute/path/to/taohtml-marketplace
 claude plugin install taohtml@taohtml
 ```
 
-更新时把新 Release 附件解压并替换同一目录，再执行上表的更新命令。Codex 更新后新开一个任务；Claude Code 更新后执行 `/reload-plugins` 或重启。详见 [Codex 插件文档](https://developers.openai.com/codex/plugins/) 与 [Claude Code marketplace 文档](https://code.claude.com/docs/en/discover-plugins)。
+ZIP 不会接收 GitHub 推送，也不是自动更新渠道。更新时先备份本地修改，完整替换旧的解压目录，再重新执行安装命令。详见 [Codex 插件文档](https://developers.openai.com/codex/plugins/) 与 [Claude Code marketplace 文档](https://code.claude.com/docs/en/discover-plugins)。
 
 ## 快速使用
 

@@ -14,6 +14,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_SOURCE = ROOT / "skill" / "taohtml"
+CLAUDE_MANIFEST_SOURCE = ROOT / ".claude-plugin" / "plugin.json"
 BUNDLE_NAME = "taohtml-marketplace"
 PLUGIN_NAME = "taohtml"
 MARKETPLACE_NAME = "taohtml"
@@ -31,6 +32,10 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     )
 
 
+def read_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def build_bundle(bundle_root: Path, version: str) -> Path:
     plugin_root = bundle_root / "plugins" / PLUGIN_NAME
     skill_target = plugin_root / "skills" / PLUGIN_NAME
@@ -41,22 +46,11 @@ def build_bundle(bundle_root: Path, version: str) -> Path:
     )
     shutil.copy2(ROOT / "LICENSE", plugin_root / "LICENSE")
 
-    shared_manifest = {
-        "name": PLUGIN_NAME,
-        "version": version,
-        "description": DESCRIPTION,
-        "author": {
-            "name": "Tao",
-            "url": "https://github.com/TaoGEO",
-        },
-        "homepage": "https://github.com/TaoGEO/TaoHtml#readme",
-        "repository": "https://github.com/TaoGEO/TaoHtml",
-        "license": "MIT",
-        "keywords": ["html", "reports", "presentations", "agent-skills"],
-        "skills": "./skills/",
-    }
+    claude_manifest = read_json(CLAUDE_MANIFEST_SOURCE)
+    claude_manifest["skills"] = "./skills/"
+    claude_manifest["version"] = version
     codex_manifest = {
-        **shared_manifest,
+        **claude_manifest,
         "interface": {
             "displayName": "TaoHtml",
             "shortDescription": "Turn source material into polished offline HTML",
@@ -70,7 +64,7 @@ def build_bundle(bundle_root: Path, version: str) -> Path:
         },
     }
     write_json(plugin_root / ".codex-plugin" / "plugin.json", codex_manifest)
-    write_json(plugin_root / ".claude-plugin" / "plugin.json", shared_manifest)
+    write_json(plugin_root / ".claude-plugin" / "plugin.json", claude_manifest)
 
     write_json(
         bundle_root / ".agents" / "plugins" / "marketplace.json",

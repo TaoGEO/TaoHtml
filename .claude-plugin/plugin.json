@@ -1,0 +1,18 @@
+{
+  "name": "taohtml",
+  "description": "Turn ideas and source material into confirmed design briefs and polished offline HTML reports.",
+  "author": {
+    "name": "Tao",
+    "url": "https://github.com/TaoGEO"
+  },
+  "homepage": "https://github.com/TaoGEO/TaoHtml#readme",
+  "repository": "https://github.com/TaoGEO/TaoHtml",
+  "license": "MIT",
+  "keywords": [
+    "html",
+    "reports",
+    "presentations",
+    "agent-skills"
+  ],
+  "skills": "./skill/"
+}
