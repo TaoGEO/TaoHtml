@@ -177,7 +177,7 @@ cp -R "$source" "$target"
 
 ### Release ZIP：离线 / 手动备选
 
-正式 Release 可提供 `taohtml-marketplace-vX.Y.Z.zip`，用于无法直接访问 GitHub marketplace 的环境。把它解压到固定本地目录后安装：
+正式 Release 提供 `taohtml-marketplace-v0.2.0.zip`，用于无法直接访问 GitHub marketplace 的环境。ZIP 内的 Codex 与 Claude 插件 manifest 均固定为 `0.2.0`；把它解压到固定本地目录后安装：
 
 Codex：
 
@@ -256,7 +256,13 @@ HTML 制作 + 模块化 Runtime
 
 项目版本记录在根目录 `VERSION`，遵循 Semantic Versioning；正式发布使用 `vMAJOR.MINOR.PATCH` tag。功能和修复在独立分支完成，通过自动化质量检查并合并到 `main` 后再创建 tag 和 GitHub Release。
 
-当前版本：`0.1.0`
+当前版本：[`0.2.0`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.2.0)
+
+### v0.2.0 发布重点
+
+- 打通 Word / PDF 材料理解、设计简报确认、HTML 制作与离线交付的首个完整纵向切片。
+- 补齐阅读 / 演讲双模式、逐步呈现、整页导航、状态恢复、全屏和页码等 Runtime 契约。
+- 将严格离线资产检查、三档目标视口浏览器 QA、单一 Skill 真源打包和 Claude GitHub marketplace 更新纳入正式发布链路。
 
 本地验证：
 
