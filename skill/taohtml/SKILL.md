@@ -34,9 +34,9 @@ Follow this route-aware sequence without skipping confirmation gates:
 
 1. Identify the route, use mode, and length. When more than one is missing, compress these startup choices into one short interaction; skip known choices.
 2. For Word/PDF, read `references/material-understanding.md`, inspect the source, show a Material Understanding Summary, and wait for confirmation or correction. For an idea-only input, do not invent a source-summary gate.
-3. Read `references/intake-workflow.md`. Resolve only the current largest missing decision that would change the report design. Stop according to its readiness, repetition, information-gain, risk, and question-budget rules.
+3. Read `references/intake-workflow.md`. Resolve only the current largest missing decision that would change the report design. For an external conversion goal, distinguish the desired action from its verified real action path; do not impose this requirement on non-conversion reports. Stop according to the reference's readiness, repetition, information-gain, risk, and question-budget rules.
 4. When several report structures are genuinely reasonable, present 2-3 chapter-level options and let the user choose or delegate. Do not ask about structure when one option clearly follows from the confirmed goal and evidence.
-5. After the applicable source gate passes and no high-risk gap remains, read `references/design-brief-template.md` and produce one adaptive Report Design Brief. Put every safe inference in its confirmation section.
+5. After the applicable source gate passes and no high-risk gap remains, read `references/design-brief-template.md` and produce one adaptive Report Design Brief. For a conversion goal, record the desired action, exact verified path, provenance and verification status, and final display method. Put every safe inference in its confirmation section.
 6. Wait for explicit confirmation of the current brief. This confirmation does not count toward the clarification-question budget. A previous "agree", "continue", or request to use TaoHtml is not production authorization.
 7. After confirmation, read `references/process-playbook.md` and produce the HTML directly. Do not insert a separate full prose manuscript step. Follow its **first runnable artifact** cadence: lock a concise page plan, save a complete runnable `index.html`, then refine and QA in bounded passes.
 8. Implement only the runtime capabilities documented in `references/runtime-contract.md` unless the user separately authorizes new runtime engineering.
@@ -89,7 +89,7 @@ The standard template supports paged reading and single-screen presentation. It 
 
 Before delivery:
 
-- Build a brief-to-output traceability ledger and verify every confirmed core viewpoint, correction, evidence gap, and decision boundary against a visible output location. Check every conjunct in compound requirements; a source screenshot may support a point but must not silently replace it in the designed narrative.
+- Build a brief-to-output traceability ledger and verify every confirmed core viewpoint, correction, evidence gap, and decision boundary against a visible output location. For conversion reports, also verify that the real action path is visible, usable, aligned with the desired action, and consistent with its recorded source and verification status. Check every conjunct in compound requirements; a source screenshot may support a point but must not silently replace it in the designed narrative.
 - Check all local and remote asset references.
 - Exercise reading and presentation modes, step navigation, whole-page navigation, return-state preservation, and hash routes.
 - Check console errors and visible bounds at the target viewport.
