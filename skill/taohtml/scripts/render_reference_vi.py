@@ -39,7 +39,7 @@ TOP_LEVEL_KEYS = {
     "guardrails",
 }
 SECTION_LIMITS = {
-    "palette": (3, 6),
+    "palette": (1, 6),
     "typography": (2, 4),
     "layout": (2, 4),
     "components": (2, 4),
@@ -76,10 +76,44 @@ FIELD_LENGTHS = {
     "status": 12,
 }
 HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+UNKNOWN_COLOR_VALUE = "unknown"
 FORBIDDEN_ANALYSIS = re.compile(
-    r"\b(?:motion|motions|animation|animations|animated|transition|transitions)\b|动效|动画|转场",
+    r"(?:连续状态|逐步变化|关键帧|时间线|时序|缓动|动态|动效|动画|转场|运动)"
+    r"|\b(?:motions?|movements?|animat(?:e|es|ed|ing|ion|ions)|transitions?|timelines?|"
+    r"timing|sequences?|sequential(?:ly)?|easing|keyframes?|morph(?:s|ed|ing)?)\b",
     re.IGNORECASE,
 )
+NEGATION_BEFORE = re.compile(
+    r"(?:未见|未展示|未出现|不含|不包含|不涉及|不支持|不分析|不检查|不推断|不输出|"
+    r"不判断|无法判断|不能判断|不可判断)"
+    r"|(?:不|未|禁止|不得|不要|不可|无需)(?:从|由|基于|在|把)?"
+    r"[^，,。；;！？!?\n]{0,24}(?:推断|分析|检查|输出|判断|展示|出现|包含|涉及|支持|"
+    r"建立|定义|写入|加入|描述|写成|作为|使用|采用)"
+    r"|\b(?:unsupported|not supported|absent|not inferred|cannot infer)\b"
+    r"|\b(?:cannot|can't|do not|don't|must not|should not|never)\b"
+    r"[^,.;!?\n]{0,32}\b(?:infer|analy[sz]e|inspect|check|output|establish|define|observe|"
+    r"determine|support|include|describe|write|use|apply|add)\b",
+    re.IGNORECASE,
+)
+DIRECT_NEGATION_BEFORE = re.compile(
+    r"(?:没有|无|非)|\b(?:no|not|without)\b", re.IGNORECASE
+)
+NEGATED_LIST_FILLER = re.compile(
+    r"(?:任何|明确的|可识别的|可判断的|可推断的|可确认的|规则|语法|描述|信息|证据|"
+    r"分析|推断|状态|行为|内容|设计|线索|的|、|，|,|/|和|与|或|及|以及)"
+    r"|\b(?:any|a|an|or|and|nor|rules?|cues?|descriptions?|inferences?|analysis|"
+    r"information|evidence|behaviou?r|states?|design)\b|[\s:/-]+",
+    re.IGNORECASE,
+)
+NEGATION_AFTER = re.compile(
+    r"^(?:(?:规则|语法|信息|行为|线索|设计|状态)?(?:在参考(?:图|中)?|由单帧)?)?"
+    r"(?:未展示|未出现|无法判断|不能判断|不可判断|未知|不支持|不分析|不推断|不输出)"
+    r"|^(?:\s+(?:rules?|cues?|behaviou?r|states?|design))?\s*"
+    r"(?:is|are|was|were)?\s*(?:not shown|cannot be inferred|can not be inferred|"
+    r"is unknown|are unknown|is unsupported|are unsupported)\b",
+    re.IGNORECASE,
+)
+STRONG_CLAUSE_BREAK = re.compile(r"[。；;！？!?\n]")
 RASTER_MIME_TYPES = {
     ".png": ("PNG", "image/png"),
     ".jpg": ("JPEG", "image/jpeg"),
@@ -114,11 +148,40 @@ def _require_text(value: object, field: str, path: str) -> str:
     limit = FIELD_LENGTHS.get(field, 88)
     if len(text) > limit:
         raise ValueError(f"{path}.{field} exceeds {limit} characters.")
-    if FORBIDDEN_ANALYSIS.search(text):
+    if _contains_dynamic_rule(text):
         raise ValueError(
             f"{path}.{field} contains unsupported dynamic-analysis wording for a single static reference."
         )
     return text
+
+
+def _contains_dynamic_rule(text: str) -> bool:
+    """Return whether text asserts a dynamic rule instead of denying that inference."""
+    for match in FORBIDDEN_ANALYSIS.finditer(text):
+        before = text[: match.start()]
+        after = text[match.end() :]
+        clause_start = max(
+            (separator.end() for separator in STRONG_CLAUSE_BREAK.finditer(before)),
+            default=0,
+        )
+        clause_prefix = before[clause_start:]
+        negated = False
+        for pattern in (NEGATION_BEFORE, DIRECT_NEGATION_BEFORE):
+            negations = list(pattern.finditer(clause_prefix))
+            if not negations:
+                continue
+            governed_text = clause_prefix[negations[-1].end() :]
+            simplified = FORBIDDEN_ANALYSIS.sub(" ", governed_text)
+            simplified = NEGATED_LIST_FILLER.sub(" ", simplified)
+            if len(governed_text) <= 64 and not simplified.strip():
+                negated = True
+                break
+        if negated:
+            continue
+        if NEGATION_AFTER.search(after[:64]):
+            continue
+        return True
+    return False
 
 
 def _validate_item(section: str, raw: object, index: int) -> dict[str, str]:
@@ -131,8 +194,18 @@ def _validate_item(section: str, raw: object, index: int) -> dict[str, str]:
         raise ValueError(
             f"{path}.status must be one of: {', '.join(sorted(STATUSES))}."
         )
-    if section == "palette" and not HEX_COLOR.fullmatch(normalized["value"]):
-        raise ValueError(f"{path}.value must be a six-digit hex color such as #112233.")
+    if section == "palette":
+        if normalized["status"] == "unknown":
+            if normalized["value"] != UNKNOWN_COLOR_VALUE:
+                raise ValueError(
+                    f"{path}.value must be '{UNKNOWN_COLOR_VALUE}' when the color is unknown; "
+                    "a real hex value would fabricate a color fact."
+                )
+        elif not HEX_COLOR.fullmatch(normalized["value"]):
+            raise ValueError(
+                f"{path}.value must be a six-digit hex color such as #112233 "
+                "when status is observed or extension."
+            )
     if section == "mini_pages" and normalized["kind"] not in {"cover", "content", "data"}:
         raise ValueError(f"{path}.kind must be cover, content, or data.")
     if section == "guardrails" and normalized["mode"] not in {"preserve", "avoid"}:
@@ -188,8 +261,6 @@ def validate_contract(raw: object) -> dict[str, Any]:
     if statuses != STATUSES:
         missing = ", ".join(sorted(STATUSES - statuses))
         raise ValueError(f"The contract must expose all three boundary statuses; missing: {missing}.")
-    if not any(item["status"] != "unknown" for item in normalized["palette"]):
-        raise ValueError("palette needs at least one observed or extension color for the board samples.")
     return normalized
 
 
@@ -279,14 +350,28 @@ def _info_item(item: dict[str, str], heading: str, value: str) -> str:
 
 
 def _render_palette(items: Iterable[dict[str, str]]) -> str:
-    return "".join(
-        '<article class="swatch">'
-        f'<div class="swatch-color" style="background:{_e(item["value"])}"></div>'
-        f'<div><h3>{_e(item["name"])}</h3><code>{_e(item["value"].upper())}</code>'
-        f'<p>{_e(item["role"])}</p>{_status(item)}{_basis(item)}</div>'
-        "</article>"
-        for item in items
-    )
+    swatches: list[str] = []
+    for item in items:
+        if item["status"] == "unknown":
+            color_sample = (
+                '<div class="swatch-color swatch-color-unknown" '
+                'aria-label="参考中无法判断颜色"></div>'
+            )
+            value_label = "未识别色值"
+            article_class = "swatch swatch-unknown"
+        else:
+            color_sample = (
+                f'<div class="swatch-color" style="background:{_e(item["value"])}"></div>'
+            )
+            value_label = item["value"].upper()
+            article_class = "swatch"
+        swatches.append(
+            f'<article class="{article_class}">{color_sample}'
+            f'<div><h3>{_e(item["name"])}</h3><code>{_e(value_label)}</code>'
+            f'<p>{_e(item["role"])}</p>{_status(item)}{_basis(item)}</div>'
+            "</article>"
+        )
+    return "".join(swatches)
 
 
 def _render_typography(items: Iterable[dict[str, str]]) -> str:
@@ -381,8 +466,15 @@ def render_html(contract: dict[str, Any], source_uri: str) -> str:
         for item in contract["palette"]
         if item["status"] != "unknown"
     ]
-    defaults = ["#151719", "#f5c84c", "#cf4f3f", "#f7f4ec"]
-    colors = (colors + defaults)[:4]
+    if colors:
+        colors = [colors[index % len(colors)] for index in range(4)]
+    else:
+        colors = [
+            "var(--board-ink)",
+            "var(--unknown-soft)",
+            "var(--unknown)",
+            "var(--board-paper)",
+        ]
     board_style = ";".join(
         f"--sample-{index}:{color}" for index, color in enumerate(colors, start=1)
     )

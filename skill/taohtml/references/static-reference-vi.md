@@ -6,7 +6,7 @@ Read this reference only when the customer chooses “use my reference” and su
 
 Analyze only visual properties visible in the supplied still image. Do not inspect, infer, or write rules for movement, animation, transitions, timing, or sequential states. A still image cannot establish those facts.
 
-Do not run this route on video, dynamic HTML, a state sequence, or multiple screenshots presented as successive states. Those inputs require a future dynamic-reference workflow. Ask the customer for one representative still image or stop at the unsupported-input boundary; do not silently reduce dynamic material to this contract.
+Route here only for exactly one still image. A clear reference supplied as a PPT, webpage, dynamic HTML, video, multiple images, or a screenshot/state sequence is an unsupported reference input in v1, not “no clear reference.” State the boundary and ask the customer to provide one representative static screenshot. Do not infer movement from the source, silently reduce it to this contract, or route it to the four built-in systems unless the customer explicitly abandons the reference route.
 
 The model performs visual understanding. This reference defines the extraction dimensions, evidence boundary, confirmation gate, and handoff contract. `scripts/render_reference_vi.py` only validates structured data, embeds the verified local reference, renders the fixed HTML/CSS board, and exports PNG.
 
@@ -42,7 +42,7 @@ For every item, write a concise `basis`. Point `observed` items to the visible r
 Create one board that includes all of these dimensions. A dimension not shown by the reference still appears as an `unknown` item so the omission is visible rather than silently fabricated.
 
 1. Reference thumbnail and a plain-language scope label.
-2. Palette with exact hex values sampled or carefully estimated from the visible image.
+2. Palette with only the exact hex values that can be sampled or carefully estimated from the visible image. One or two supported colors are sufficient; never invent a third color to fill the board.
 3. Typography hierarchy with level, visible sample, size/weight/line-height description, and boundary status.
 4. Grid, whitespace, outer margin, column, alignment, and spacing rhythm.
 5. Cards, panels, labels, borders, rules, corners, shadows, and other visible component language.
@@ -100,7 +100,9 @@ Use UTF-8 JSON with these exact top-level keys:
 }
 ```
 
-Every list must be non-empty. `mini_pages` must contain exactly one each of `cover`, `content`, and `data`. `guardrails` must contain at least one `preserve` and one `avoid`. Across the whole contract, all three boundary statuses must appear at least once. Use an `unknown` item for a missing category instead of omitting the category. For `evidence_language`, set `sample` to `bar`, `line`, `table`, `metric`, or `citation` only when that language is directly observed; an `unknown` item must use `none`, which renders an explicit “参考中未出现” state instead of a fabricated chart.
+Every list must be non-empty. `palette` accepts one to six items, so one or two supported colors are valid. A palette item with `observed` or `extension` status must carry a six-digit hex value. An `unknown` palette item must use the literal value `unknown`; the renderer shows a neutral hatched placeholder and “未识别色值”, never a real color swatch. Do not add an unknown palette item when the supported colors already express the category clearly.
+
+`mini_pages` must contain exactly one each of `cover`, `content`, and `data`. `guardrails` must contain at least one `preserve` and one `avoid`. Across the whole contract, all three boundary statuses must appear at least once. Use an `unknown` item for a missing category instead of omitting the category. For `evidence_language`, set `sample` to `bar`, `line`, `table`, `metric`, or `citation` only when that language is directly observed; an `unknown` item must use `none`, which renders an explicit “参考中未出现” state instead of a fabricated chart.
 
 ## Deterministic Render
 
@@ -113,7 +115,7 @@ python scripts/render_reference_vi.py \
   --output /absolute/path/to/reference-vi-board
 ```
 
-The command creates `reference-vi-board.html` and a 3200×2400 `reference-vi-board.png` beside it. It accepts readable PNG, JPEG, WebP, or safe offline SVG input, embeds that image as a `data:` URI, and fails closed on invalid contracts, active SVG content, remote SVG references, or unsupported dynamic-analysis wording.
+The command creates `reference-vi-board.html` and a 3200×2400 `reference-vi-board.png` beside it. It accepts readable PNG, JPEG, WebP, or safe offline SVG input, embeds that image as a `data:` URI, and fails closed on invalid contracts, active SVG content, remote SVG references, fabricated unknown color values, or unsupported dynamic/time-sequence wording. Boundary statements such as “静态” or “无动态” remain valid; positive rules about movement, timing, sequences, easing, keyframes, or morphing do not.
 
 Run `check_assets.py --strict-offline` on the rendered HTML. Open the HTML in a real browser, verify the status labels and all sections, and inspect the PNG at original resolution for Chinese text, hex values, type hierarchy, component samples, and the three mini pages.
 

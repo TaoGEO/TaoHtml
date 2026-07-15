@@ -19,10 +19,10 @@
       --extension-soft: #f7e5d5;
       --unknown: #58616a;
       --unknown-soft: #e5e8eb;
-      --sample-1: #151719;
-      --sample-2: #f5c84c;
-      --sample-3: #cf4f3f;
-      --sample-4: #f7f4ec;
+      --sample-1: var(--board-ink);
+      --sample-2: var(--unknown-soft);
+      --sample-3: var(--unknown);
+      --sample-4: var(--board-paper);
     }
 
     * { box-sizing: border-box; }
@@ -84,9 +84,17 @@
     .reference-caption p { margin: 0; color: var(--board-muted); font-size: 20px; line-height: 1.4; }
 
     .palette-panel { grid-column: span 4; }
-    .palette-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .palette-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(30%, 1fr)); gap: 8px; }
     .swatch { min-width: 0; display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: stretch; padding: 8px; border: 1px solid var(--board-line); background: #fff; }
     .swatch-color { width: 58px; min-height: 72px; border: 1px solid #0003; }
+    .swatch-color-unknown {
+      display: grid;
+      place-items: center;
+      border: 2px dashed var(--unknown);
+      background: repeating-linear-gradient(135deg, #fff 0 8px, var(--unknown-soft) 8px 16px);
+    }
+    .swatch-color-unknown::after { content: "?"; color: var(--unknown); font-size: 30px; font-weight: 900; }
+    .swatch-unknown code { color: var(--unknown); font-family: inherit; }
     .swatch h3 { margin: 0 0 5px; font-size: 19px; }
     .swatch code { display: block; margin-bottom: 6px; font: 800 17px/1.1 "SFMono-Regular", Consolas, monospace; }
     .swatch p { margin: 0 0 7px; color: var(--board-muted); font-size: 15px; line-height: 1.2; }
