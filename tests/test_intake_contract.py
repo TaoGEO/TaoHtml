@@ -28,10 +28,61 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("not a four-question form", INTAKE)
 
     def test_six_is_a_hard_cap_but_brief_confirmation_is_separate(self) -> None:
-        self.assertIn("Enforce **6 clarification questions** as a hard maximum", INTAKE)
+        self.assertIn(
+            "Enforce **6 clarification questions** as a hard maximum, including for the most complex idea-only intake",
+            INTAKE,
+        )
         self.assertIn("Do not ask a seventh", INTAKE)
         self.assertIn("does not count toward this budget", INTAKE)
         self.assertIn("start a new intake cycle with fresh counters", INTAKE)
+
+    def test_known_route_mode_audience_goal_length_and_action_path_are_not_reasked(
+        self,
+    ) -> None:
+        self.assertIn(
+            "Treat a stated route, use mode, audience, desired outcome, content length, real action path, or hard presentation duration as `known`",
+            INTAKE,
+        )
+        self.assertIn("do not ask for or confirm the same information again", INTAKE)
+
+    def test_known_presentation_mode_is_not_reasked(self) -> None:
+        self.assertIn(
+            "If presentation mode is already known, do not ask the user to select the use mode again",
+            INTAKE,
+        )
+
+    def test_missing_length_offers_three_levels_and_dynamic_page_estimate(self) -> None:
+        self.assertIn(
+            "ask one question that offers **concise / standard / detailed**",
+            INTAKE,
+        )
+        self.assertIn(
+            "Estimate the page count dynamically from the actual material",
+            INTAKE,
+        )
+        self.assertIn(
+            "Never assign or present a fixed page range by length label alone",
+            INTAKE,
+        )
+        self.assertIn("do not infer a default length without explicit delegation", INTAKE)
+        self.assertNotRegex(INTAKE, r"\b\d+\s*[-–]\s*\d+\s+pages\b")
+
+    def test_presentation_duration_is_not_a_default_startup_condition(self) -> None:
+        self.assertIn(
+            "Presentation duration is an optional delivery constraint, not a startup choice or a design-ready prerequisite",
+            INTAKE,
+        )
+        self.assertIn("do not ask for a duration by default", INTAKE)
+        self.assertIn("do not block progress when no duration was given", INTAKE)
+
+    def test_user_provided_hard_duration_is_used_without_reasking(self) -> None:
+        self.assertIn("If the user provides a hard duration", INTAKE)
+        self.assertIn("use it to constrain scope, pacing, and content density", INTAKE)
+        self.assertIn(
+            "do not ask the user to repeat or confirm that duration",
+            INTAKE,
+        )
+        self.assertIn("A hard duration does not replace the content-length choice", INTAKE)
 
     def test_same_gap_is_asked_at_most_twice(self) -> None:
         self.assertIn("same key gap at most **twice**", INTAKE)
@@ -96,10 +147,20 @@ class IntakeContractTests(unittest.TestCase):
             "visible, usable, and aligned with the confirmed objective", PLAYBOOK
         )
 
-    def test_skill_keeps_compact_startup_and_has_no_dbs_dependency(self) -> None:
-        self.assertIn("compress these startup choices into one short interaction", SKILL)
-        self.assertIn("the compact startup choice is the explicit exception", SKILL)
+    def test_skill_asks_one_design_decision_per_round_and_has_no_dbs_dependency(
+        self,
+    ) -> None:
+        self.assertIn("Identify the route, use mode, and content length one decision at a time", SKILL)
+        self.assertIn("Ask one decision question per round", SKILL)
+        self.assertIn("Do not bundle independent startup choices", SKILL)
+        self.assertNotIn("compact startup", (SKILL + INTAKE).lower())
+        self.assertNotIn("bundled startup", (SKILL + INTAKE).lower())
         self.assertNotIn("DBS", SKILL + INTAKE + BRIEF)
+
+    def test_design_ready_state_stops_questions_before_the_cap(self) -> None:
+        self.assertIn("Stop immediately when the design-ready gate passes", INTAKE)
+        self.assertIn("never continue asking to approach a target or maximum", INTAKE)
+        self.assertIn("Stop asking as soon as these conditions are met", INTAKE)
 
 
 if __name__ == "__main__":

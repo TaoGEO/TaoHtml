@@ -8,7 +8,7 @@ Move through these states in order:
 
 | State | Result | Exit condition |
 |---|---|---|
-| S0 Startup | Idea, Word/PDF, or PPT/HTML plus reading/presentation and concise/standard/detailed are selected | Choices are known or safely inferred |
+| S0 Startup | Idea, Word/PDF, or PPT/HTML plus reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
 | S2 Design completion | Only outcome-changing gaps are resolved | The project passes the design-ready gate, or intake stops as blocked |
 | S3 Design brief | One customer-readable brief is shown | The user explicitly confirms the current brief |
@@ -36,7 +36,7 @@ known | confirmed | inferred | missing
 - **inferred**: a low-risk decision TaoHtml can make from context or user delegation; record its basis and expose it in the brief.
 - **missing**: not yet known and not safe to infer.
 
-Rebuild the ledger after reading each source and update it after every answer. Move information instead of copying it across buckets. Do not ask about `known`, `confirmed`, or safely `inferred` items.
+Rebuild the ledger after reading each source and update it after every answer. Move information instead of copying it across buckets. Treat a stated route, use mode, audience, desired outcome, content length, real action path, or hard presentation duration as `known`; do not ask for or confirm the same information again. Do not ask about any other `known`, `confirmed`, or safely `inferred` item.
 
 ## Desired Action And Real Action Path
 
@@ -59,7 +59,7 @@ Never invent a URL, QR code, contact detail, price, command, or product entry. I
 
 When a conversion objective lacks a real action path, ask one minimal decision question at the point where it is the largest outcome-changing gap: request the exact channel, request authorization to locate and verify one, or offer to explicitly downgrade the goal so the report no longer promises direct action. This prompt counts toward the same six-question limit; it is not a fixed questionnaire item. A downgrade is valid only when the user clearly accepts the changed goal.
 
-## Compact Startup
+## Startup Decisions
 
 Preserve the three product choices:
 
@@ -67,7 +67,11 @@ Preserve the three product choices:
 - **Use mode**: reading, where each page stands alone and content is visible by default; or presentation, where tighter copy follows a spoken staged sequence.
 - **Length**: concise, standard, or detailed.
 
-Skip every choice already made. When two or three remain missing, ask for them in one compact startup interaction instead of spreading setup across several rounds. This bundled startup prompt counts as one clarification question. Estimate pages from the actual content; never assign a fixed page range by length label alone.
+Resolve at most one missing startup choice per round and skip every choice already made. If presentation mode is already known, do not ask the user to select the use mode again. Do not bundle route, use mode, and length into one prompt. For an idea-only input, the route is already known. When route and use mode are known but content length is missing, ask one question that offers **concise / standard / detailed**; do not infer a default length without explicit delegation, and do not replace these choices with duration or page-count options.
+
+Estimate the page count dynamically from the actual material after the content length is selected, and record that estimate in the design brief. Never assign or present a fixed page range by length label alone.
+
+Presentation duration is an optional delivery constraint, not a startup choice or a design-ready prerequisite. In presentation mode, do not ask for a duration by default and do not block progress when no duration was given. If the user provides a hard duration, record it as `known`, use it to constrain scope, pacing, and content density, and do not ask the user to repeat or confirm that duration. A hard duration does not replace the content-length choice.
 
 ## Idea-Only Judgment Layer
 
@@ -85,10 +89,10 @@ Treat this as a judgment layer, not a four-question form. Visual style, motion d
 Before asking, re-read the conversation, available source, ledger, prior attempts, and counters. Then:
 
 1. Remove gaps whose answers are already present or can be safely inferred.
-2. Rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
-3. Ask only the largest current gap.
+2. Resolve any missing startup choice according to `Startup Decisions`; after startup, rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
+3. Ask only the largest current gap whose answer would change the report design.
 
-Ask one decision question per round. Combine closely related details only when they jointly decide one outcome; do not pack independent questionnaire fields together. Offer 2-3 options only when they are real alternatives and state their design impact briefly.
+Ask exactly one decision question per round. Do not pack independent questionnaire fields together. Offer 2-3 options only when they are real alternatives and state their design impact briefly.
 
 Treat "decide for me", "not important", or equivalent wording as delegation: choose a reasonable low-risk default, move it to `inferred`, and do not ask again.
 
@@ -96,16 +100,16 @@ For a missing conversion action path, delegation authorizes TaoHtml to locate an
 
 ## Question Budget And Stop Rules
 
-Count agent-initiated clarification prompts within the current intake cycle. Count the bundled startup prompt as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
+Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
 
 - Allow **0 clarification questions** when the input already passes the source and design-ready gates.
 - Treat **3-5 clarification questions** as the ordinary target, not a quota.
-- Enforce **6 clarification questions** as a hard maximum. Do not ask a seventh.
+- Enforce **6 clarification questions** as a hard maximum, including for the most complex idea-only intake. Do not ask a seventh.
 - Ask about the same key gap at most **twice**. On the second attempt, replace the abstract wording with a concrete example or 2-3 real options. After that, infer or block according to risk.
 - Track whether each response produces actionable new information: it resolves or narrows a missing decision, corrects the ledger, supplies evidence, or clearly delegates a decision.
 - Stop questioning immediately after **three consecutive rounds without actionable new information**. Then infer all remaining low-risk gaps and either issue the brief or use the blocked-intake output.
 
-At the hard maximum, apply the same resolution: infer low-risk gaps and stop; never use the budget pressure as permission to invent a high-risk decision.
+Stop immediately when the design-ready gate passes; never continue asking to approach a target or maximum. At the hard maximum, apply the same resolution: infer low-risk gaps and stop; never use the budget pressure as permission to invent a high-risk decision.
 
 If the user initiates a change to the core goal or scope, invalidate any affected brief and start a new intake cycle with fresh counters. Preserve reusable facts in the ledger, but do not count the first question of the new cycle as question seven of the old one. Local wording, color, layout, or motion revisions do not start a new cycle unless they change the report's meaning or scope.
 
@@ -157,7 +161,7 @@ Treat a project as design-ready when:
 - No unresolved conflict can reverse the main conclusion.
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
 - Visual direction is known or safely delegated to TaoHtml.
-- Route, use mode, length, and material delivery constraints are known or safely inferred.
+- Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No high-risk item remains in `missing`.
 
