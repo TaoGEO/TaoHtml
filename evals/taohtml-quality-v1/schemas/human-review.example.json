@@ -1,0 +1,18 @@
+{
+  "status": "complete",
+  "reviewer": "reviewer-id",
+  "reviewed_at": "2026-07-15T11:00:00+08:00",
+  "dimensions": {
+    "story_progression": {"score": 3, "note": ""},
+    "page_role_clarity": {"score": 3, "note": ""},
+    "composition_hierarchy": {"score": 3, "note": ""},
+    "layout_repetition": {"score": 3, "note": ""},
+    "evidence_readability": {"score": 3, "note": ""},
+    "motion_support": {"score": 3, "note": ""},
+    "overall_finish": {"score": 3, "note": ""}
+  },
+  "manual_revision_count": 0,
+  "reference_floor": {"status": "unavailable", "note": "Only idea-live-conversion uses the prior 9-page visual floor."},
+  "notes": "",
+  "failure_samples": []
+}

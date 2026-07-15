@@ -1,0 +1,1 @@
+Please use $taohtml to turn `input/materials/orbit-pilot-review.pdf` into a self-contained English reading report for the steering committee. Preserve the source evidence and do not silently resolve contradictions or invent facts. Put the complete runnable deliverable in `deliverable/`, with `deliverable/index.html` as the entry point.

@@ -1,0 +1,24 @@
+{
+  "id": "20260715-codex-model-scenario-01",
+  "scenario_id": "idea-live-conversion",
+  "client": "Codex",
+  "agent": "Codex default agent",
+  "model": "unavailable",
+  "skill": {
+    "version": "0.2.0",
+    "commit": "c4463b0"
+  },
+  "started_at": "2026-07-15T10:00:00+08:00",
+  "ended_at": "2026-07-15T10:20:00+08:00",
+  "question_count": 0,
+  "token_usage": {
+    "status": "unavailable",
+    "input": null,
+    "output": null,
+    "total": null
+  },
+  "duration": {
+    "status": "unavailable",
+    "seconds": null
+  }
+}

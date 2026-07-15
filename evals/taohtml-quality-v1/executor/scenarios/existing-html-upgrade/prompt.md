@@ -1,0 +1,1 @@
+Please use $taohtml to upgrade `input/materials/legacy-deck.html` into a single-screen live presentation. Keep every visible page word, viewpoint, and page order unchanged; upgrade only the visual system and TaoHtml Runtime. Put the complete runnable deliverable in `deliverable/`, with `deliverable/index.html` as the entry point.
