@@ -13,3 +13,4 @@ outputs/
 *.log
 .artifacts/
 .playwright-cli/
+.venv/

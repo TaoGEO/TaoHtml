@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Browser QA for local HTML decks at 1600x900.
+"""Browser QA for local HTML decks.
 
-Checks routing, staged reveals, source modals, media loading, console errors,
-screenshots, and visible content bounds. Requires Playwright:
+Checks the runtime contract, routing, staged reveals, source modals, media
+loading, console errors, screenshots, and visible content bounds. Requires Playwright:
   python -m pip install playwright
   python -m playwright install chromium
 """
@@ -91,6 +91,167 @@ def main() -> int:
         if slide_count == 0:
             failures.append("No .slide elements found.")
 
+        runtime_methods = [
+            "getState",
+            "setMode",
+            "showPage",
+            "nextStep",
+            "previousStep",
+            "nextPage",
+            "previousPage",
+            "toggleFullscreen",
+        ]
+        runtime_contract = page.evaluate(
+            """methods => {
+              const runtime = window.TaoHtmlRuntime;
+              return {
+                available: Boolean(runtime),
+                missing: runtime ? methods.filter(name => typeof runtime[name] !== 'function') : methods,
+              };
+            }""",
+            runtime_methods,
+        )
+        results["runtime_contract"] = runtime_contract
+        if not runtime_contract["available"] or runtime_contract["missing"]:
+            failures.append(f"Runtime contract is incomplete: {runtime_contract}")
+
+        runtime_behavior: dict[str, object] = {"tested": False}
+        if runtime_contract["available"] and slide_count >= 2:
+            page.goto(f"{url}#1")
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
+            first_fragment_count = page.locator(".slide.active .fragment").count()
+            before = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            if first_fragment_count:
+                page.keyboard.press("ArrowRight")
+            after_step = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.keyboard.press("PageDown")
+            after_page_down = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.keyboard.press("PageUp")
+            after_return = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+            reading_visible = page.evaluate(
+                """() => [...document.querySelectorAll('.slide.active .fragment')]
+                .every(el => getComputedStyle(el).opacity === '1')"""
+            )
+            reading_state = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.evaluate("() => window.TaoHtmlRuntime.showPage(1)")
+            page.keyboard.press("ArrowLeft")
+            reading_after_left = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.evaluate("() => window.TaoHtmlRuntime.showPage(1)")
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
+            presentation_state = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.keyboard.press("ArrowLeft")
+            after_left_at_zero = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+            page.evaluate("() => window.TaoHtmlRuntime.showPage(0)")
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
+            page.keyboard.press("ArrowLeft")
+            after_left_at_first_page = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            control_before = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.locator("#moreToggle").focus()
+            page.keyboard.press("Space")
+            control_after = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            control_menu_open = page.locator("#moreMenu:not([hidden])").count() == 1
+            page.wait_for_timeout(3200)
+            menu_stays_open = page.locator("#moreMenu:not([hidden])").count() == 1
+            page.locator("#fullscreenToggle").click()
+            page.wait_for_function("() => Boolean(document.fullscreenElement)")
+            fullscreen_entered = page.evaluate(
+                """() => ({
+                  menuHidden: document.querySelector('#moreMenu').hidden,
+                  expanded: document.querySelector('#moreToggle').getAttribute('aria-expanded'),
+                  controlsHidden: document.querySelector('#deck').classList.contains('controls-hidden'),
+                })"""
+            )
+            page.wait_for_timeout(3200)
+            fullscreen_idle_hidden = page.locator("#deck.controls-hidden").count() == 1
+            page.mouse.move(args.width // 2, args.height // 2)
+            fullscreen_pointer_revealed = page.locator("#deck:not(.controls-hidden)").count() == 1
+            page.evaluate("() => document.exitFullscreen()")
+            page.wait_for_function("() => !document.fullscreenElement")
+            fullscreen_exited = page.evaluate(
+                """() => ({
+                  menuHidden: document.querySelector('#moreMenu').hidden,
+                  expanded: document.querySelector('#moreToggle').getAttribute('aria-expanded'),
+                })"""
+            )
+            grouped_step = page.evaluate(
+                """() => {
+                  const targetIndex = [...document.querySelectorAll('.slide')]
+                    .findIndex(slide => slide.querySelectorAll('.fragment').length >= 2);
+                  if (targetIndex < 0) return { tested: false };
+                  const runtime = window.TaoHtmlRuntime;
+                  runtime.showPage(targetIndex);
+                  runtime.setMode('reading');
+                  document.querySelectorAll('.slide.active .fragment')
+                    .forEach(el => { el.dataset.taohtmlStep = '1'; });
+                  runtime.setMode('presentation');
+                  runtime.nextStep();
+                  return {
+                    tested: true,
+                    state: runtime.getState(),
+                    total: document.querySelectorAll('.slide.active .fragment').length,
+                    visible: document.querySelectorAll('.slide.active .fragment.visible').length,
+                  };
+                }"""
+            )
+
+            expected_stage = 1 if first_fragment_count else 0
+            runtime_behavior = {
+                "tested": True,
+                "before": before,
+                "after_step": after_step,
+                "after_page_down": after_page_down,
+                "after_return": after_return,
+                "reading_state": reading_state,
+                "reading_visible": reading_visible,
+                "reading_after_left": reading_after_left,
+                "presentation_state": presentation_state,
+                "after_left_at_zero": after_left_at_zero,
+                "after_left_at_first_page": after_left_at_first_page,
+                "control_keyboard": {
+                    "before": control_before,
+                    "after": control_after,
+                    "menu_open": control_menu_open,
+                    "menu_stays_open": menu_stays_open,
+                },
+                "fullscreen": {
+                    "entered": fullscreen_entered,
+                    "idle_hidden": fullscreen_idle_hidden,
+                    "pointer_revealed": fullscreen_pointer_revealed,
+                    "exited": fullscreen_exited,
+                },
+                "grouped_step": grouped_step,
+            }
+            if after_step["stages"][0] != expected_stage:
+                failures.append("ArrowRight did not advance exactly one presentation step.")
+            if after_page_down["index"] != 1:
+                failures.append("PageDown did not jump directly to the next page.")
+            if after_return["index"] != 0 or after_return["stages"][0] != expected_stage:
+                failures.append("Returning to a page did not restore its presentation stage.")
+            if reading_state["mode"] != "reading" or not reading_visible:
+                failures.append("Reading mode did not expose all current-page fragments.")
+            if reading_after_left["mode"] != "reading" or reading_after_left["index"] != 0:
+                failures.append("ArrowLeft did not move to the previous page in reading mode.")
+            if presentation_state["mode"] != "presentation" or presentation_state["stages"][1] != 0:
+                failures.append("Switching from reading to presentation did not reset the current page.")
+            if after_left_at_zero["index"] != 0 or after_left_at_zero["stages"][0] != expected_stage:
+                failures.append("ArrowLeft at step zero did not return to the previous page and preserve its stage.")
+            if after_left_at_first_page["index"] != 0 or after_left_at_first_page["stages"][0] != 0:
+                failures.append("ArrowLeft at the first page underflowed the deck boundary.")
+            if control_after != control_before or not control_menu_open or not menu_stays_open:
+                failures.append("Focused controls did not consume Space without advancing the report.")
+            if fullscreen_entered != {"menuHidden": True, "expanded": "false", "controlsHidden": False}:
+                failures.append("Entering fullscreen did not close the more menu and expose controls cleanly.")
+            if not fullscreen_idle_hidden or not fullscreen_pointer_revealed:
+                failures.append("Fullscreen controls did not auto-hide on idle and reappear on pointer movement.")
+            if fullscreen_exited != {"menuHidden": True, "expanded": "false"}:
+                failures.append("Exiting fullscreen left stale more-menu state behind.")
+            if grouped_step["tested"] and grouped_step["visible"] != grouped_step["total"]:
+                failures.append("Elements sharing one data-step did not reveal together.")
+        results["runtime_behavior"] = runtime_behavior
+        page.reload(wait_until="load")
+
         for i in range(slide_count):
             console_start = 0 if i == 0 else len(console_errors)
             page_error_start = 0 if i == 0 else len(page_errors)
@@ -105,10 +266,24 @@ def main() -> int:
             route_ok = active_count == 1 and active_index == i
 
             fragment_count = active.locator(".fragment").count() if active_count == 1 else 0
-            for _ in range(fragment_count):
+            step_count = (
+                active.locator(".fragment").evaluate_all(
+                    "els => Math.max(0, ...els.map(el => Number.parseInt(el.dataset.taohtmlStep || '0', 10)))"
+                )
+                if active_count == 1
+                else 0
+            )
+            for _ in range(step_count):
                 page.keyboard.press("ArrowRight")
                 page.wait_for_timeout(40)
             visible_fragments = active.locator(".fragment.visible").count() if active_count == 1 else 0
+            for _ in range(step_count):
+                page.keyboard.press("ArrowLeft")
+                page.wait_for_timeout(40)
+            rewound_fragments = active.locator(".fragment.visible").count() if active_count == 1 else 0
+            for _ in range(step_count):
+                page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(40)
 
             source_failures: list[str] = []
             source_buttons = active.locator(".source-btn") if active_count == 1 else page.locator(".never-match")
@@ -152,7 +327,12 @@ def main() -> int:
                 "title": active.get_attribute("data-title") if active_count == 1 else None,
                 "screenshot": str(screenshot),
                 "route_ok": route_ok,
-                "fragments": {"total": fragment_count, "visible": visible_fragments},
+                "fragments": {
+                    "total": fragment_count,
+                    "steps": step_count,
+                    "visible": visible_fragments,
+                    "rewound": rewound_fragments,
+                },
                 "source_failures": source_failures,
                 "image_failures": image_failures,
                 "offscreen_elements": overflow,
@@ -166,6 +346,10 @@ def main() -> int:
             if visible_fragments != fragment_count:
                 failures.append(
                     f"Page {i + 1}: only {visible_fragments}/{fragment_count} fragments became visible."
+                )
+            if rewound_fragments != 0:
+                failures.append(
+                    f"Page {i + 1}: {rewound_fragments}/{fragment_count} fragments remained after rewind."
                 )
             if source_failures:
                 failures.append(f"Page {i + 1}: source modal failures: {source_failures}")

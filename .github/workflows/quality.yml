@@ -41,18 +41,22 @@ jobs:
         run: python -m py_compile skill/taohtml/scripts/*.py
 
       - name: Check template assets
-        run: python skill/taohtml/scripts/check_assets.py skill/taohtml/assets/html-deck-template/index.html
+        run: python skill/taohtml/scripts/check_assets.py skill/taohtml/assets/html-deck-template/index.html --strict-offline
 
-      - name: Run template browser QA
-        run: python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa
+      - name: Run template browser QA at target viewports
+        run: |
+          python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa-1366 --width 1366 --height 768
+          python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa-1600 --width 1600 --height 900
+          python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa-1920 --width 1920 --height 1080
 
       - name: Build QA contact sheet
-        run: python skill/taohtml/scripts/build_contact_sheet.py .artifacts/template-qa .artifacts/template-contact-sheet.png
+        run: python skill/taohtml/scripts/build_contact_sheet.py .artifacts/template-qa-1600 .artifacts/template-contact-sheet.png
 
       - name: Package template
         run: |
-          version=$(cat VERSION)
-          python skill/taohtml/scripts/package_deck.py skill/taohtml/assets/html-deck-template ".artifacts/taohtml-template-${version}.zip"
+          short_sha="${GITHUB_SHA::7}"
+          python skill/taohtml/scripts/package_deck.py skill/taohtml/assets/html-deck-template ".artifacts/taohtml-template-ci-${short_sha}.zip"
+          python scripts/package_plugin_marketplace.py ".artifacts/taohtml-marketplace-ci-${short_sha}.zip"
 
       - name: Upload QA artifacts
         uses: actions/upload-artifact@v7

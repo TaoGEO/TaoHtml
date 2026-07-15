@@ -2,6 +2,29 @@
 
 TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` form.
 
+## [Unreleased]
+
+## [0.2.0] - 2026-07-15
+
+### Added
+
+- Add the first Word/PDF vertical-slice workflow with material-summary and design-brief confirmation gates.
+- Add a documented minimal runtime contract for reading and single-screen presentation.
+- Add strict offline asset validation and runtime behavior checks.
+- Add a self-contained local marketplace ZIP for Codex and Claude Code, generated from the canonical Skill source.
+
+### Changed
+
+- Separate presentation steps from whole-page navigation and preserve per-page reveal state.
+- Add reading/presentation switching, fullscreen control, page count, and auto-hiding controls to the template.
+- Require an early runnable `index.html` during production and a brief-to-output traceability check before delivery.
+- Run browser QA at three target viewports in CI.
+- Document the supported Claude GitHub marketplace, raw Skill, and offline ZIP installation and update paths.
+
+### Fixed
+
+- Make the Claude GitHub marketplace install from the repository root and use commit-based updates without a pinned manifest version.
+
 ## [0.1.0] - 2026-07-13
 
 ### Added

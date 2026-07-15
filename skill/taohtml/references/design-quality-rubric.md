@@ -114,7 +114,7 @@ Check:
 
 - Does each click reveal the next spoken point?
 - Does a staged slide show its complete final state before moving on?
-- Do animations reset when returning to a slide?
+- Do slides preserve and restore their prior reveal state when returning?
 - Do videos open only when the presenter chooses and stop when closed?
 
 ### 7. Visual Finish - 8 points
@@ -126,7 +126,7 @@ Check:
 
 Check:
 
-- Are margins, labels, page numbers, and progress indicators consistent?
+- Are margins, labels, page numbers, and controls consistent?
 - Are buttons and controls styled as part of the deck?
 - Are type sizes stable and not viewport-scaled?
 - Are colors balanced rather than one-note?
