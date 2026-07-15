@@ -132,7 +132,13 @@ def resolve_source(
     source_image: Path | None,
     source_kind: str | None,
 ) -> tuple[str, str]:
-    resolved_kind = source_kind or ("verified" if source_image is not None else "illustrative")
+    """Validate and embed a source image without inferring verified provenance.
+
+    A caller must explicitly pass ``verified`` after grounding the local file in
+    confirmed source material. Omitting ``source_kind`` is always fail-safe and
+    illustrative, whether or not a local image is supplied.
+    """
+    resolved_kind = source_kind or "illustrative"
     if resolved_kind not in SOURCE_KINDS:
         raise ValueError(f"Unknown source kind: {resolved_kind}")
     if resolved_kind == "verified" and source_image is None:
@@ -236,6 +242,7 @@ def render_theme(
     source_image: Path | None = None,
     source_kind: str | None = None,
 ) -> Path:
+    """Render one theme; an omitted source kind always means illustrative."""
     source_uri, resolved_kind = resolve_source(source_image, source_kind)
     return _render_theme(content, theme_id, output, source_uri, resolved_kind)
 
@@ -246,6 +253,7 @@ def render_all(
     source_image: Path | None = None,
     source_kind: str | None = None,
 ) -> list[Path]:
+    """Render every theme; verified provenance must be explicitly declared."""
     source_uri, resolved_kind = resolve_source(source_image, source_kind)
     return [
         _render_theme(
@@ -272,7 +280,7 @@ def main() -> int:
     parser.add_argument(
         "--source-kind",
         choices=SOURCE_KINDS,
-        help="Use verified only for grounded source material; illustrative is labeled next to the visual. Defaults from whether --source-image is supplied.",
+        help="Use verified only for grounded source material; illustrative is labeled next to the visual. Defaults to illustrative even when --source-image is supplied.",
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--theme", choices=THEME_IDS)

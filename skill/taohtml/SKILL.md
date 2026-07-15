@@ -86,7 +86,7 @@ Use the bundled scripts where relevant:
 - `scripts/check_html_deck.py`: exercise routes, reveal states, runtime behavior, media, console errors, bounds, and screenshots.
 - `scripts/build_contact_sheet.py`: build a visual QA overview.
 - `scripts/package_deck.py`: package HTML plus local assets when a single file is not appropriate.
-- `scripts/render_visual_system.py`: render content through one built-in system while retaining the shared runtime shell. Pass a real local source image as `--source-kind verified`; when no real evidence image exists, use the renderer's automatically labeled illustrative placeholder or pass a local image as `--source-kind illustrative`. The renderer never labels illustrative material as verified evidence.
+- `scripts/render_visual_system.py`: render content through one built-in system while retaining the shared runtime shell. Pass a real local source image as `--source-kind verified`; verified provenance is never inferred from a local path. If `source_kind` / `--source-kind` is omitted, the Python API and CLI default to `illustrative` even when a local image is supplied. When no real evidence image exists, use the renderer's automatically labeled illustrative placeholder or pass a local image as `--source-kind illustrative`. The renderer never labels illustrative material as verified evidence.
 
 ## Current Runtime Boundary
 

@@ -316,7 +316,14 @@ def inspect_verification_handoff(
         ["无；本报告未新增待客户核实的事实性内容", "no creative supplements added"],
     )
     declares_empty = any(normalize_text(candidate) in normalized for candidate in empty_markers)
-    structured = bool(text.strip()) and has_title and (not missing_fields or declares_empty)
+    allow_empty = config.get("allow_empty", False)
+    empty_accepted = declares_empty and allow_empty
+    structured = (
+        bool(text.strip())
+        and has_title
+        and (not missing_fields or empty_accepted)
+        and not (declares_empty and not allow_empty)
+    )
     checks = [
         make_check(
             "delivery.verification-handoff",
@@ -327,7 +334,9 @@ def inspect_verification_handoff(
                 "provided": bool(text.strip()),
                 "title_present": has_title,
                 "declares_empty": declares_empty,
-                "missing_fields": [] if declares_empty else missing_fields,
+                "allow_empty": allow_empty,
+                "empty_accepted": empty_accepted,
+                "missing_fields": [] if empty_accepted else missing_fields,
             },
             hard_failure=False,
             scope="workflow",

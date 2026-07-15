@@ -280,7 +280,7 @@ HTML 制作 + 模块化 Runtime
 - `check_html_deck.py`：用 Playwright 检查 Runtime 契约、阅读/演讲模式、步级与页级导航、状态恢复、hash 路由、证据弹窗、控制台错误和可见区域边界。
 - `build_contact_sheet.py`：把 QA 截图合成总览图。
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
-- `render_visual_system.py`：把内容注入选中主题，同时保留共享 runtime shell。真实来源图用 `--source-kind verified --source-image ...`，文件缺失或无效时失败；没有真实证据图时可使用自动示意占位或 `--source-kind illustrative` 的本地图，渲染器会在相邻位置标“示意 / 待核实”，不会把它冒充来源证据。
+- `render_visual_system.py`：把内容注入选中主题，同时保留共享 runtime shell。真实来源图必须显式使用 `--source-kind verified --source-image ...`，文件缺失或无效时失败；本地路径本身不代表来源已核实，CLI 或 Python API 未传 `source_kind` 时即使有本地图也安全默认为 `illustrative`。没有真实证据图时可使用自动示意占位或 `--source-kind illustrative` 的本地图，渲染器会在相邻位置标“示意 / 待核实”，不会把它冒充来源证据。
 
 ## 开发、验证与版本管理
 

@@ -36,6 +36,7 @@
     "minimum_source_buttons": 1,
     "verification_handoff": {
       "required": true,
+      "allow_empty": true,
       "title_any": ["待核实内容清单", "Pending Verification List"],
       "required_field_groups": [
         {"id": "location", "any": ["页面/内容", "page/content", "location"]},

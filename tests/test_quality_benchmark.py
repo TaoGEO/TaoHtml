@@ -401,6 +401,43 @@ class DeterministicJudgeTests(unittest.TestCase):
         self.assertEqual(statuses["handoff.creative-fact-coverage"], "pass")
         self.assertEqual(JUDGE.classify_checks(checks)["status"], "pass")
 
+    def test_idea_only_semantic_claims_cannot_pass_with_empty_handoff(self) -> None:
+        scenario = JUDGE.load_scenario("idea-live-conversion")
+        target = scenario["content_checks"]["allowed_action_targets"][0]
+        html_text = f"""
+        <main class="deck" data-mode="presentation">
+          <section class="slide">
+            <p>先把案例变成可调用证据，再谈扩大获客。</p>
+            <p>案例散落，这是一个示意场景。</p>
+            <p>我们已经处理几十个项目、几百段对话，每个线索都能高效转化。</p>
+          </section>
+          <section class="slide"><a href="{target}">{target}</a></section>
+        </main>
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text(html_text, encoding="utf-8")
+            _, content_checks = JUDGE.inspect_content(html, scenario)
+        fact_check = next(
+            check
+            for check in content_checks
+            if check["id"] == "content.source-bounded-facts"
+        )
+        self.assertEqual(fact_check["evidence"]["unexpected"], [])
+
+        handoff = """## 《待核实内容清单》
+
+无；本报告未新增待客户核实的事实性内容
+"""
+        checks = [
+            *content_checks,
+            *JUDGE.inspect_verification_handoff(handoff, scenario, []),
+        ]
+        statuses = {check["id"]: check["status"] for check in checks}
+        self.assertEqual(statuses["delivery.verification-handoff"], "warning")
+        self.assertEqual(statuses["handoff.creative-fact-coverage"], "warning")
+        self.assertEqual(JUDGE.classify_checks(checks)["status"], "conditional")
+
     def test_e_handoff_does_not_expand_six_question_cap(self) -> None:
         at_cap, _ = self.idea_semantic_checks(self.complete_handoff(), question_count=6)
         over_cap, checks = self.idea_semantic_checks(
