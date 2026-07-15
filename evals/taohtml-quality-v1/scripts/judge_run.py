@@ -451,6 +451,7 @@ def validate_metadata(metadata: dict[str, Any], scenario_id: str) -> None:
         "ended_at",
         "question_count",
         "token_usage",
+        "billing_usage",
         "duration",
     }
     missing = sorted(required - metadata.keys())
@@ -469,19 +470,71 @@ def validate_metadata(metadata: dict[str, Any], scenario_id: str) -> None:
         for field in ("version", "commit")
     ):
         raise ValueError("skill.version and skill.commit must be non-empty strings")
-    for field in ("token_usage", "duration"):
-        status = metadata[field].get("status") if isinstance(metadata[field], dict) else None
-        if status not in {"available", "unavailable"}:
-            raise ValueError(f"{field}.status must be available or unavailable")
     token_usage = metadata["token_usage"]
-    token_values = [token_usage.get(key) for key in ("input", "output", "total")]
-    if token_usage["status"] == "unavailable" and any(value is not None for value in token_values):
-        raise ValueError("unavailable token_usage values must be null")
-    if token_usage["status"] == "available" and any(
-        not isinstance(value, int) or value < 0 for value in token_values
-    ):
-        raise ValueError("available token_usage values must be non-negative integers")
+    if not isinstance(token_usage, dict):
+        raise ValueError("token_usage must be an object")
+    token_availability = token_usage.get("availability")
+    token_source = token_usage.get("source")
+    token_keys = ("input_tokens", "output_tokens", "cache_tokens", "total_tokens")
+    token_values = [token_usage.get(key) for key in token_keys]
+    if token_availability not in {"exact", "unavailable"}:
+        raise ValueError("token_usage.availability must be exact or unavailable")
+    if token_availability == "unavailable":
+        if token_source != "unavailable" or any(value is not None for value in token_values):
+            raise ValueError("unavailable token_usage must use source unavailable and null values")
+    else:
+        if token_source not in {"platform_task_usage", "manual"}:
+            raise ValueError("exact token_usage source must be platform_task_usage or manual")
+        if any(
+            value is not None
+            and (not isinstance(value, int) or isinstance(value, bool) or value < 0)
+            for value in token_values
+        ):
+            raise ValueError("exact token values must be non-negative integers or null")
+        if all(value is None for value in token_values):
+            raise ValueError("exact token_usage must contain at least one platform value")
+
+    billing_usage = metadata["billing_usage"]
+    if not isinstance(billing_usage, dict):
+        raise ValueError("billing_usage must be an object")
+    billing_availability = billing_usage.get("availability")
+    billing_source = billing_usage.get("source")
+    billing_keys = ("workbuddy_points", "balance_before", "balance_after")
+    billing_values = [billing_usage.get(key) for key in billing_keys]
+    if billing_availability not in {"exact", "unavailable"}:
+        raise ValueError("billing_usage.availability must be exact or unavailable")
+    if billing_availability == "unavailable":
+        if billing_source != "unavailable" or any(value is not None for value in billing_values):
+            raise ValueError("unavailable billing_usage must use source unavailable and null values")
+    else:
+        if billing_source not in {"platform_task_usage", "balance_delta", "manual"}:
+            raise ValueError("exact billing_usage source is invalid")
+        points = billing_usage.get("workbuddy_points")
+        if (
+            not isinstance(points, (int, float))
+            or isinstance(points, bool)
+            or points < 0
+        ):
+            raise ValueError("exact billing_usage.workbuddy_points must be non-negative")
+        before = billing_usage.get("balance_before")
+        after = billing_usage.get("balance_after")
+        if billing_source == "balance_delta":
+            if any(
+                not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0
+                for value in (before, after)
+            ):
+                raise ValueError("balance_delta requires non-negative platform balances")
+            if before < after or abs((before - after) - points) > 1e-9:
+                raise ValueError("workbuddy_points must exactly equal balance_before - balance_after")
+        elif before is not None or after is not None:
+            raise ValueError("balances are recorded only when billing_usage.source is balance_delta")
+
     duration = metadata["duration"]
+    if not isinstance(duration, dict) or duration.get("status") not in {
+        "available",
+        "unavailable",
+    }:
+        raise ValueError("duration.status must be available or unavailable")
     seconds = duration.get("seconds")
     if duration["status"] == "unavailable" and seconds is not None:
         raise ValueError("unavailable duration.seconds must be null")

@@ -41,12 +41,49 @@ def numeric_stats(values: Iterable[float | int]) -> dict[str, Any]:
     }
 
 
+def availability_stats(results: list[dict[str, Any]], field: str) -> dict[str, Any]:
+    exact = sum(
+        item.get("run", {}).get(field, {}).get("availability") == "exact"
+        for item in results
+    )
+    total = len(results)
+    return {
+        "exact_count": exact,
+        "unavailable_count": total - exact,
+        "availability_rate": round(exact / total, 4) if total else None,
+    }
+
+
+def exact_usage_values(
+    results: list[dict[str, Any]], field: str, value_key: str
+) -> Iterable[float | int]:
+    for item in results:
+        usage = item.get("run", {}).get(field, {})
+        value = usage.get(value_key)
+        if (
+            usage.get("availability") == "exact"
+            and isinstance(value, (int, float))
+            and not isinstance(value, bool)
+        ):
+            yield value
+
+
 def validate_result(result: dict[str, Any], path: Path) -> None:
     for key in ("schema_version", "run", "objective", "human", "comparison", "failure_samples"):
         if key not in result:
             raise ValueError(f"{path}: missing {key}")
     if result["schema_version"] != "1.0":
         raise ValueError(f"{path}: unsupported schema_version")
+    run = result.get("run")
+    if not isinstance(run, dict):
+        raise ValueError(f"{path}: run must be an object")
+    for field in ("token_usage", "billing_usage"):
+        usage = run.get(field)
+        if not isinstance(usage, dict) or usage.get("availability") not in {
+            "exact",
+            "unavailable",
+        }:
+            raise ValueError(f"{path}: invalid or missing run.{field}")
 
 
 def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -86,6 +123,16 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
         "successful_run_count": len(successful),
         "success_rate": round(len(successful) / len(comparable), 4) if comparable else None,
         "question_count": numeric_stats(item["run"]["question_count"] for item in results),
+        "usage_availability": {
+            "tokens": availability_stats(results, "token_usage"),
+            "workbuddy_points": availability_stats(results, "billing_usage"),
+        },
+        "total_tokens": numeric_stats(
+            exact_usage_values(results, "token_usage", "total_tokens")
+        ),
+        "workbuddy_points": numeric_stats(
+            exact_usage_values(results, "billing_usage", "workbuddy_points")
+        ),
         "hard_failure_count": {
             "total": sum(item["objective"]["hard_failure_count"] for item in results),
             "per_run": numeric_stats(item["objective"]["hard_failure_count"] for item in results),
@@ -117,6 +164,7 @@ def aggregate(
         "definition": {
             "success": "all required objective checks available and zero hard failures",
             "visual_scores": "reported by dimension only; never a production permission score",
+            "usage": "availability rates use all runs; unavailable values are excluded from numeric statistics and never treated as zero",
         },
         "overall": summarize(results),
         "groups": groups,
@@ -141,6 +189,18 @@ def render_markdown(report: dict[str, Any]) -> str:
         if overall["success_rate"] is None
         else f"{overall['success_rate'] * 100:.1f}%"
     )
+    token_availability = overall["usage_availability"]["tokens"]
+    points_availability = overall["usage_availability"]["workbuddy_points"]
+    token_rate = (
+        "unavailable"
+        if token_availability["availability_rate"] is None
+        else f"{token_availability['availability_rate'] * 100:.1f}%"
+    )
+    points_rate = (
+        "unavailable"
+        if points_availability["availability_rate"] is None
+        else f"{points_availability['availability_rate'] * 100:.1f}%"
+    )
     lines = [
         "# TaoHtml quality benchmark summary",
         "",
@@ -148,6 +208,10 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Success rate: {success_rate}",
         f"- Hard failures: {overall['hard_failure_count']['total']}",
         f"- Question count median/range: {overall['question_count']['median']} / {overall['question_count']['range']}",
+        f"- Token availability: {token_rate} ({token_availability['exact_count']}/{overall['run_count']})",
+        f"- Total tokens median/range: {overall['total_tokens']['median']} / {overall['total_tokens']['range']}",
+        f"- WorkBuddy points availability: {points_rate} ({points_availability['exact_count']}/{overall['run_count']})",
+        f"- WorkBuddy points median/range: {overall['workbuddy_points']['median']} / {overall['workbuddy_points']['range']}",
         f"- Manual revisions median/range: {overall['manual_revision_count']['median']} / {overall['manual_revision_count']['range']}",
         f"- Prior 9-page visual floor: {overall['reference_floor_distribution']}",
         "",
@@ -163,8 +227,13 @@ def render_markdown(report: dict[str, Any]) -> str:
         label = ", ".join(f"{key}={value}" for key, value in group["key"].items())
         metrics = group["metrics"]
         rate = "unavailable" if metrics["success_rate"] is None else f"{metrics['success_rate'] * 100:.1f}%"
+        group_token_rate = metrics["usage_availability"]["tokens"]["availability_rate"]
+        group_points_rate = metrics["usage_availability"]["workbuddy_points"]["availability_rate"]
         lines.append(
-            f"- {label}: runs={metrics['run_count']}, success={rate}, hard_failures={metrics['hard_failure_count']['total']}"
+            f"- {label}: runs={metrics['run_count']}, success={rate}, "
+            f"hard_failures={metrics['hard_failure_count']['total']}, "
+            f"token_availability={group_token_rate}, "
+            f"workbuddy_points_availability={group_points_rate}"
         )
     return "\n".join(lines) + "\n"
 

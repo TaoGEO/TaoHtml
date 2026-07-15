@@ -8,6 +8,8 @@
 
 人工层使用 1-5 的独立维度：故事推进、页面角色、构图层级、版式重复、证据可读性、动效是否服务讲解、整体完成度。只比较各维度中位数与范围，不求和、不设单一通过线。人工修改次数单独记录。
 
+每次结果还必须分开记录 token、耗时与平台计费用量。Token 包含 input/output/cache/total；平台计费当前记录 WorkBuddy 积分。每类用量独立标记 `exact | unavailable` 及 `platform_task_usage | balance_delta | manual | unavailable` 来源。只允许平台真实提供的数值；缺失值保留 `null`，聚合时不得当作 0。
+
 ## 三个黄金场景
 
 ### `idea-live-conversion`

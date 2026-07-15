@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import tempfile
@@ -69,6 +70,7 @@ class QualityBenchmarkDefinitionTests(unittest.TestCase):
                 "skill",
                 "question_count",
                 "token_usage",
+                "billing_usage",
                 "duration",
             }.issubset(run_required)
         )
@@ -85,6 +87,54 @@ class QualityBenchmarkDefinitionTests(unittest.TestCase):
         )
         JUDGE.validate_metadata(metadata, metadata["scenario_id"])
         JUDGE.validate_human_review(human_review)
+
+    def test_usage_metadata_accepts_only_exact_platform_values(self) -> None:
+        metadata = json.loads(
+            (BENCHMARK / "schemas" / "run-metadata.example.json").read_text(encoding="utf-8")
+        )
+        exact = copy.deepcopy(metadata)
+        exact["token_usage"] = {
+            "availability": "exact",
+            "source": "platform_task_usage",
+            "input_tokens": 120,
+            "output_tokens": 80,
+            "cache_tokens": None,
+            "total_tokens": 200,
+        }
+        exact["billing_usage"] = {
+            "availability": "exact",
+            "source": "balance_delta",
+            "workbuddy_points": 7,
+            "balance_before": 100,
+            "balance_after": 93,
+        }
+        JUDGE.validate_metadata(exact, exact["scenario_id"])
+
+        partial_exact_tokens = copy.deepcopy(exact)
+        partial_exact_tokens["token_usage"]["output_tokens"] = None
+        partial_exact_tokens["token_usage"]["total_tokens"] = None
+        JUDGE.validate_metadata(partial_exact_tokens, partial_exact_tokens["scenario_id"])
+
+        unavailable_with_estimate = copy.deepcopy(metadata)
+        unavailable_with_estimate["billing_usage"]["workbuddy_points"] = 5
+        with self.assertRaisesRegex(ValueError, "unavailable billing_usage"):
+            JUDGE.validate_metadata(
+                unavailable_with_estimate,
+                unavailable_with_estimate["scenario_id"],
+            )
+
+        unavailable_tokens_with_estimate = copy.deepcopy(metadata)
+        unavailable_tokens_with_estimate["token_usage"]["total_tokens"] = 200
+        with self.assertRaisesRegex(ValueError, "unavailable token_usage"):
+            JUDGE.validate_metadata(
+                unavailable_tokens_with_estimate,
+                unavailable_tokens_with_estimate["scenario_id"],
+            )
+
+        mismatched_delta = copy.deepcopy(exact)
+        mismatched_delta["billing_usage"]["workbuddy_points"] = 8
+        with self.assertRaisesRegex(ValueError, "exactly equal"):
+            JUDGE.validate_metadata(mismatched_delta, mismatched_delta["scenario_id"])
 
 
 class PrepareRunTests(unittest.TestCase):
@@ -189,6 +239,11 @@ class AggregateResultsTests(unittest.TestCase):
         comparable: bool,
         score: int | None,
         revisions: int | None,
+        total_tokens: int | None = None,
+        workbuddy_points: float | None = None,
+        points_source: str = "platform_task_usage",
+        balance_before: float | None = None,
+        balance_after: float | None = None,
     ) -> dict[str, object]:
         return {
             "schema_version": "1.0",
@@ -200,6 +255,21 @@ class AggregateResultsTests(unittest.TestCase):
                 "model": "Model A",
                 "skill": {"version": "0.2.0", "commit": "abc1234"},
                 "question_count": questions,
+                "token_usage": {
+                    "availability": "exact" if total_tokens is not None else "unavailable",
+                    "source": "platform_task_usage" if total_tokens is not None else "unavailable",
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "cache_tokens": None,
+                    "total_tokens": total_tokens,
+                },
+                "billing_usage": {
+                    "availability": "exact" if workbuddy_points is not None else "unavailable",
+                    "source": points_source if workbuddy_points is not None else "unavailable",
+                    "workbuddy_points": workbuddy_points,
+                    "balance_before": balance_before,
+                    "balance_after": balance_after,
+                },
             },
             "objective": {"hard_failure_count": hard_failures},
             "human": {
@@ -216,9 +286,31 @@ class AggregateResultsTests(unittest.TestCase):
 
     def test_aggregate_reports_success_hard_failures_ranges_and_revisions(self) -> None:
         results = [
-            self.make_result("one", 2, 0, comparable=True, score=4, revisions=1),
-            self.make_result("two", 6, 2, comparable=True, score=2, revisions=3),
-            self.make_result("three", 4, 0, comparable=False, score=None, revisions=None),
+            self.make_result(
+                "one", 2, 0, comparable=True, score=4, revisions=1, total_tokens=100
+            ),
+            self.make_result(
+                "two",
+                6,
+                2,
+                comparable=True,
+                score=2,
+                revisions=3,
+                workbuddy_points=12.5,
+            ),
+            self.make_result(
+                "three",
+                4,
+                0,
+                comparable=False,
+                score=None,
+                revisions=None,
+                total_tokens=200,
+                workbuddy_points=7,
+                points_source="balance_delta",
+                balance_before=100,
+                balance_after=93,
+            ),
         ]
         report = AGGREGATE.aggregate(results)
         overall = report["overall"]
@@ -228,10 +320,33 @@ class AggregateResultsTests(unittest.TestCase):
         self.assertEqual(overall["hard_failure_count"]["total"], 2)
         self.assertEqual(overall["question_count"]["median"], 4)
         self.assertEqual(overall["question_count"]["range"], [2, 6])
+        self.assertEqual(
+            overall["usage_availability"]["tokens"],
+            {"exact_count": 2, "unavailable_count": 1, "availability_rate": 0.6667},
+        )
+        self.assertEqual(
+            overall["usage_availability"]["workbuddy_points"],
+            {"exact_count": 2, "unavailable_count": 1, "availability_rate": 0.6667},
+        )
+        self.assertEqual(overall["total_tokens"]["median"], 150)
+        self.assertEqual(overall["total_tokens"]["range"], [100, 200])
+        self.assertEqual(overall["workbuddy_points"]["median"], 9.75)
+        self.assertEqual(overall["workbuddy_points"]["range"], [7, 12.5])
         self.assertEqual(overall["human_dimensions"]["story_progression"]["median"], 3)
         self.assertEqual(overall["manual_revision_count"]["median"], 2)
         self.assertEqual(overall["reference_floor_distribution"], {"unavailable": 3})
         self.assertEqual(len(report["groups"]), 1)
+        markdown = AGGREGATE.render_markdown(report)
+        self.assertIn("Token availability: 66.7% (2/3)", markdown)
+        self.assertIn("WorkBuddy points availability: 66.7% (2/3)", markdown)
+
+    def test_result_validation_requires_explicit_usage_availability(self) -> None:
+        result = self.make_result(
+            "one", 2, 0, comparable=True, score=4, revisions=1
+        )
+        del result["run"]["billing_usage"]
+        with self.assertRaisesRegex(ValueError, "billing_usage"):
+            AGGREGATE.validate_result(result, Path("result.json"))
 
     def test_directory_discovery_ignores_metadata_and_human_review_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

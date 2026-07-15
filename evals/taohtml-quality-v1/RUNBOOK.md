@@ -32,7 +32,15 @@ python3 -m venv .venv
 
 ## 3. 记录运行元数据
 
-复制 `schemas/run-metadata.example.json` 到该次 `.artifacts/` 目录并填写。`client`、`agent`、`model`、TaoHtml `version`/提交、问题数必填。客户端能提供 token 或耗时时写 `available` 与实值；不能获取时必须写 `unavailable` 和 `null`，不得估算。
+复制 `schemas/run-metadata.example.json` 到该次 `.artifacts/` 目录并填写。`client`、`agent`、`model`、TaoHtml `version`/提交、问题数必填。只记录平台真实提供的用量：
+
+- `token_usage` 分别记录 `input_tokens`、`output_tokens`、平台提供时的 `cache_tokens` 和 `total_tokens`。只有平台提供精确单任务用量时写 `availability: exact`。
+- `billing_usage.workbuddy_points` 只记录 WorkBuddy 单任务精确积分。若平台展示单任务明细，使用 `source: platform_task_usage`；若人工抄录的仍是平台显示的精确单任务数值，使用 `source: manual`。
+- 只有任务前后余额均为平台值，且测量窗口内没有其他积分变动时，才使用 `source: balance_delta`，并同时记录 `balance_before`、`balance_after` 及完全相等的差值。
+- 任意值无法从平台获取时，对应用量块必须写 `availability: unavailable`、`source: unavailable` 和 `null`。不得根据文本长度、耗时、套餐或模型估算。
+- 耗时保持独立记录；能获取时写 `available`，否则写 `unavailable` 和 `null`。
+
+[官方 WorkBuddy 文档](https://www.workbuddy.cn/docs/workbuddy/Usage) 说明：用户可在 WorkBuddy 官网点击右上角头像，进入“个人主页 → 套餐与用量”查看积分使用历史和当前用量。是否能得到单任务精确值，仍取决于平台在当次运行中是否暴露任务明细或可用的平台余额。执行 Agent 未看到单任务积分时，必须记录 `unavailable`。
 
 用 `controller/HUMAN_RUBRIC.md` 审阅后，复制并填写 `schemas/human-review.example.json`。如果尚未人审，可先不传 `--human-review`，结果会明确记录 `pending`/`unavailable`。
 
@@ -60,6 +68,6 @@ python3 -m venv .venv
   --output .artifacts/taohtml-evals/summary.md
 ```
 
-默认按场景、客户端、Agent、模型、Skill 版本和提交分组，避免用不同场景混合比较模型。输出可比运行成功率、问题数中位数/范围、硬失败数、每个人工维度的中位数/范围、人工修改次数以及旧 9 页视觉底线的分布。也可重复 `--group-by model --group-by skill.commit` 自定义比较轴。目录输入只读取 `result.json` 或 `*-result.json`，不会把 metadata/人审草稿误当结果。脚本不调用任何真实模型 API。
+默认按场景、客户端、Agent、模型、Skill 版本和提交分组，避免用不同场景混合比较模型。输出可比运行成功率、问题数中位数/范围、硬失败数、token 可获取率、WorkBuddy 积分可获取率、可用数值的中位数/范围、每个人工维度的中位数/范围、人工修改次数以及旧 9 页视觉底线的分布。缺失用量只进入可获取率分母，不得当作 0 进入中位数或范围。也可重复 `--group-by model --group-by skill.commit` 自定义比较轴。目录输入只读取 `result.json` 或 `*-result.json`，不会把 metadata/人审草稿误当结果。脚本不调用任何真实模型 API。
 
 建议每个“客户端 x Agent/模型 x TaoHtml 提交 x 场景”至少运行 3 次，在查看失败样本前完成同一批次，避免主控在批次中途改口径。
