@@ -33,7 +33,18 @@
     "entrypoint": "deliverable/index.html",
     "initial_mode": "reading",
     "minimum_slides": 2,
-    "minimum_source_buttons": 1
+    "minimum_source_buttons": 1,
+    "verification_handoff": {
+      "required": true,
+      "allow_empty": true,
+      "title_any": ["待核实内容清单", "Pending Verification List"],
+      "required_field_groups": [
+        {"id": "location", "any": ["页面/内容", "page/content", "location"]},
+        {"id": "supplement_type", "any": ["补充类型", "supplement type"]},
+        {"id": "source_status", "any": ["来源状态", "source status"]},
+        {"id": "suggested_action", "any": ["建议动作", "suggested action"]}
+      ]
+    }
   },
   "content_checks": {
     "required_text_groups": [
@@ -47,6 +58,7 @@
       {"id": "next-step", "any": ["two weeks", "2 weeks"]}
     ],
     "forbidden_text": ["approved for citywide rollout", "the pilot is ready for citywide rollout", "81 percent was verified", "81% was verified"],
+    "fact_policy": "source_locked",
     "allowed_fact_tokens": [
       "3 months", "four sites", "4 sites", "128 service deliveries", "12 minutes", "11 minutes",
       "80 percent", "80%", "78 percent", "78%", "81 percent", "81%", "2 incidents",

@@ -96,9 +96,19 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("Stop questioning immediately", INTAKE)
         self.assertIn("infer all remaining low-risk gaps", INTAKE)
 
-    def test_high_risk_gap_blocks_brief_and_production(self) -> None:
+    def test_ordinary_missing_content_is_completed_and_handed_off(self) -> None:
+        self.assertIn("Ordinary information gaps do not automatically create a block", INTAKE)
+        self.assertIn("creative-supplement ledger", INTAKE)
+        self.assertIn("《待核实内容清单》", PLAYBOOK)
+        for field in ("页面/内容", "补充类型", "来源状态", "建议动作"):
+            self.assertIn(field, PLAYBOOK)
+
+    def test_minimum_hard_boundary_gap_blocks_brief_and_production(self) -> None:
         self.assertIn("do not generate a Report Design Brief", INTAKE)
         self.assertIn("do not begin production", INTAKE)
+        self.assertIn("minimum hard boundaries", INTAKE)
+        self.assertIn("never invent a real customer or company identity", INTAKE)
+        self.assertIn("legal, medical, financial, safety", INTAKE)
         for heading in (
             "## 当前已知",
             "## 未决缺口",
@@ -161,6 +171,11 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("Stop immediately when the design-ready gate passes", INTAKE)
         self.assertIn("never continue asking to approach a target or maximum", INTAKE)
         self.assertIn("Stop asking as soon as these conditions are met", INTAKE)
+
+    def test_verification_handoff_does_not_expand_the_question_budget(self) -> None:
+        self.assertIn("Enforce **6 clarification questions**", INTAKE)
+        self.assertIn("must not trigger this block", INTAKE)
+        self.assertIn("continue instead of repeatedly interrupting the user", INTAKE)
 
 
 if __name__ == "__main__":

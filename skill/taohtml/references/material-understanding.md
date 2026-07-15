@@ -74,7 +74,7 @@ Use this order:
 3. Show the public source and the conclusion it would support for customer confirmation.
 4. If public evidence conflicts with customer material, show both sides and the impact; do not choose silently when it changes the conclusion.
 
-Customer data visualized by the agent remains customer evidence. Never invent values to complete a chart.
+Customer data visualized by the agent remains customer evidence. Never alter it, relabel it as generated, or invent values and present them as customer evidence. When a useful report needs an illustrative chart, use separately tracked simulated values, label the chart `示意 / 模拟 / 待核实` next to the visual, and include the values in the delivery verification list.
 
 When units or definitions are inconsistent, correct only what can be determined safely. Put every correction, reason, and consequence in the design brief's confirmation section.
 

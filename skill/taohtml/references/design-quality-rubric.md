@@ -24,10 +24,11 @@ After implementation:
 
 If any hard gate fails, the deck is not ready.
 
-- **Information gate**: important source facts, numbers, charts, or claims are missing with no appendix or source view.
+- **Information gate**: confirmed source facts, numbers, charts, or claims are omitted or silently changed with no appendix or source view.
 - **Audience gate**: the deck does not make clear what the audience should believe or do next.
 - **Layout gate**: most pages use the same title-plus-cards structure without a purposeful reason.
-- **Evidence gate**: key claims are not backed by real material or clearly labeled simulations.
+- **Evidence gate**: generated material is presented as real proof, or a simulated chart, fictional case, generated evidence-like artifact, or easily mistaken data lacks an adjacent `示意 / 模拟 / 待核实` label. Ordinary creative supplements disclosed in the delivery verification list do not fail this gate merely because the user did not supply them.
+- **Handoff gate**: creative supplements are not covered by a structured `《待核实内容清单》`. This makes the full workflow conditional, while an otherwise usable HTML artifact may still pass its design and technical gates.
 - **Operation gate**: live presentation flow depends on hover, tiny mouse targets, or interactions a clicker cannot operate.
 - **Portability gate**: the HTML references absolute local files, temp files, WeChat cache files, or missing assets.
 - **Overflow gate**: text overlaps, spills out of containers, or leaves the 16:9 canvas at 1600x900.
@@ -173,7 +174,7 @@ If the deck feels cluttered:
 
 If the deck feels stylish but unconvincing:
 
-1. Add original artifacts.
-2. Add exact numbers and source labels.
-3. Separate interpretation from source proof.
-4. Add boundary language before the offer.
+1. Add original artifacts where credibility depends on source proof.
+2. Add exact sourced numbers or explicitly tracked projected values.
+3. Separate source proof, interpretation, and creative supplements.
+4. Add boundary language before the offer and complete the delivery verification list.

@@ -17,3 +17,5 @@
 “只有想法”场景还需填 `reference_floor.status`：`below | matches | exceeds | unavailable`。校准物是用户认可的旧“想法 -> 9 页 TaoHtml 介绍演示”；它只能由 controller 在人审时只读对照，绝不复制给执行 Agent。该字段是视觉差异记录，不是硬失败或单分生产许可。其他场景填 `unavailable`。
 
 失败样本记录页码/状态、现象、期望与截图或 QA 路径；不要只写“不好看”。
+
+技术与人工自审都必须分开写两项：`artifact usability`（HTML 是否可用）与 `verification handoff`（交付风险披露是否完整）。普通创作性补全本身不降低成品结论；若成品通过但交付清单缺失或漏项，记录完整工作流 `CONDITIONAL`。若生成内容冒充真实客户、公司、引语、来源、已发生成果或未核实高风险事实，则仍记录硬失败。

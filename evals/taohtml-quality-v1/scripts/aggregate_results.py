@@ -68,6 +68,27 @@ def exact_usage_values(
             yield value
 
 
+def workflow_status(item: dict[str, Any]) -> str:
+    status = item.get("objective", {}).get("status")
+    if status in {"pass", "conditional", "fail", "unavailable"}:
+        return status
+    if not item.get("comparison", {}).get("comparable"):
+        return "unavailable"
+    return "pass" if item.get("comparison", {}).get("benchmark_success") else "fail"
+
+
+def artifact_status(item: dict[str, Any]) -> str:
+    status = item.get("objective", {}).get("artifact_status")
+    if status in {"pass", "fail", "unavailable"}:
+        return status
+    artifact_usable = item.get("comparison", {}).get("artifact_usable")
+    if isinstance(artifact_usable, bool):
+        return "pass" if artifact_usable else "fail"
+    if not item.get("comparison", {}).get("comparable"):
+        return "unavailable"
+    return "fail" if item.get("objective", {}).get("hard_failure_count", 0) else "pass"
+
+
 def validate_result(result: dict[str, Any], path: Path) -> None:
     for key in ("schema_version", "run", "objective", "human", "comparison", "failure_samples"):
         if key not in result:
@@ -84,11 +105,29 @@ def validate_result(result: dict[str, Any], path: Path) -> None:
             "unavailable",
         }:
             raise ValueError(f"{path}: invalid or missing run.{field}")
+    status = result.get("objective", {}).get("status")
+    if status is not None and status not in {"pass", "conditional", "fail", "unavailable"}:
+        raise ValueError(f"{path}: invalid objective.status")
+    emitted_artifact_status = result.get("objective", {}).get("artifact_status")
+    if emitted_artifact_status is not None and emitted_artifact_status not in {
+        "pass",
+        "fail",
+        "unavailable",
+    }:
+        raise ValueError(f"{path}: invalid objective.artifact_status")
 
 
 def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     comparable = [item for item in results if item["comparison"].get("comparable")]
-    successful = [item for item in comparable if item["comparison"].get("benchmark_success")]
+    statuses = [workflow_status(item) for item in results]
+    successful = [item for item in comparable if workflow_status(item) == "pass"]
+    conditional = [item for item in comparable if workflow_status(item) == "conditional"]
+    artifact_usable = [item for item in comparable if artifact_status(item) == "pass"]
+    status_distribution = {
+        status: statuses.count(status)
+        for status in ("pass", "conditional", "fail", "unavailable")
+        if statuses.count(status)
+    }
     dimensions = sorted(
         {
             key
@@ -122,6 +161,11 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
         "unavailable_run_count": len(results) - len(comparable),
         "successful_run_count": len(successful),
         "success_rate": round(len(successful) / len(comparable), 4) if comparable else None,
+        "conditional_run_count": len(conditional),
+        "conditional_rate": round(len(conditional) / len(comparable), 4) if comparable else None,
+        "artifact_usable_run_count": len(artifact_usable),
+        "artifact_usable_rate": round(len(artifact_usable) / len(comparable), 4) if comparable else None,
+        "workflow_status_distribution": status_distribution,
         "question_count": numeric_stats(item["run"]["question_count"] for item in results),
         "usage_availability": {
             "tokens": availability_stats(results, "token_usage"),
@@ -162,7 +206,9 @@ def aggregate(
         )
     return {
         "definition": {
-            "success": "all required objective checks available and zero hard failures",
+            "success": "usable artifact plus complete verification handoff and zero hard failures or warnings",
+            "conditional": "artifact passes, but a non-hard workflow disclosure warning remains",
+            "artifact_usable": "HTML artifact passes content, asset, Runtime, navigation, and layout checks regardless of handoff completeness",
             "visual_scores": "reported by dimension only; never a production permission score",
             "usage": "availability rates use all runs; unavailable values are excluded from numeric statistics and never treated as zero",
         },
@@ -189,6 +235,16 @@ def render_markdown(report: dict[str, Any]) -> str:
         if overall["success_rate"] is None
         else f"{overall['success_rate'] * 100:.1f}%"
     )
+    conditional_rate = (
+        "unavailable"
+        if overall["conditional_rate"] is None
+        else f"{overall['conditional_rate'] * 100:.1f}%"
+    )
+    artifact_rate = (
+        "unavailable"
+        if overall["artifact_usable_rate"] is None
+        else f"{overall['artifact_usable_rate'] * 100:.1f}%"
+    )
     token_availability = overall["usage_availability"]["tokens"]
     points_availability = overall["usage_availability"]["workbuddy_points"]
     token_rate = (
@@ -205,7 +261,10 @@ def render_markdown(report: dict[str, Any]) -> str:
         "# TaoHtml quality benchmark summary",
         "",
         f"- Runs: {overall['run_count']} ({overall['comparable_run_count']} comparable)",
-        f"- Success rate: {success_rate}",
+        f"- Full-workflow PASS rate: {success_rate}",
+        f"- CONDITIONAL rate: {conditional_rate}",
+        f"- Artifact usable rate: {artifact_rate}",
+        f"- Workflow statuses: {overall['workflow_status_distribution']}",
         f"- Hard failures: {overall['hard_failure_count']['total']}",
         f"- Question count median/range: {overall['question_count']['median']} / {overall['question_count']['range']}",
         f"- Token availability: {token_rate} ({token_availability['exact_count']}/{overall['run_count']})",
@@ -230,7 +289,9 @@ def render_markdown(report: dict[str, Any]) -> str:
         group_token_rate = metrics["usage_availability"]["tokens"]["availability_rate"]
         group_points_rate = metrics["usage_availability"]["workbuddy_points"]["availability_rate"]
         lines.append(
-            f"- {label}: runs={metrics['run_count']}, success={rate}, "
+            f"- {label}: runs={metrics['run_count']}, full_workflow_pass={rate}, "
+            f"conditional={metrics['conditional_run_count']}, "
+            f"artifact_usable={metrics['artifact_usable_run_count']}, "
             f"hard_failures={metrics['hard_failure_count']['total']}, "
             f"token_availability={group_token_rate}, "
             f"workbuddy_points_availability={group_points_rate}"

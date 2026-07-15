@@ -37,7 +37,7 @@ A persuasive commercial spine often follows this movement:
 4. **Definition**: name the new concept after the pain is visible.
 5. **Mechanism**: explain why it happens.
 6. **Framework**: compress complexity into usable categories.
-7. **Evidence**: show real proof, not just opinion.
+7. **Evidence or projection**: show real proof when available; otherwise make the reasoning explicit and track creative supplements for verification.
 8. **Operating model**: turn the idea into a repeatable process.
 9. **Offer**: show how the presenter can help.
 10. **Boundary**: clarify what is promised and what is not.
@@ -129,7 +129,7 @@ If a slide tries to define, prove, sell, and teach at the same time, split it.
 
 ## 5. Turn Claims Into Evidence Pages
 
-A claim without proof should either become a hypothesis or receive evidence.
+A claim without proof should become a hypothesis, receive evidence, or be completed as a clearly tracked creative supplement. The third path keeps production moving; it does not turn generated content into source evidence.
 
 Useful evidence types:
 
@@ -163,6 +163,8 @@ When a report screenshot is long, split it into slices:
 - Final diagnosis or conclusion.
 
 Do not omit data visualizations if the user says the report itself is important. Visual charts often carry credibility that summaries cannot replace.
+
+During production, keep a creative-supplement ledger with four fields: page/content location, supplement type, source status, and suggested customer action. Ordinary projected narrative can stay visually clean and be disclosed in the delivery note. A simulated chart, fictional customer case, generated evidence-like artifact, or data display likely to be mistaken for real proof must also carry an adjacent `示意 / 模拟 / 待核实` label in the HTML. Never give a fictional case a real customer or company identity, fabricate a quotation/citation/source, present it as an achieved customer result, or replace confirmed source data.
 
 ## 6. Design A Deck-Level Visual System
 
@@ -291,7 +293,7 @@ Use this sequence:
 1. Write a concise page plan: page role, core claim, evidence, layout family, and staged-state count where relevant.
 2. Lock one design thesis and the recurring visual motifs. Reopen that decision only when implementation exposes a concrete failure.
 3. Instantiate `assets/html-deck-template/` and save a complete runnable `index.html` with every planned page, navigation, and essential content present. A simple but coherent first pass is preferred to a half-built high-detail page.
-4. Add evidence and visual refinement in bounded passes. Embed or render only the source pages needed to support the visible claims; do not package the entire source by default.
+4. Add evidence, creative supplements, and visual refinement in bounded passes. Embed or render only the source pages needed to support visible source claims; do not package the entire source by default. Add every actual creative supplement to the delivery verification ledger as it is introduced.
 5. Run asset and browser QA as soon as the runnable artifact exists. Fix objective failures before adding optional polish.
 6. Stop when the confirmed scope, visual direction, runtime contract, and delivery gate are satisfied. Do not add unrequested pages, controls, or runtime features during refinement.
 
@@ -361,6 +363,21 @@ Before sending or using the deck on another computer:
 
 If the output is PPTX or PDF, still preserve the working source and raw assets separately.
 
+### 11A. Deliver The Verification Handoff
+
+Complete the report first, then include a concise `《待核实内容清单》` in the delivery message. Do not replace the list with a generic disclaimer. Use one row per reviewable supplement:
+
+```markdown
+## 《待核实内容清单》
+
+| 页面/内容 | 补充类型 | 来源状态 | 建议动作 |
+|---|---|---|---|
+| 第 3 页「检索到提案」流程中的“5 分钟” | 推演数字 | TaoHtml 创作性补全，尚待客户核实 | 确认该量级；或修改、删除、让 TaoHtml 改为不含数字的表达 |
+| 第 5 页顾问转化场景 | 示意案例 | 合成场景，不代表已发生的客户成果 | 确认场景是否贴近业务；或提供真实案例替换 |
+```
+
+Use the source-status column precisely: `用户已提供`, `来源材料`, `公开来源已核实`, or `TaoHtml 创作性补全，尚待客户核实`. Do not put confirmed real data, sources, quotations, or action channels in the creative-supplement category. If no creative supplements were added, keep the heading and state `无；本报告未新增待客户核实的事实性内容`.
+
 ## 12. QA Checklist
 
 Content:
@@ -369,6 +386,9 @@ Content:
 - Does every section open and close cleanly?
 - Does each slide have one job?
 - Are major claims backed by evidence?
+- Are ordinary creative supplements separated from source facts and covered by `《待核实内容清单》`?
+- Are simulated charts, fictional cases, generated evidence-like artifacts, and easily mistaken data labeled `示意 / 模拟 / 待核实` next to the content?
+- Are customer-provided and verified facts preserved with their real provenance rather than listed as creative supplements?
 - Does a brief-to-output traceability check map every confirmed core viewpoint, correction, evidence gap, and decision boundary to a visible output location?
 - For conversion reports, does executable-action traceability map the desired action, exact path, source and verification status, and final display location from the brief to the output?
 - Is the rendered action channel visible, usable, and aligned with the confirmed objective rather than reduced to CTA wording alone?
@@ -414,7 +434,7 @@ Fix: start with a behavior, scene, question, screenshot, or contradiction. Defin
 
 ### There Is No Evidence
 
-Fix: ask for or locate screenshots, reports, customer examples, product interfaces, metrics, or demo recordings. If none exist, label the point as a hypothesis or create a clearly marked simulation.
+Fix: ask for or locate screenshots, reports, customer examples, product interfaces, metrics, or demo recordings only when the missing proof changes a hard boundary or conclusion. Otherwise complete the report with a hypothesis or creative supplement, track it for the delivery list, and clearly mark evidence-like simulations in the HTML.
 
 ### Two Pages Look The Same But Mean Different Things
 
@@ -477,6 +497,7 @@ When the user asks for a complete deck/report, produce:
 - Optional portable zip.
 - Brief change summary.
 - Verification summary.
+- `《待核实内容清单》` with page/content, supplement type, source status, and suggested action.
 
 When the user asks only for strategy, produce:
 

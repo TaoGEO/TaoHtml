@@ -33,17 +33,20 @@ Use `preview.svg` only when presenting the choice. Do not load all four manifest
 
 Treat `assets/html-deck-template/index.html` as the runtime shell and the selected system as the presentation layer. Replace content sections and inject theme CSS, but keep runtime controls, navigation, hash routing, reveal state, fullscreen behavior, and offline constraints unchanged. A theme switch must never add a new state machine or require a remote asset.
 
-Use the production renderer only with explicit, verified local evidence:
+Use the production renderer with an explicit source kind. For a real local source image:
 
 ```bash
 python scripts/render_visual_system.py \
   --content /absolute/path/to/content.json \
   --theme black-white-fluorescent-cards \
   --source-image /absolute/path/to/verified-evidence.png \
+  --source-kind verified \
   --output /absolute/path/to/report.html
 ```
 
-`--source-image` is required. The renderer accepts readable PNG, JPEG, WebP, or safe SVG files, validates the file contents, and embeds the bytes as an offline `data:` URI. If the evidence is missing, unsupported, unreadable, active, or remotely linked, rendering fails. Never replace missing customer evidence with generated, demonstration, or evaluation material.
+The renderer accepts readable PNG, JPEG, WebP, or safe SVG files, validates the file contents, and embeds the bytes as an offline `data:` URI. `--source-kind verified` requires `--source-image` and means the Agent has grounded the image in customer material or another confirmed source. A local file path alone never establishes provenance: when `source_kind` / `--source-kind` is omitted, both the Python API and CLI fail safe to `illustrative`, even if `source_image` / `--source-image` is present. If a verified file is missing, unsupported, unreadable, active, or remotely linked, rendering fails; the renderer never substitutes illustrative material under a verified label.
+
+When no real evidence image exists, omit `--source-image` or pass a local generated image with `--source-kind illustrative`. The renderer then uses or embeds an illustrative image and automatically places an adjacent `示意 / 待核实` label. This keeps idea-only production moving without presenting the visual as source evidence. Record the specific illustration, simulated values, and related claims in `《待核实内容清单》`. Never use an illustrative mode to replace a confirmed real customer screenshot, chart, logo, source page, or data point.
 
 ## Deviation Rule
 

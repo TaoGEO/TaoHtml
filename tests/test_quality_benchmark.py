@@ -78,6 +78,14 @@ class QualityBenchmarkDefinitionTests(unittest.TestCase):
         self.assertIn("manual_revision_count", human_required)
         self.assertIn("reference_floor", human_required)
         self.assertIn("failure_samples", schema["properties"])
+        self.assertIn(
+            "conditional",
+            schema["properties"]["objective"]["properties"]["status"]["enum"],
+        )
+        check_statuses = schema["properties"]["objective"]["properties"]["checks"][
+            "items"
+        ]["properties"]["status"]["enum"]
+        self.assertIn("warning", check_statuses)
 
         metadata = json.loads(
             (BENCHMARK / "schemas" / "run-metadata.example.json").read_text(encoding="utf-8")
@@ -136,6 +144,22 @@ class QualityBenchmarkDefinitionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exactly equal"):
             JUDGE.validate_metadata(mismatched_delta, mismatched_delta["scenario_id"])
 
+    def test_workbuddy_reassessment_preserves_artifact_pass_and_conditional_workflow(
+        self,
+    ) -> None:
+        reassessment = json.loads(
+            (
+                BENCHMARK
+                / "controller"
+                / "reassessments"
+                / "workbuddy-idea-live-conversion-20260715.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(reassessment["artifact_status"], "pass")
+        self.assertEqual(reassessment["workflow_status"], "conditional")
+        self.assertIn("sealed WorkBuddy RAR remains unchanged", reassessment["source_record_policy"])
+        self.assertIn("5 分钟", reassessment["observed_creative_supplements"])
+
 
 class PrepareRunTests(unittest.TestCase):
     def test_prepared_idea_workspace_has_no_controller_data(self) -> None:
@@ -181,6 +205,62 @@ class PrepareRunTests(unittest.TestCase):
 
 
 class DeterministicJudgeTests(unittest.TestCase):
+    @staticmethod
+    def idea_semantic_checks(
+        handoff_text: str | None,
+        *,
+        question_count: int = 6,
+        extra_html: str = "",
+    ) -> tuple[dict[str, object], list[dict[str, object]]]:
+        scenario = JUDGE.load_scenario("idea-live-conversion")
+        target = scenario["content_checks"]["allowed_action_targets"][0]
+        html_text = f"""
+        <main class="deck" data-mode="presentation">
+          <section class="slide">
+            <p>先把案例变成可调用证据，再谈扩大获客。</p>
+            <p>案例散落，这是一个示意场景。</p>
+            <p>整理过程预计 5 分钟完成。</p>
+            {extra_html}
+          </section>
+          <section class="slide"><a href="{target}">{target}</a></section>
+        </main>
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text(html_text, encoding="utf-8")
+            _, content_checks = JUDGE.inspect_content(html, scenario)
+        fact_check = next(
+            check
+            for check in content_checks
+            if check["id"] == "content.source-bounded-facts"
+        )
+        question_check = JUDGE.make_check(
+            "intake.question-cap",
+            "intake",
+            "pass" if question_count <= 6 else "fail",
+            "Question cap.",
+            {"actual": question_count, "maximum": 6},
+            scope="workflow",
+        )
+        checks = [question_check, *content_checks]
+        checks.extend(
+            JUDGE.inspect_verification_handoff(
+                handoff_text,
+                scenario,
+                fact_check["evidence"]["unexpected"],
+            )
+        )
+        return JUDGE.classify_checks(checks), checks
+
+    @staticmethod
+    def complete_handoff() -> str:
+        return """## 《待核实内容清单》
+
+| 页面/内容 | 补充类型 | 来源状态 | 建议动作 |
+|---|---|---|---|
+| 第 1 页“5 分钟” | 推演数字 | TaoHtml 创作性补全，尚待客户核实 | 确认、修改、删除或让 TaoHtml 替换 |
+"""
+
     def test_missing_entrypoint_is_a_comparable_hard_failure(self) -> None:
         metadata = json.loads(
             (BENCHMARK / "schemas" / "run-metadata.example.json").read_text(encoding="utf-8")
@@ -261,6 +341,112 @@ class DeterministicJudgeTests(unittest.TestCase):
         statuses = {check["id"]: check["status"] for check in checks}
         self.assertEqual(statuses["content.core-viewpoints"], "pass")
         self.assertEqual(statuses["content.action-targets"], "pass")
+
+    def test_a_idea_only_output_with_complete_handoff_is_pass(self) -> None:
+        classification, checks = self.idea_semantic_checks(self.complete_handoff())
+        statuses = {check["id"]: check["status"] for check in checks}
+        self.assertEqual(statuses["content.source-bounded-facts"], "pass")
+        self.assertEqual(statuses["delivery.verification-handoff"], "pass")
+        self.assertEqual(statuses["handoff.creative-fact-coverage"], "pass")
+        self.assertEqual(classification["artifact_status"], "pass")
+        self.assertEqual(classification["status"], "pass")
+
+    def test_b_usable_output_without_handoff_is_conditional(self) -> None:
+        classification, checks = self.idea_semantic_checks(None)
+        statuses = {check["id"]: check["status"] for check in checks}
+        self.assertEqual(statuses["delivery.verification-handoff"], "warning")
+        self.assertEqual(classification["artifact_status"], "pass")
+        self.assertEqual(classification["status"], "conditional")
+
+    def test_c_invented_real_source_or_unverified_high_risk_fact_is_fail(self) -> None:
+        for forbidden in (
+            "真实客户星河咨询 CEO 李明表示",
+            "来源：《2026 独立顾问转化率白皮书》",
+            "财务建议：每位顾问应投入全部储蓄",
+        ):
+            with self.subTest(forbidden=forbidden):
+                classification, checks = self.idea_semantic_checks(
+                    self.complete_handoff(),
+                    extra_html=f"<p>{forbidden}</p>",
+                )
+                statuses = {check["id"]: check["status"] for check in checks}
+                self.assertEqual(statuses["content.forbidden-claims"], "fail")
+                self.assertEqual(classification["artifact_status"], "fail")
+                self.assertEqual(classification["status"], "fail")
+
+    def test_d_confirmed_source_data_is_not_creative_supplement(self) -> None:
+        scenario = JUDGE.load_scenario("pdf-evidence-report")
+        handoff = """## Pending Verification List
+
+| Page/content | Supplement type | Source status | Suggested action |
+|---|---|---|---|
+| Page 2, 78 percent | Creative supplement | Pending verification | Confirm or replace |
+"""
+        checks = JUDGE.inspect_verification_handoff(handoff, scenario, [])
+        statuses = {check["id"]: check["status"] for check in checks}
+        self.assertEqual(statuses["handoff.protected-source-classification"], "fail")
+        self.assertEqual(JUDGE.classify_checks(checks)["status"], "fail")
+
+    def test_source_only_report_can_explicitly_declare_no_creative_supplements(
+        self,
+    ) -> None:
+        scenario = JUDGE.load_scenario("pdf-evidence-report")
+        handoff = """## 《待核实内容清单》
+
+无；本报告未新增待客户核实的事实性内容
+"""
+        checks = JUDGE.inspect_verification_handoff(handoff, scenario, [])
+        statuses = {check["id"]: check["status"] for check in checks}
+        self.assertEqual(statuses["delivery.verification-handoff"], "pass")
+        self.assertEqual(statuses["handoff.creative-fact-coverage"], "pass")
+        self.assertEqual(JUDGE.classify_checks(checks)["status"], "pass")
+
+    def test_idea_only_semantic_claims_cannot_pass_with_empty_handoff(self) -> None:
+        scenario = JUDGE.load_scenario("idea-live-conversion")
+        target = scenario["content_checks"]["allowed_action_targets"][0]
+        html_text = f"""
+        <main class="deck" data-mode="presentation">
+          <section class="slide">
+            <p>先把案例变成可调用证据，再谈扩大获客。</p>
+            <p>案例散落，这是一个示意场景。</p>
+            <p>我们已经处理几十个项目、几百段对话，每个线索都能高效转化。</p>
+          </section>
+          <section class="slide"><a href="{target}">{target}</a></section>
+        </main>
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text(html_text, encoding="utf-8")
+            _, content_checks = JUDGE.inspect_content(html, scenario)
+        fact_check = next(
+            check
+            for check in content_checks
+            if check["id"] == "content.source-bounded-facts"
+        )
+        self.assertEqual(fact_check["evidence"]["unexpected"], [])
+
+        handoff = """## 《待核实内容清单》
+
+无；本报告未新增待客户核实的事实性内容
+"""
+        checks = [
+            *content_checks,
+            *JUDGE.inspect_verification_handoff(handoff, scenario, []),
+        ]
+        statuses = {check["id"]: check["status"] for check in checks}
+        self.assertEqual(statuses["delivery.verification-handoff"], "warning")
+        self.assertEqual(statuses["handoff.creative-fact-coverage"], "warning")
+        self.assertEqual(JUDGE.classify_checks(checks)["status"], "conditional")
+
+    def test_e_handoff_does_not_expand_six_question_cap(self) -> None:
+        at_cap, _ = self.idea_semantic_checks(self.complete_handoff(), question_count=6)
+        over_cap, checks = self.idea_semantic_checks(
+            self.complete_handoff(), question_count=7
+        )
+        self.assertEqual(at_cap["status"], "pass")
+        self.assertEqual(over_cap["status"], "fail")
+        question_check = next(check for check in checks if check["id"] == "intake.question-cap")
+        self.assertEqual(question_check["evidence"]["actual"], 7)
 
 
 class AggregateResultsTests(unittest.TestCase):
@@ -381,6 +567,42 @@ class AggregateResultsTests(unittest.TestCase):
         del result["run"]["billing_usage"]
         with self.assertRaisesRegex(ValueError, "billing_usage"):
             AGGREGATE.validate_result(result, Path("result.json"))
+
+    def test_aggregate_separates_artifact_usable_from_conditional_workflow(self) -> None:
+        passed = self.make_result(
+            "pass", 3, 0, comparable=True, score=4, revisions=0
+        )
+        passed["objective"].update(
+            {"status": "pass", "artifact_status": "pass", "warning_count": 0}
+        )
+        passed["comparison"].update(
+            {"workflow_status": "pass", "artifact_usable": True}
+        )
+        conditional = self.make_result(
+            "conditional", 4, 0, comparable=True, score=4, revisions=0
+        )
+        conditional["objective"].update(
+            {
+                "status": "conditional",
+                "artifact_status": "pass",
+                "warning_count": 1,
+            }
+        )
+        conditional["comparison"].update(
+            {
+                "workflow_status": "conditional",
+                "artifact_usable": True,
+                "benchmark_success": False,
+            }
+        )
+        overall = AGGREGATE.aggregate([passed, conditional])["overall"]
+        self.assertEqual(overall["success_rate"], 0.5)
+        self.assertEqual(overall["conditional_rate"], 0.5)
+        self.assertEqual(overall["artifact_usable_rate"], 1.0)
+        self.assertEqual(
+            overall["workflow_status_distribution"],
+            {"pass": 1, "conditional": 1},
+        )
 
     def test_directory_discovery_ignores_metadata_and_human_review_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
