@@ -154,10 +154,32 @@ TaoHtml 会引导 Agent 依次判断：
 ### 脚本
 
 - `extract_pdf_pages.py`：将 PDF 页面渲染成 PNG 证据素材。
-- `check_assets.py`：检查缺失素材和不可迁移的本地绝对路径。
-- `check_html_deck.py`：用 Playwright 在 1600x900 下做浏览器 QA。
+- `check_assets.py`：检查普通资源、`data-source`、`srcset`、远程资源和不可迁移的本地绝对路径。
+- `check_html_deck.py`：用 Playwright 在 1600x900 下检查 hash 路由、分步展开、证据弹窗、媒体加载、控制台错误和可见区域边界。
 - `build_contact_sheet.py`：把 QA 截图合成总览图。
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
+
+## 开发、验证与版本管理
+
+项目版本记录在根目录 `VERSION`，遵循 Semantic Versioning；正式发布使用 `vMAJOR.MINOR.PATCH` tag。功能和修复在独立分支完成，通过自动化质量检查并合并到 `main` 后再创建 tag 和 GitHub Release。
+
+当前版本：`0.1.0`
+
+本地验证：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m playwright install chromium
+
+python -m unittest discover -s tests -v
+python -m py_compile skill/taohtml/scripts/*.py
+python skill/taohtml/scripts/check_assets.py skill/taohtml/assets/html-deck-template/index.html
+python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa
+```
+
+每个版本的可见变化记录在 `CHANGELOG.md`。不要直接在 `main` 上开发，也不要在质量检查通过前创建版本 tag。
 
 ## 设计标准
 

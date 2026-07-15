@@ -29,8 +29,8 @@ For HTML output, reuse:
 
 - `assets/html-deck-template/` as the default local, dependency-free 16:9 deck shell when starting from scratch.
 - `scripts/extract_pdf_pages.py` to render PDF source pages into evidence assets.
-- `scripts/check_assets.py` to detect missing assets, remote links, and non-portable absolute paths.
-- `scripts/check_html_deck.py` to run browser QA and screenshots at 1600x900.
+- `scripts/check_assets.py` to detect missing `src`, `href`, `poster`, `data-source`, `srcset`, and CSS assets, plus remote links and non-portable absolute paths.
+- `scripts/check_html_deck.py` to run browser QA at 1600x900 across hash routes, staged reveals, source modals, media loading, console errors, visible bounds, and screenshots.
 - `scripts/build_contact_sheet.py` to create a QA overview image from screenshots.
 - `scripts/package_deck.py` to create a portable zip after QA passes.
 

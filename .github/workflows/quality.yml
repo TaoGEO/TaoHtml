@@ -1,0 +1,63 @@
+name: TaoHtml Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile scripts
+        run: python -m py_compile skill/taohtml/scripts/*.py
+
+      - name: Check template assets
+        run: python skill/taohtml/scripts/check_assets.py skill/taohtml/assets/html-deck-template/index.html
+
+      - name: Run template browser QA
+        run: python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa
+
+      - name: Build QA contact sheet
+        run: python skill/taohtml/scripts/build_contact_sheet.py .artifacts/template-qa .artifacts/template-contact-sheet.png
+
+      - name: Package template
+        run: |
+          version=$(cat VERSION)
+          python skill/taohtml/scripts/package_deck.py skill/taohtml/assets/html-deck-template ".artifacts/taohtml-template-${version}.zip"
+
+      - name: Upload QA artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: taohtml-template-qa
+          path: .artifacts/
+          if-no-files-found: error
+          include-hidden-files: true
