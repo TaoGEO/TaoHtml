@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f6f3e8"/>
+  <rect x="64" y="56" width="1072" height="648" rx="24" fill="#ffffff" stroke="#17202a" stroke-width="3"/>
+  <text x="112" y="132" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#17202a">固定内容样张 · 合成证据记录</text>
+  <text x="112" y="184" font-family="Arial,sans-serif" font-size="20" fill="#53606d">用于比较四套视觉系统，不代表真实客户数据</text>
+  <line x1="112" y1="226" x2="1088" y2="226" stroke="#c7ced6" stroke-width="2"/>
+  <text x="112" y="294" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#17202a">证据条目</text>
+  <text x="112" y="344" font-family="Arial,sans-serif" font-size="20" fill="#17202a">案例归档：12 个项目，统一字段后可检索</text>
+  <text x="112" y="390" font-family="Arial,sans-serif" font-size="20" fill="#17202a">引用准备：8 个案例完成来源与结论绑定</text>
+  <text x="112" y="436" font-family="Arial,sans-serif" font-size="20" fill="#17202a">销售复用：6 个案例进入提案与复盘场景</text>
+  <rect x="112" y="500" width="976" height="112" rx="12" fill="#17202a"/>
+  <text x="152" y="550" font-family="Arial,sans-serif" font-size="18" fill="#b9c2cc">结论</text>
+  <text x="152" y="586" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#ffffff">证据必须同时保留来源、语境、结论与可复用入口。</text>
+</svg>

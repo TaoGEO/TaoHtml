@@ -84,6 +84,16 @@ For an idea-only route, evaluate these layers in order and skip any layer alread
 
 Treat this as a judgment layer, not a four-question form. Visual style, motion density, minor chapter naming, and ordinary delivery defaults are normally low-risk inferences unless the user has made them consequential.
 
+## Visual Source Selection
+
+Resolve the visual source only after content and chapter structure are clear enough to judge fit.
+
+- If the user supplies a clear visual reference, use that reference as the authority. Do not require an internal-theme choice. Record whether to reproduce it closely or use it as design DNA.
+- If no clear reference exists, read `visual-systems.md` and recommend 2-3 genuinely suitable built-in systems. Show each system's exact customer-facing name, one-line description, and bundled preview. Ask the user to choose once, or invite explicit delegation to TaoHtml.
+- Do not ask open-ended aesthetic questions such as “What style do you like?”. Do not repeat a theme-selection question after the user chooses or delegates.
+- Theme selection uses the same clarification counter and never expands the six-question hard maximum. If the project reaches the maximum or the three-no-gain stop before a theme is selected, choose the lowest-risk fit, move it to `inferred`, and disclose the basis in the Report Design Brief.
+- A selected theme fixes a reusable visual grammar, not a palette. Preserve its composition, hierarchy, image treatment, module language, chart/evidence treatment, and motion grammar unless the brief records a necessary deviation.
+
 ## Select The Next Question
 
 Before asking, re-read the conversation, available source, ledger, prior attempts, and counters. Then:
@@ -161,6 +171,7 @@ Treat a project as design-ready when:
 - No unresolved conflict can reverse the main conclusion.
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
 - Visual direction is known or safely delegated to TaoHtml.
+- The visual source is recorded as a user reference or one selected built-in visual system; any necessary deviation is explicit.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No high-risk item remains in `missing`.
