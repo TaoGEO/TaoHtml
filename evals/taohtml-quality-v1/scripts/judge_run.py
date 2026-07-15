@@ -58,6 +58,7 @@ class DeckParser(HTMLParser):
         self.skip_depth = 0
         self.deck_mode: str | None = None
         self.action_targets: set[str] = set()
+        self.visible_action_targets: set[str] = set()
         self.source_buttons = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -96,6 +97,9 @@ class DeckParser(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self.slide_start_depth is not None and self.skip_depth == 0 and data.strip():
             self.current_slide.append(data.strip())
+            self.visible_action_targets.update(
+                item.rstrip(".,);。，；") for item in ACTION_RE.findall(data)
+            )
 
 
 def load_scenario(scenario_id: str) -> dict[str, Any]:
@@ -216,8 +220,7 @@ def inspect_content(html: Path, scenario: dict[str, Any]) -> tuple[DeckParser, l
         )
     )
 
-    visible_actions = {item.rstrip(".,);。，；") for item in ACTION_RE.findall(full_text)}
-    found_actions = parser.action_targets | visible_actions
+    found_actions = parser.action_targets | parser.visible_action_targets
     allowed_actions = set(content.get("allowed_action_targets", []))
     unexpected_actions = sorted(found_actions - allowed_actions)
     missing_actions = sorted(allowed_actions - found_actions)

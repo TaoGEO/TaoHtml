@@ -54,7 +54,7 @@
       },
       {
         "id": "simulation-label",
-        "any": ["示意", "模拟", "synthetic", "illustrative"]
+        "any": ["示意", "模拟", "合成示例", "合成案例", "synthetic", "illustrative", "composite example", "composite case"]
       },
       {
         "id": "confirmed-cta",

@@ -228,6 +228,28 @@ class DeterministicJudgeTests(unittest.TestCase):
         self.assertEqual(statuses["content.source-bounded-facts"], "fail")
         self.assertEqual(statuses["content.action-targets"], "fail")
 
+    def test_composite_label_and_visible_action_preserve_valid_output(self) -> None:
+        scenario = JUDGE.load_scenario("idea-live-conversion")
+        target = scenario["content_checks"]["allowed_action_targets"][0]
+        html_text = f"""
+        <main class="deck" data-mode="presentation">
+          <section class="slide">
+            <p>先把案例变成可调用证据，再谈扩大获客。</p>
+            <p>案例散落，这是一个合成示例。</p>
+          </section>
+          <section class="slide">
+            <a href="{target}">{target}</a>
+          </section>
+        </main>
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text(html_text, encoding="utf-8")
+            _, checks = JUDGE.inspect_content(html, scenario)
+        statuses = {check["id"]: check["status"] for check in checks}
+        self.assertEqual(statuses["content.core-viewpoints"], "pass")
+        self.assertEqual(statuses["content.action-targets"], "pass")
+
 
 class AggregateResultsTests(unittest.TestCase):
     @staticmethod
