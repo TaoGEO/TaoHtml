@@ -35,8 +35,10 @@
       "type": "object",
       "required": ["status", "hard_failure_count", "checks"],
       "properties": {
-        "status": {"enum": ["pass", "fail", "unavailable"]},
+        "status": {"enum": ["pass", "conditional", "fail", "unavailable"]},
+        "artifact_status": {"enum": ["pass", "fail", "unavailable"]},
         "hard_failure_count": {"type": "integer", "minimum": 0},
+        "warning_count": {"type": "integer", "minimum": 0},
         "checks": {
           "type": "array",
           "items": {
@@ -45,8 +47,9 @@
             "properties": {
               "id": {"type": "string"},
               "category": {"type": "string"},
-              "status": {"enum": ["pass", "fail", "unavailable"]},
+              "status": {"enum": ["pass", "warning", "fail", "unavailable"]},
               "hard_failure": {"type": "boolean"},
+              "scope": {"enum": ["artifact", "workflow"]},
               "summary": {"type": "string"},
               "evidence": {}
             }
@@ -62,6 +65,8 @@
       "properties": {
         "comparable": {"type": "boolean"},
         "benchmark_success": {"type": "boolean"},
+        "artifact_usable": {"type": "boolean"},
+        "workflow_status": {"enum": ["pass", "conditional", "fail", "unavailable"]},
         "note": {"type": "string"}
       }
     }

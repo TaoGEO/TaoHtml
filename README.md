@@ -4,6 +4,8 @@ TaoHtml 是一个面向内容创作者的 HTML 视觉排版与交付 skill。
 
 它帮助 AI Agent 理解想法和源材料、确认报告设计简报，再生成结构清晰、视觉专业、可以离线交付的 HTML。长期目标覆盖多种 HTML 内容排版；当前首先把 Word / PDF 到分页式阅读报告与单屏演讲稿这条闭环做扎实。
 
+当前产品合同是“报告产出优先”：普通信息不足时允许 Agent 做创作性补全，先完成可用报告，再用结构化《待核实内容清单》让客户确认、修改、删除或替换；真实来源与高风险事实仍保持最小硬边界。
+
 > English brief: TaoHtml helps AI agents understand source material, confirm a report design brief, and turn it into polished offline HTML for reading or presentation.
 
 ## 真实案例：GEO 沙龙路演 HTML
@@ -236,9 +238,9 @@ TaoHtml 不会立刻写 HTML。标准流程是：
 2. 按入口完成来源理解；Word / PDF 输出材料理解摘要并等待确认或修正，只有想法则直接从对话建立决策账本。
 3. 只追问仍会改变设计结果的信息。
 4. 恰好一张静态参考先生成《VI 设计标准图》并等待“确认 VI”；其他明确参考先转为一张代表性静态截图；只有没有明确参考时，才从四套内置视觉系统推荐 2–3 套并完成选择或代理决策。
-5. 输出准确记录视觉来源、已确认 VI 或所选主题及必要偏离的《报告设计简报》。
+5. 输出准确记录视觉来源、已确认 VI 或所选主题、必要偏离和计划创作性补全范围的《报告设计简报》。
 6. 用户针对当前简报回复“确认”后，才开始制作 HTML；参考路线还需要独立任务产出的项目专用主题。
-7. 完成 Runtime、资产与浏览器 QA 后交付。
+7. 完成 Runtime、资产与浏览器 QA 后先交付可用报告，再附结构化《待核实内容清单》。普通创作性补全不会仅因用户未提供而阻塞制作。
 
 参考图能力提示：WorkBuddy 首次使用推荐 Auto；Codex 与 Claude Code 沿用当前会话。若当前会话无法可靠读取参考图，TaoHtml 会停止并让用户选择手动调整会话后重开，或改用四套内置视觉系统。
 
@@ -257,7 +259,7 @@ TaoHtml 不会立刻写 HTML。标准流程是：
   ↓ 用户确认
 HTML 制作 + 模块化 Runtime
   ↓
-资产检查 + 浏览器 QA + 离线交付
+资产检查 + 浏览器 QA + 离线报告 + 待核实内容清单
 ```
 
 详细状态门和提问规则见 [工作流说明](docs/workflow.md)。
@@ -285,7 +287,7 @@ HTML 制作 + 模块化 Runtime
 - `check_html_deck.py`：用 Playwright 检查 Runtime 契约、阅读/演讲模式、步级与页级导航、状态恢复、hash 路由、证据弹窗、控制台错误和可见区域边界。
 - `build_contact_sheet.py`：把 QA 截图合成总览图。
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
-- `render_visual_system.py`：把内容注入选中主题，同时保留共享 runtime shell。生产调用必须通过 `--source-image` 显式提供已核验的本地 PNG/JPEG/WebP/SVG 证据图；脚本校验并内嵌为离线 data URI，缺失或无效时直接失败，不生成、替代或伪造证据。
+- `render_visual_system.py`：把内容注入选中主题，同时保留共享 runtime shell。真实来源图必须显式使用 `--source-kind verified --source-image ...`，文件缺失或无效时失败；本地路径本身不代表来源已核实，CLI 或 Python API 未传 `source_kind` 时即使有本地图也安全默认为 `illustrative`。没有真实证据图时可使用自动示意占位或 `--source-kind illustrative` 的本地图，渲染器会在相邻位置标“示意 / 待核实”，不会把它冒充来源证据。
 - `render_reference_vi.py`：校验内部 VI JSON，内嵌单张静态参考，通过固定 HTML/CSS 模板生成规范板并导出 3200×2400 PNG；不负责图片理解或项目主题编译。
 
 ## 开发、验证与版本管理

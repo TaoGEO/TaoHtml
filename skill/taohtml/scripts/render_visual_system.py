@@ -39,6 +39,10 @@ SVG_EXTERNAL_REFERENCE = re.compile(
 SVG_ACTIVE_CONTENT = re.compile(
     rb"<\s*(?:script|foreignObject)\b|\son[a-z]+\s*=", re.IGNORECASE
 )
+SOURCE_KINDS = ("verified", "illustrative")
+ILLUSTRATIVE_MARKER = re.compile(
+    r"示意|模拟|待核实|illustrative|simulation|pending verification", re.IGNORECASE
+)
 
 
 def load_content(path: Path) -> dict[str, str]:
@@ -61,11 +65,7 @@ def load_manifest(theme_id: str) -> dict[str, object]:
     return manifest
 
 
-def source_data_uri(source_image: Path | None) -> str:
-    if source_image is None:
-        raise ValueError(
-            "Verified local evidence is required: pass --source-image with a readable PNG, JPEG, WebP, or SVG file."
-        )
+def local_image_data_uri(source_image: Path) -> str:
     try:
         path = source_image.expanduser().resolve(strict=True)
     except FileNotFoundError as exc:
@@ -116,9 +116,61 @@ def source_data_uri(source_image: Path | None) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def render_sections(template: str, content: dict[str, str], source_uri: str) -> str:
+def illustrative_placeholder_data_uri() -> str:
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+<rect width="1200" height="760" fill="#f3f1e9"/><rect x="70" y="70" width="1060" height="620" rx="28" fill="#fff" stroke="#17202a" stroke-width="3" stroke-dasharray="12 12"/>
+<path d="M150 560L350 390L520 470L760 245L1045 420" fill="none" stroke="#17202a" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="350" cy="390" r="24" fill="#d7ff3f" stroke="#17202a" stroke-width="8"/><circle cx="760" cy="245" r="24" fill="#ff7a33" stroke="#17202a" stroke-width="8"/>
+<text x="150" y="175" font-family="Arial,sans-serif" font-size="42" font-weight="700" fill="#17202a">示意内容 · 待核实</text>
+<text x="150" y="225" font-family="Arial,sans-serif" font-size="24" fill="#53606d">No verified source image was supplied.</text>
+</svg>"""
+    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def resolve_source(
+    source_image: Path | None,
+    source_kind: str | None,
+) -> tuple[str, str]:
+    """Validate and embed a source image without inferring verified provenance.
+
+    A caller must explicitly pass ``verified`` after grounding the local file in
+    confirmed source material. Omitting ``source_kind`` is always fail-safe and
+    illustrative, whether or not a local image is supplied.
+    """
+    resolved_kind = source_kind or "illustrative"
+    if resolved_kind not in SOURCE_KINDS:
+        raise ValueError(f"Unknown source kind: {resolved_kind}")
+    if resolved_kind == "verified" and source_image is None:
+        raise ValueError(
+            "Verified local evidence requires --source-image with a readable PNG, JPEG, WebP, or SVG file."
+        )
+    source_uri = (
+        local_image_data_uri(source_image)
+        if source_image is not None
+        else illustrative_placeholder_data_uri()
+    )
+    return source_uri, resolved_kind
+
+
+def render_sections(
+    template: str,
+    content: dict[str, str],
+    source_uri: str,
+    source_kind: str,
+) -> str:
     values = {key: html.escape(value, quote=True) for key, value in content.items()}
+    if source_kind == "illustrative":
+        source_text = content.get("S4_SOURCE", "")
+        if not ILLUSTRATIVE_MARKER.search(source_text):
+            source_text = f"示意 / 待核实 · {source_text or '生成视觉'}"
+        values["S4_SOURCE"] = html.escape(source_text, quote=True)
+        source_label = "示意内容图片（待核实）"
+    else:
+        source_label = "来源证据图片（已核实）"
     values["SOURCE_URI"] = html.escape(source_uri, quote=True)
+    values["SOURCE_LABEL"] = html.escape(source_label, quote=True)
+    values["SOURCE_KIND"] = source_kind
     required = set(PLACEHOLDER.findall(template))
     missing = sorted(required - values.keys())
     if missing:
@@ -131,12 +183,21 @@ def render_sections(template: str, content: dict[str, str], source_uri: str) -> 
     return rendered.strip()
 
 
-def _render_theme(content: dict[str, str], theme_id: str, output: Path, source_uri: str) -> Path:
+def _render_theme(
+    content: dict[str, str],
+    theme_id: str,
+    output: Path,
+    source_uri: str,
+    source_kind: str,
+) -> Path:
     manifest = load_manifest(theme_id)
     theme_dir = SYSTEMS_ROOT / theme_id
     css = (theme_dir / "theme.css").read_text(encoding="utf-8").strip()
     sections = render_sections(
-        (theme_dir / "templates.html").read_text(encoding="utf-8"), content, source_uri
+        (theme_dir / "templates.html").read_text(encoding="utf-8"),
+        content,
+        source_uri,
+        source_kind,
     )
     if "</style>" in css.lower():
         raise ValueError(f"Theme CSS contains a closing style tag: {theme_id}")
@@ -179,32 +240,47 @@ def render_theme(
     theme_id: str,
     output: Path,
     source_image: Path | None = None,
+    source_kind: str | None = None,
 ) -> Path:
-    return _render_theme(content, theme_id, output, source_data_uri(source_image))
+    """Render one theme; an omitted source kind always means illustrative."""
+    source_uri, resolved_kind = resolve_source(source_image, source_kind)
+    return _render_theme(content, theme_id, output, source_uri, resolved_kind)
 
 
 def render_all(
     content: dict[str, str],
     output_root: Path,
     source_image: Path | None = None,
+    source_kind: str | None = None,
 ) -> list[Path]:
-    source_uri = source_data_uri(source_image)
+    """Render every theme; verified provenance must be explicitly declared."""
+    source_uri, resolved_kind = resolve_source(source_image, source_kind)
     return [
-        _render_theme(content, theme_id, output_root / theme_id / "index.html", source_uri)
+        _render_theme(
+            content,
+            theme_id,
+            output_root / theme_id / "index.html",
+            source_uri,
+            resolved_kind,
+        )
         for theme_id in THEME_IDS
     ]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Render content and verified local evidence through TaoHtml's built-in visual systems."
+        description="Render content through TaoHtml's built-in visual systems with verified or illustrative local visuals."
     )
     parser.add_argument("--content", type=Path, required=True, help="Flat JSON content object.")
     parser.add_argument(
         "--source-image",
         type=Path,
-        required=True,
-        help="Verified local PNG, JPEG, WebP, or SVG evidence image to validate and embed for offline use.",
+        help="Local PNG, JPEG, WebP, or SVG image to validate and embed. Omit for an automatically labeled illustrative placeholder.",
+    )
+    parser.add_argument(
+        "--source-kind",
+        choices=SOURCE_KINDS,
+        help="Use verified only for grounded source material; illustrative is labeled next to the visual. Defaults to illustrative even when --source-image is supplied.",
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--theme", choices=THEME_IDS)
@@ -224,12 +300,18 @@ def main() -> int:
                     args.theme,
                     args.output.resolve(),
                     args.source_image,
+                    args.source_kind,
                 )
             ]
         else:
             if args.output_root is None:
                 parser.error("--output-root is required with --all")
-            outputs = render_all(content, args.output_root.resolve(), args.source_image)
+            outputs = render_all(
+                content,
+                args.output_root.resolve(),
+                args.source_image,
+                args.source_kind,
+            )
     except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as exc:
         print(f"RENDER_FAILED: {exc}", file=sys.stderr)
         return 1

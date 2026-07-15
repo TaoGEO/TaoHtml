@@ -1,6 +1,6 @@
 # Report Design Brief Template
 
-Generate this brief only after the route-appropriate source gate and the design-ready gate in `intake-workflow.md` both pass. Word/PDF requires a confirmed Material Understanding Summary; an idea-only route does not. If any high-risk gap remains, use the blocked-intake output instead of this template.
+Generate this brief only after the route-appropriate source gate and the design-ready gate in `intake-workflow.md` both pass. Word/PDF requires a confirmed Material Understanding Summary; an idea-only route does not. If a minimum hard-boundary gap remains, use the blocked-intake output instead of this template. Ordinary missing details may be completed after confirmation and disclosed in the delivery verification list.
 
 Keep it readable by the customer. Include only fields that affect this project. Do not emit a separate JSON configuration and do not pre-design every page.
 
@@ -54,7 +54,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 
 ## 待确认项
 - TaoHtml 的自动推断及依据：...
-- 补全内容：...
+- 预计创作性补全范围：可能补充的场景、数字、观点、示例或表达；具体生成内容将在交付时逐条列入《待核实内容清单》
 - 数据修正及原因：...
 - 其他会影响成品的判断：...
 
@@ -72,8 +72,9 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - If TaoHtml recommends or selects a built-in visual system, copy its full customer-facing name and one-line description, explain why it suits the topic, audience, and use mode, and record every necessary deviation. Write `无` when there is no deviation.
 - Include `行动闭环` only when the confirmed goal requires the audience to complete an external action. Omit it for explanatory, educational, or internal reports that do not require conversion; do not add a gratuitous CTA.
 - Copy the exact verified action path into the brief. Record its provenance and verification status separately from the desired action, and state how the audience will see and use it on the final page.
-- Put every automatic inference and its basis, content addition, and data correction in `待确认项`, even when confidence is high. This is where all `inferred` ledger items receive unified confirmation.
-- Never disguise a high-risk unresolved decision as an inference. Return to the blocked-intake output in `intake-workflow.md` instead.
+- Put every outcome-changing design inference and its basis, planned creative-supplement scope, and source-data correction in `待确认项`. This is where `inferred` design-ledger items receive unified confirmation; do not require the customer to pre-approve every production sentence or illustrative value.
+- During production, record each actual creative supplement in the delivery verification ledger rather than silently converting it into a source fact. Do not list customer-provided or independently verified facts as creative supplements.
+- Never disguise a minimum hard-boundary decision as an inference. Return to the blocked-intake output in `intake-workflow.md` instead.
 - Keep source records in the brief whether or not the final pages visibly cite them.
 - Do not split content into slide copy, speaker notes, and appendix at this stage; production makes that allocation from the confirmed mode.
 
