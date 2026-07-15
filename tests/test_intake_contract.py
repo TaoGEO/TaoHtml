@@ -11,6 +11,9 @@ INTAKE = (SKILL_DIR / "references" / "intake-workflow.md").read_text(encoding="u
 BRIEF = (SKILL_DIR / "references" / "design-brief-template.md").read_text(
     encoding="utf-8"
 )
+PLAYBOOK = (SKILL_DIR / "references" / "process-playbook.md").read_text(
+    encoding="utf-8"
+)
 
 
 class IntakeContractTests(unittest.TestCase):
@@ -54,6 +57,44 @@ class IntakeContractTests(unittest.TestCase):
         ):
             self.assertIn(heading, INTAKE)
         self.assertIn("use the blocked-intake output instead of this template", BRIEF)
+
+    def test_conversion_goal_requires_a_real_action_path_before_brief(self) -> None:
+        self.assertIn("A conversion objective is not design-ready", INTAKE)
+        self.assertIn("real action path remains missing", INTAKE)
+        self.assertIn("do not generate a Report Design Brief or begin production", INTAKE)
+
+    def test_verified_source_action_path_is_reused_without_reasking(self) -> None:
+        self.assertIn(
+            "Do not ask for an action path already supported by the source or project context",
+            INTAKE,
+        )
+        self.assertIn("record the value, source, and verification result", INTAKE)
+
+    def test_non_conversion_reports_do_not_require_an_action_path(self) -> None:
+        self.assertIn(
+            "Do not ask for an action path when the report is explanatory, educational, or internal",
+            INTAKE,
+        )
+
+    def test_action_channels_cannot_be_invented(self) -> None:
+        self.assertIn(
+            "Never invent a URL, QR code, contact detail, price, command, or product entry",
+            INTAKE,
+        )
+        self.assertIn("Never synthesize a placeholder channel", PLAYBOOK)
+
+    def test_brief_and_delivery_trace_the_executable_action_path(self) -> None:
+        for field in (
+            "期望行动",
+            "真实执行路径",
+            "渠道来源与验证状态",
+            "最终页面展示方式",
+        ):
+            self.assertIn(field, BRIEF)
+        self.assertIn("executable-action traceability", PLAYBOOK)
+        self.assertIn(
+            "visible, usable, and aligned with the confirmed objective", PLAYBOOK
+        )
 
     def test_skill_keeps_compact_startup_and_has_no_dbs_dependency(self) -> None:
         self.assertIn("compress these startup choices into one short interaction", SKILL)

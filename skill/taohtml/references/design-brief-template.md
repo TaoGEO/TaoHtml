@@ -16,7 +16,13 @@ Keep it readable by the customer. Include only fields that affect this project. 
 
 ## 报告目标
 - 受众：...
-- 希望受众理解、相信或采取的行动：...
+- 希望受众理解或相信：...
+- 期望行动：...
+
+## 行动闭环（仅在目标要求外部行动时保留）
+- 真实执行路径：完整 URL / Agent 调用语法 / 命令 / 下载或预约入口 / 联系方式
+- 渠道来源与验证状态：用户明确提供 / 来源材料或项目上下文 + 验证方式与结果 / 用户授权 TaoHtml 选择 + 独立验证结果
+- 最终页面展示方式：可见链接、完整命令、联系方式，或已解码核对且同时展示文本入口的二维码
 
 ## 必须保留的核心观点
 1. ...
@@ -58,6 +64,8 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - If the user supplied a clear visual reference, record whether it should be closely reproduced or treated as design DNA.
 - If TaoHtml recommends a visual direction, explain why it suits the topic, audience, and use mode.
+- Include `行动闭环` only when the confirmed goal requires the audience to complete an external action. Omit it for explanatory, educational, or internal reports that do not require conversion; do not add a gratuitous CTA.
+- Copy the exact verified action path into the brief. Record its provenance and verification status separately from the desired action, and state how the audience will see and use it on the final page.
 - Put every automatic inference and its basis, content addition, and data correction in `待确认项`, even when confidence is high. This is where all `inferred` ledger items receive unified confirmation.
 - Never disguise a high-risk unresolved decision as an inference. Return to the blocked-intake output in `intake-workflow.md` instead.
 - Keep source records in the brief whether or not the final pages visibly cite them.

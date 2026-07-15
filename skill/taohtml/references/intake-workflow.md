@@ -38,6 +38,27 @@ known | confirmed | inferred | missing
 
 Rebuild the ledger after reading each source and update it after every answer. Move information instead of copying it across buckets. Do not ask about `known`, `confirmed`, or safely `inferred` items.
 
+## Desired Action And Real Action Path
+
+Keep two decisions separate:
+
+- **Desired action**: what the audience should decide or do after the report.
+- **Real action path**: the exact channel through which the audience can complete that action, such as a verified URL, host-agent invocation, installation command, booking route, download location, or contact detail.
+
+Treat trial, purchase, booking, download, installation, contact, registration, subscription, and similar external-action goals as **conversion objectives**. A conversion objective is not design-ready until the desired action and a real action path are both resolved. Do not ask for an action path when the report is explanatory, educational, or internal and its confirmed goal does not require an external action.
+
+Accept an action path only when it is:
+
+1. explicitly provided by the user;
+2. present in the source material or project context and verified against that context; or
+3. selected under explicit user delegation and independently verified by the Agent before the brief.
+
+Do not ask for an action path already supported by the source or project context; record the value, source, and verification result in the ledger instead. Where independent verification is required, establish that the intended audience can use the complete channel and that it leads to the intended action. For URLs, open the target and confirm its purpose. For host-agent syntax or commands, check authoritative host or project documentation without triggering the external action. For user-provided contact details or prices, preserve the exact value and mark it as user-provided rather than implying independent verification. A QR code is a presentation of a verified value, not a source: decode it and compare the result with that value before delivery.
+
+Never invent a URL, QR code, contact detail, price, command, or product entry. If the user delegates channel selection but the Agent cannot verify a candidate, keep the action path in `missing`.
+
+When a conversion objective lacks a real action path, ask one minimal decision question at the point where it is the largest outcome-changing gap: request the exact channel, request authorization to locate and verify one, or offer to explicitly downgrade the goal so the report no longer promises direct action. This prompt counts toward the same six-question limit; it is not a fixed questionnaire item. A downgrade is valid only when the user clearly accepts the changed goal.
+
 ## Compact Startup
 
 Preserve the three product choices:
@@ -71,6 +92,8 @@ Ask one decision question per round. Combine closely related details only when t
 
 Treat "decide for me", "not important", or equivalent wording as delegation: choose a reasonable low-risk default, move it to `inferred`, and do not ask again.
 
+For a missing conversion action path, delegation authorizes TaoHtml to locate and verify a channel; it does not authorize invention or an unverified default.
+
 ## Question Budget And Stop Rules
 
 Count agent-initiated clarification prompts within the current intake cycle. Count the bundled startup prompt as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
@@ -96,7 +119,10 @@ Treat a gap as high risk when guessing could:
 - change the report's promised scope or responsibility boundary;
 - reverse or materially distort the main conclusion;
 - create an unsupported factual, quantitative, legal, safety, or outcome claim; or
+- claim that an audience can complete a conversion action without a verified real action path; or
 - silently choose between structures that embody different goals or conclusions.
+
+When a conversion objective's real action path remains missing at a stop condition, do not generate a Report Design Brief or begin production. Use the blocked-intake output below, unless the user has explicitly downgraded the goal to one that does not require direct action. Never replace the missing channel with a slogan, a generic process such as “choose material → hand it over → see the result,” or an implied future entry point.
 
 When any high-risk gap remains after its second attempt, the six-question maximum, or the three-no-gain stop, do not generate a Report Design Brief and do not begin production. Output only:
 
@@ -132,6 +158,7 @@ Treat a project as design-ready when:
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
 - Visual direction is known or safely delegated to TaoHtml.
 - Route, use mode, length, and material delivery constraints are known or safely inferred.
+- For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No high-risk item remains in `missing`.
 
 Stop asking as soon as these conditions are met. A clear idea can therefore proceed directly to a brief with zero clarification questions.

@@ -12,6 +12,8 @@ The first question is not "how many slides". The first question is:
 
 > What decision, belief, or action should the audience reach after this report?
 
+Keep the desired action separate from its execution path. For a conversion objective, production may use only the exact channel and verification status recorded in the confirmed brief; a persuasive verb is not a substitute for a usable entry point.
+
 Clarify:
 
 - Who is the audience?
@@ -318,7 +320,7 @@ For evidence pages, describe:
 
 For commercial closing pages, make the next action concrete without overselling.
 
-## 10. Close With Offer, Boundary, And Action
+## 10. Close With Offer, Boundary, And Executable Action
 
 A report that promotes a product, service, or tool should not end abruptly after the framework.
 
@@ -331,6 +333,16 @@ Recommended closing stack:
 5. What is not promised.
 6. Pricing or package, if relevant.
 7. Clear next action.
+
+For a conversion report, make the next action executable:
+
+- Copy the exact verified action path from the confirmed brief. Never synthesize a placeholder channel or “improve” a URL, command, contact detail, price, or product entry from memory.
+- Show the complete path visibly enough to use. A button label, a generic three-step slogan, or “scan/contact/try now” without the underlying link, syntax, command, or contact route does not close the action.
+- Make a link's destination match the visible verified URL. When using a QR code, encode the same verified value, decode the rendered code during QA, and keep a readable text alternative on the page.
+- Validate usability without taking the external action: open public URLs and confirm the intended destination; compare host-agent syntax or commands with authoritative documentation or project context; compare contact details and prices with their confirmed source. Do not submit a form, send a message, place an order, or create an account merely to test a CTA.
+- If production reveals that the confirmed path is missing, incomplete, or invalid, return to intake and revise the brief. Do not ship a direct-action claim with an implied or fictional route.
+
+For reports without a conversion objective, do not add a CTA channel or closing sales page merely to satisfy this section.
 
 Boundary language is important:
 
@@ -358,6 +370,9 @@ Content:
 - Does each slide have one job?
 - Are major claims backed by evidence?
 - Does a brief-to-output traceability check map every confirmed core viewpoint, correction, evidence gap, and decision boundary to a visible output location?
+- For conversion reports, does executable-action traceability map the desired action, exact path, source and verification status, and final display location from the brief to the output?
+- Is the rendered action channel visible, usable, and aligned with the confirmed objective rather than reduced to CTA wording alone?
+- If the CTA uses a link, command, contact route, price, or QR code, does its rendered value exactly match the verified source, and does the QR decode to the same path?
 - Do compound requirements preserve every required part, such as "SLA, responsibility boundary, and API dictionary" rather than compressing the list into a narrower substitute?
 - Is the offer introduced only after the problem and method are credible?
 
@@ -412,6 +427,10 @@ Fix: crop the screenshot, add a title, mark the decisive area, and write the imp
 ### The Sales Part Arrives Too Early
 
 Fix: move pricing and service pages after diagnosis, mechanism, proof, and operating system.
+
+### The CTA Names An Action But Provides No Route
+
+Fix: distinguish the desired action from its real execution path. Use only the verified channel in the confirmed brief, make the complete value visible and usable, and trace it through delivery QA. If no verified channel exists, return to intake or explicitly downgrade the goal instead of writing a conversion slogan.
 
 ### The Interaction Requires A Mouse
 
