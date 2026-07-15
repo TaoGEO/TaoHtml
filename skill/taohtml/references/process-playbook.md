@@ -465,7 +465,7 @@ Fix:
 
 ### The Reference Style Was Copied As A Palette Only
 
-Fix: re-run the design DNA extraction. Copy composition, hierarchy, motifs, source treatment, and motion grammar. A reference deck's style is usually created by layout behavior, not hex values.
+Fix: use the applicable confirmed visual source. For one static reference image, return to the confirmed VI board and copy only its composition, hierarchy, motifs, source treatment, module language, evidence treatment, and preserve/avoid rules; never infer sequential behavior from the still image. Presentation behavior comes from the confirmed use mode and runtime contract, not from that reference. A visual system is created by layout behavior, not hex values alone.
 
 ## 14. Minimal Delivery Template
 

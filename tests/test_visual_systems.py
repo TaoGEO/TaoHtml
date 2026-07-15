@@ -161,7 +161,10 @@ class VisualSystemRoutingTests(unittest.TestCase):
         intake = (SKILL_ROOT / "references" / "intake-workflow.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("use that reference as the authority", intake)
+        self.assertIn("supplies exactly one static image", intake)
+        self.assertIn("read `static-reference-vi.md`", intake)
+        self.assertIn("render the VI design standards board", intake)
+        self.assertIn("do not infer dynamic behavior", intake)
         self.assertIn("recommend 2-3 genuinely suitable built-in systems", intake)
         self.assertIn("exact customer-facing name, one-line description, and bundled preview", intake)
         self.assertIn("Do not ask open-ended aesthetic questions", intake)

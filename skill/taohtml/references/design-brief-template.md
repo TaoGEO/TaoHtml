@@ -35,13 +35,13 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 支撑证据：...
 - 预期结论：...
 
-## 视觉与动效方向
+## 视觉方向
 - 视觉来源：用户明确参考 / TaoHtml 内置主题
 - 用户参考（如适用）：链接、文件或可定位描述；贴近复现 / 仅提取设计 DNA
+- VI 规范图（单张静态参考时保留）：当前 PNG / HTML 路径 + 已确认状态
 - 所选内置主题（如适用）：完整主题名称 + 一句具体画面描述
 - 选择理由：...
 - 必要偏离说明：无 / 偏离项、原因及仍保留的主题语法
-- 动效密度：少量 / 适中 / 丰富
 - 阅读与演讲行为：...
 
 ## 来源与证据记录
@@ -67,6 +67,8 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - If the user supplied a clear visual reference, record whether it should be closely reproduced or treated as design DNA.
 - If the user supplied a clear visual reference, do not add a competing built-in-theme requirement.
+- For one static reference image, include the confirmed VI board path and confirmation state. Do not include a dynamic-analysis field or infer sequential behavior from the image.
+- Treat VI confirmation and Report Design Brief confirmation as separate gates. A confirmed VI board may enter the separate project-theme handoff, but it does not authorize report production.
 - If TaoHtml recommends or selects a built-in visual system, copy its full customer-facing name and one-line description, explain why it suits the topic, audience, and use mode, and record every necessary deviation. Write `无` when there is no deviation.
 - Include `行动闭环` only when the confirmed goal requires the audience to complete an external action. Omit it for explanatory, educational, or internal reports that do not require conversion; do not add a gratuitous CTA.
 - Copy the exact verified action path into the brief. Record its provenance and verification status separately from the desired action, and state how the audience will see and use it on the final page.

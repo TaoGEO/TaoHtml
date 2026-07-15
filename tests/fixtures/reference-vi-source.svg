@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">城市更新观察静态参考样张</title>
+  <desc id="desc">暖白画布、深墨标题、砖红强调、黄铜标签、硬边模块与直接标注柱图</desc>
+  <rect width="1200" height="900" fill="#f4efe5"/>
+  <rect x="56" y="50" width="1088" height="800" fill="#fbf8f1" stroke="#17191a" stroke-width="4"/>
+  <rect x="86" y="82" width="176" height="36" fill="#c8a64b"/>
+  <text x="104" y="108" fill="#17191a" font-family="Arial,PingFang SC,sans-serif" font-size="18" font-weight="800" letter-spacing="2">URBAN NOTE 07</text>
+  <text x="88" y="198" fill="#17191a" font-family="Arial Black,PingFang SC,sans-serif" font-size="76" font-weight="900">旧街区不是负担，</text>
+  <text x="88" y="282" fill="#17191a" font-family="Arial Black,PingFang SC,sans-serif" font-size="76" font-weight="900">而是增长的底稿。</text>
+  <rect x="88" y="316" width="408" height="10" fill="#b94b3f"/>
+  <text x="88" y="376" fill="#565a58" font-family="Arial,PingFang SC,sans-serif" font-size="25">把空间、商户与社区证据放进同一张决策地图。</text>
+
+  <rect x="742" y="84" width="360" height="314" fill="#233c37" stroke="#17191a" stroke-width="4"/>
+  <circle cx="915" cy="242" r="108" fill="#c8a64b" opacity=".9"/>
+  <path d="M766 352L834 244L895 304L958 164L1078 350Z" fill="#b94b3f" opacity=".9"/>
+  <rect x="766" y="108" width="116" height="28" fill="#fbf8f1"/>
+  <text x="780" y="129" fill="#17191a" font-family="Arial,PingFang SC,sans-serif" font-size="15" font-weight="800">街区样本 / 03</text>
+
+  <line x1="88" y1="440" x2="1102" y2="440" stroke="#17191a" stroke-width="3"/>
+  <text x="88" y="492" fill="#17191a" font-family="Arial Black,PingFang SC,sans-serif" font-size="31" font-weight="900">三项证据决定更新优先级</text>
+
+  <rect x="88" y="528" width="286" height="238" fill="#ffffff" stroke="#17191a" stroke-width="3"/>
+  <text x="112" y="566" fill="#b94b3f" font-family="Arial,PingFang SC,sans-serif" font-size="17" font-weight="800">01 / 空间活力</text>
+  <text x="112" y="632" fill="#17191a" font-family="Arial Black,sans-serif" font-size="58" font-weight="900">72%</text>
+  <text x="112" y="676" fill="#565a58" font-family="Arial,PingFang SC,sans-serif" font-size="19">晚间人流集中在三条支路</text>
+  <rect x="112" y="714" width="222" height="12" fill="#e1ddd4"/>
+  <rect x="112" y="714" width="160" height="12" fill="#b94b3f"/>
+
+  <rect x="396" y="528" width="286" height="238" fill="#ffffff" stroke="#17191a" stroke-width="3"/>
+  <text x="420" y="566" fill="#b94b3f" font-family="Arial,PingFang SC,sans-serif" font-size="17" font-weight="800">02 / 商户稳定</text>
+  <text x="420" y="632" fill="#17191a" font-family="Arial Black,sans-serif" font-size="58" font-weight="900">48</text>
+  <text x="420" y="676" fill="#565a58" font-family="Arial,PingFang SC,sans-serif" font-size="19">持续经营超过五年的门店</text>
+  <rect x="420" y="714" width="222" height="12" fill="#e1ddd4"/>
+  <rect x="420" y="714" width="118" height="12" fill="#c8a64b"/>
+
+  <rect x="704" y="528" width="398" height="238" fill="#233c37" stroke="#17191a" stroke-width="3"/>
+  <text x="730" y="566" fill="#f4efe5" font-family="Arial,PingFang SC,sans-serif" font-size="17" font-weight="800">03 / 直接标注证据</text>
+  <line x1="744" y1="724" x2="1068" y2="724" stroke="#f4efe5" stroke-width="2"/>
+  <rect x="770" y="658" width="58" height="66" fill="#b94b3f"/>
+  <rect x="864" y="614" width="58" height="110" fill="#c8a64b"/>
+  <rect x="958" y="582" width="58" height="142" fill="#f4efe5"/>
+  <text x="780" y="648" fill="#f4efe5" font-family="Arial,sans-serif" font-size="17" font-weight="800">31</text>
+  <text x="874" y="604" fill="#f4efe5" font-family="Arial,sans-serif" font-size="17" font-weight="800">53</text>
+  <text x="968" y="572" fill="#f4efe5" font-family="Arial,sans-serif" font-size="17" font-weight="800">68</text>
+
+  <text x="88" y="814" fill="#565a58" font-family="Arial,PingFang SC,sans-serif" font-size="15">样张用途：TaoHtml 单张静态参考 VI 规范板回归与视觉验收</text>
+  <text x="1058" y="814" fill="#17191a" font-family="Arial,sans-serif" font-size="15" font-weight="800">07</text>
+</svg>
