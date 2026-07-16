@@ -19,6 +19,19 @@ PACKAGER = ROOT / "scripts" / "package_plugin_marketplace.py"
 SKILLHUB_PACKAGER = ROOT / "scripts" / "package_skillhub.py"
 ARCHIVE_ROOT = "taohtml-marketplace"
 GITHUB_REPOSITORY = "https://github.com/TaoGEO/TaoHtml"
+EXPECTED_CUSTOMER_OPENING = (
+    "把已有的 Word、PDF 或 PPT，直接制作成可在浏览器中汇报、带分步动效、支持全屏展示与离线交付的 16:9 HTML 演示文稿。"
+    "它不只是转换文件格式，还会重新设计页面、视觉层级和讲解节奏，让成品可以直接用于项目汇报、客户提案、产品路演或培训。",
+    "如果你准备写报告、做汇报或制作提案，但目前只有一个主题、还没有完整思路，TaoHtml 也可以通过少量关键问题，"
+    "帮助你梳理目标、受众、核心观点、证据和报告结构，再完成内容与演示设计。",
+    "如果你有喜欢的 PPT、网页或图片风格，可以把参考图发给 TaoHtml。它会拆解配色、字体层级、构图、组件和品牌元素，"
+    "先生成一张 VI 设计标准图供你确认，再按照这套标准制作完整报告。企业模板还可以保留 Logo、页眉、页脚等固定品牌元素。",
+    "如果你没有明确的参考风格，可以直接选择四套内置视觉系统：黑白荧光卡片、严谨咨询报告、稳重企业年报、杂志图文拼贴，"
+    "由 TaoHtml 根据报告内容完成重构与设计。",
+)
+
+sys.path.insert(0, str(ROOT))
+from scripts import package_skillhub as skillhub_packager
 
 
 class PluginPackagingTests(unittest.TestCase):
@@ -145,9 +158,10 @@ class PluginPackagingTests(unittest.TestCase):
             "Copy-Item -Recurse -Force .\\skill\\taohtml $env:USERPROFILE\\.codex\\skills\\taohtml",
             readme,
         )
-        self.assertIn("taohtml-marketplace-v0.3.0.zip", readme)
-        for version in ("v0.3.0", "v0.2.0", "v0.1.0"):
+        self.assertIn("taohtml-marketplace-v0.3.1.zip", readme)
+        for version in ("v0.3.1", "v0.3.0", "v0.2.0", "v0.1.0"):
             self.assertIn(version, readme)
+        self.assertIn("CHANGELOG.md#031---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#030---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#020---2026-07-15", readme)
         self.assertIn("CHANGELOG.md#010---2026-07-13", readme)
@@ -180,9 +194,10 @@ class PluginPackagingTests(unittest.TestCase):
         with Image.open(overview) as image:
             self.assertEqual(image.size, (1708, 914))
 
-    def test_builds_skillhub_channel_package_from_the_canonical_skill(self) -> None:
+    def test_builds_skillhub_channel_package_with_separate_overview_and_rules(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "taohtml-skillhub-v0.3.0.zip"
+            version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+            output = Path(temp_dir) / f"taohtml-skillhub-v{version}.zip"
             repeated_output = Path(temp_dir) / "taohtml-skillhub-repeated.zip"
             subprocess.run(
                 [
@@ -207,6 +222,7 @@ class PluginPackagingTests(unittest.TestCase):
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
                 self.assertIn("SKILL.md", names)
+                self.assertIn("references/agent-workflow.md", names)
                 self.assertEqual(
                     [name for name in names if name.endswith("SKILL.md")],
                     ["SKILL.md"],
@@ -220,10 +236,7 @@ class PluginPackagingTests(unittest.TestCase):
                 metadata = yaml.safe_load(frontmatter_text)
                 self.assertEqual(metadata["name"], "taohtml")
                 self.assertEqual(metadata["slug"], "taohtml")
-                self.assertEqual(
-                    metadata["version"],
-                    (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
-                )
+                self.assertEqual(metadata["version"], version)
                 self.assertEqual(metadata["displayName"], "TaoHtml")
                 self.assertEqual(metadata["category"], "content-creation")
                 self.assertEqual(
@@ -232,25 +245,90 @@ class PluginPackagingTests(unittest.TestCase):
                 )
                 self.assertIn("16:9", metadata["summary"])
                 self.assertIn("四套内置视觉系统", metadata["description"])
-                self.assertIn("参考图建立项目专用视觉风格", metadata["description"])
+                self.assertIn("把参考图发给 TaoHtml", metadata["description"])
+                self.assertIn("VI 设计标准图供你确认", metadata["description"])
                 self.assertNotIn("CSS scroll-snap", metadata["description"])
+                expected_summary, expected_description = (
+                    skillhub_packager.readme_intro_copy()
+                )
+                self.assertEqual(metadata["summary"], expected_summary)
+                self.assertEqual(metadata["description"], expected_description)
+                self.assertEqual(metadata["summary"], EXPECTED_CUSTOMER_OPENING[0])
+                self.assertEqual(
+                    metadata["description"], "".join(EXPECTED_CUSTOMER_OPENING)
+                )
 
                 canonical_text = (
                     ROOT / "skill" / "taohtml" / "SKILL.md"
                 ).read_text(encoding="utf-8")
                 canonical_body = canonical_text.split("\n---\n", 1)[1]
-                self.assertTrue(generated_body.startswith(canonical_body.rstrip()))
+                self.assertEqual(
+                    archive.read("references/agent-workflow.md").decode("utf-8"),
+                    canonical_body,
+                )
+                self.assertEqual(
+                    generated_body,
+                    skillhub_packager.skillhub_body(version),
+                )
+                self.assertEqual(
+                    skillhub_packager.skillhub_body(version),
+                    skillhub_packager.readme_customer_overview(version),
+                )
+                self.assertNotEqual(generated_body, canonical_body)
+                self.assertIn("## Explicit Invocation", canonical_body)
+                self.assertNotIn("Explicit Invocation", generated_body)
+                self.assertTrue(
+                    generated_body.startswith(
+                        "# TaoHtml\n\n" + "\n\n".join(EXPECTED_CUSTOMER_OPENING)
+                    )
+                )
+                before_installation = generated_body.split("\n## 安装入口\n", 1)[0]
+                self.assertNotIn("agent-workflow.md", before_installation)
+                self.assertNotIn("Agent 执行要求（安装后）", generated_body)
+                self.assertIn(
+                    "Agent 都必须先完整读取同一渠道包内的 `references/agent-workflow.md`",
+                    generated_body,
+                )
+                self.assertIn("用户无需手动打开或加载这些文件", generated_body)
+                self.assertIn("均从技能根目录解析", generated_body)
 
                 readme = (ROOT / "README.md").read_text(encoding="utf-8")
-                author_section = "## 作者与合作\n" + readme.split(
-                    "\n## 作者与合作\n", 1
-                )[1]
-                next_heading = author_section.find("\n## ", len("## 作者与合作"))
-                if next_heading >= 0:
-                    author_section = author_section[:next_heading]
-                author_section = author_section.strip() + "\n"
-                self.assertTrue(generated_body.endswith(author_section))
-                self.assertIn("微信：`taomir`", author_section)
+                for heading in (
+                    "## 核心能力",
+                    "## 四套内置视觉系统",
+                    "## 使用客户参考图",
+                    "## 安装入口",
+                    "## 版本更新",
+                    "## 作者与合作",
+                ):
+                    self.assertIn(heading, generated_body)
+                for key_copy in (
+                    *EXPECTED_CUSTOMER_OPENING,
+                    "黑白荧光卡片",
+                    "严谨咨询报告",
+                    "稳重企业年报",
+                    "杂志图文拼贴",
+                    "接受 1 张静态参考图，提取可观察的颜色、字体层级、构图、组件和证据语言",
+                    "接受同一模板族 1–3 张静态截图，锁定截图中可见的 Logo、页眉、页脚、品牌条和固定装饰",
+                    "TaoHtml 由 Tao 发起",
+                    "微信：`taomir`",
+                ):
+                    self.assertIn(key_copy, readme)
+                    self.assertIn(key_copy, generated_body)
+                self.assertNotRegex(
+                    generated_body,
+                    r"(?i)<img|!\[[^\]]*\]\(|\.(?:png|jpe?g|webp|gif|svg)\)",
+                )
+                self.assertNotIn("docs/assets/readme/", generated_body)
+                self.assertNotIn("即使不查看下方总览图", generated_body)
+                self.assertIn("以下表格直接说明各自的画面特征", generated_body)
+                self.assertNotIn("下方全部使用", generated_body)
+                self.assertIn("以下说明基于仓库自制、无真实品牌的合成样例", generated_body)
+                self.assertNotIn("和高清 VI 标准图", generated_body)
+                self.assertIn(
+                    f"[GitHub README 的“使用客户参考图”章节]({GITHUB_REPOSITORY}/blob/v{version}/README.md#使用客户参考图)",
+                    generated_body,
+                )
                 self.assertNotIn("## 作者与合作", canonical_text)
                 self.assertNotIn("taomir", canonical_text)
                 self.assertNotIn("taomir", metadata["summary"])
@@ -260,7 +338,7 @@ class PluginPackagingTests(unittest.TestCase):
                     (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"),
                 )
 
-    def test_public_channel_descriptions_share_the_v030_positioning(self) -> None:
+    def test_public_channel_descriptions_share_the_current_positioning(self) -> None:
         canonical = (ROOT / "skill" / "taohtml" / "SKILL.md").read_text(
             encoding="utf-8"
         )

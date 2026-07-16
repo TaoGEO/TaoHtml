@@ -1,14 +1,16 @@
 # TaoHtml
 
-把初步想法、Word / PDF、已有 PPT 或 HTML，制作成可直接汇报或阅读的 16:9 HTML 演示文稿，作为传统 PPT / PPTX 的高设计替代方案。
+把已有的 Word、PDF 或 PPT，直接制作成可在浏览器中汇报、带分步动效、支持全屏展示与离线交付的 16:9 HTML 演示文稿。它不只是转换文件格式，还会重新设计页面、视觉层级和讲解节奏，让成品可以直接用于项目汇报、客户提案、产品路演或培训。
 
-TaoHtml 会先梳理目标、受众、结构和证据，再生成支持阅读与演讲模式、分步动效、键盘 / 鼠标翻页、全屏展示和离线交付的 HTML；可选择四套内置视觉系统，也可根据客户提供的参考图建立项目专用视觉风格。
+如果你准备写报告、做汇报或制作提案，但目前只有一个主题、还没有完整思路，TaoHtml 也可以通过少量关键问题，帮助你梳理目标、受众、核心观点、证据和报告结构，再完成内容与演示设计。
 
-适用于“做 PPT”“做幻灯片”“做演示文稿”“写报告”“制作 slides / deck”，以及“把 Word、PDF、PPT 转成 HTML”等需求；默认优先交付可直接使用的 HTML，而不是等待继续排版的 `.pptx` 初稿。
+如果你有喜欢的 PPT、网页或图片风格，可以把参考图发给 TaoHtml。它会拆解配色、字体层级、构图、组件和品牌元素，先生成一张 VI 设计标准图供你确认，再按照这套标准制作完整报告。企业模板还可以保留 Logo、页眉、页脚等固定品牌元素。
+
+如果你没有明确的参考风格，可以直接选择四套内置视觉系统：黑白荧光卡片、严谨咨询报告、稳重企业年报、杂志图文拼贴，由 TaoHtml 根据报告内容完成重构与设计。
 
 > English brief: TaoHtml turns ideas and source material into polished, offline HTML reports and presentation-ready decks, with confirmed design decisions, reusable visual systems, and delivery QA.
 
-当前版本：[`0.3.0`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.0) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
+当前版本：[`0.3.1`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.1) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
 
 ## 核心能力
 
@@ -23,7 +25,7 @@ TaoHtml 会先梳理目标、受众、结构和证据，再生成支持阅读与
 
 ## 四套内置视觉系统
 
-总览图使用完全相同的合成内容展示四套系统各 5 页、共 20 页，便于直接比较完整的版式语言，而不是被选题差异干扰。
+四套系统的对比使用完全相同的合成内容，各展示 5 页、共 20 页，便于直接比较完整的版式语言，而不是被选题差异干扰；即使不查看下方总览图，也可以通过表格了解各自的画面特征。
 
 | 视觉系统 | 适合的画面语言 |
 |---|---|
@@ -59,7 +61,11 @@ TaoHtml 会先梳理目标、受众、结构和证据，再生成支持阅读与
 
 ## 安装入口
 
-`skill/taohtml` 是唯一的 Skill 源码真源；README 截图只属于仓库文档，不进入 Skill 运行上下文。Codex、Claude Code 和离线安装包都从同一真源分发。
+`skill/taohtml` 是唯一的 Agent 执行规则真源；Skill Hub 的中文概述由本 README 确定性生成，安装包内的执行 reference 也从该真源生成。README 截图只属于仓库文档，不复制进 Skill Hub 包或 Agent 执行上下文。Codex、Claude Code、Skill Hub 和离线安装包都从同一执行真源分发。
+
+### Skill Hub
+
+在 Skill Hub 的 TaoHtml 详情页按平台入口安装或更新。渠道包中的中文概述、Agent 执行 reference 和版本号会作为同一版本一起分发；升级后请以详情页和安装结果显示的版本为准。安装完成后，每次调用 TaoHtml，Agent 都必须先完整读取同一渠道包内的 `references/agent-workflow.md`，再开始分析或操作；包内 `references/...`、`scripts/...` 与 `assets/...` 均从技能根目录解析，用户无需手动打开或加载这些文件。v0.3.1 只修复 Skill Hub 的概述展示与执行规则分离，不增加或改写 TaoHtml 的报告制作能力。
 
 ### Claude Code：GitHub marketplace
 
@@ -91,7 +97,7 @@ cp -R "$source" "$target"
 
 ### Release ZIP：离线 / 手动安装
 
-[`taohtml-marketplace-v0.3.0.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.3.0/taohtml-marketplace-v0.3.0.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.3.0`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。
+[`taohtml-marketplace-v0.3.1.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.3.1/taohtml-marketplace-v0.3.1.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.3.1`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。
 
 ## 版本更新
 
@@ -99,6 +105,7 @@ README 只保留每版最重要的用户变化；完整逐条历史见 [CHANGELO
 
 | 版本 | 最重要的变化 | 版本页与完整记录 |
 |---|---|---|
+| **v0.3.1** | Skill Hub 概述改为与 GitHub README 同源的中文纯文字客户介绍；Agent 执行规则改由同包 reference 承载，能力边界不变 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.1) · [CHANGELOG](CHANGELOG.md#031---2026-07-16) |
 | **v0.3.0** | 四套可执行视觉系统与同内容样张；参考风格重构 / 企业模板保真及项目主题编译；报告产出优先 + 《待核实内容清单》与质量基准 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.0) · [CHANGELOG](CHANGELOG.md#030---2026-07-16) |
 | **v0.2.0** | Word / PDF 材料理解到离线 HTML 的首个完整闭环；阅读 / 演讲 Runtime 与三档浏览器 QA；单一 Skill 真源与跨客户端离线包 | [GitHub Release](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.2.0) · [CHANGELOG](CHANGELOG.md#020---2026-07-15) |
 | **v0.1.0** | 建立明确版本、仓库质量工作流与可移植资产检查；补齐 hash 路由、分步内容和来源弹窗的基础浏览器 QA | [Git tag](https://github.com/TaoGEO/TaoHtml/tree/v0.1.0) · [CHANGELOG](CHANGELOG.md#010---2026-07-13) |

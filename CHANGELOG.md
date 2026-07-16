@@ -4,6 +4,13 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-16
+
+### Fixed
+
+- Generate the Skill Hub root `SKILL.md` as a Chinese, text-only customer overview derived deterministically from the GitHub README, while packaging the canonical Agent execution body separately as `references/agent-workflow.md` and requiring it to be read before execution.
+- Keep README screenshots out of the Skill Hub package and add drift, execution-source, image-exclusion, and deterministic-packaging regression coverage for the channel split.
+
 ## [0.3.0] - 2026-07-16
 
 ### Added
