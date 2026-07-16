@@ -295,7 +295,7 @@ HTML 制作 + 模块化 Runtime
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
 - `render_visual_system.py`：把内容注入既有内置 theme id 或显式 `--project-theme` 目录，同时保留共享 runtime shell。真实来源图必须显式使用 `--source-kind verified --source-image ...`，文件缺失或无效时失败；本地路径本身不代表来源已核实，CLI 或 Python API 未传 `source_kind` 时即使有本地图也安全默认为 `illustrative`。没有真实证据图时可使用自动示意占位或 `--source-kind illustrative` 的本地图，渲染器会在相邻位置标“示意 / 待核实”，不会把它冒充来源证据。
 - `render_reference_vi.py`：校验内部 VI JSON，内嵌单张静态参考，通过固定 HTML/CSS 模板生成规范板并导出 3200×2400 PNG；不负责图片理解或项目主题编译。
-- `compile_project_theme.py`：校验已确认 VI handoff，从可执行布局语法确定性生成项目主题 manifest、结构化 CSS、不同 DOM 页面模板和 provenance usage；不调用模型，也不修改四套内置主题。
+- `compile_project_theme.py`：校验已确认 VI handoff 与共享布局兼容矩阵，从可执行布局语法确定性生成项目主题 manifest、结构化 CSS、不同 DOM 页面模板和准确 provenance usage；未定义组合在 VI 校验阶段失败，不调用模型，也不修改四套内置主题。
 
 ## 开发、验证与版本管理
 

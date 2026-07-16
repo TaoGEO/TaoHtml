@@ -18,6 +18,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_ROOT = ROOT / "skill" / "taohtml"
 RENDERER_PATH = SKILL_ROOT / "scripts" / "render_reference_vi.py"
+LAYOUT_GRAMMAR_PATH = SKILL_ROOT / "scripts" / "project_theme_layout.py"
 CONTRACT_PATH = ROOT / "tests" / "fixtures" / "reference-vi-contract.json"
 SOURCE_PATH = ROOT / "tests" / "fixtures" / "reference-vi-source.svg"
 CHECK_ASSETS = SKILL_ROOT / "scripts" / "check_assets.py"
@@ -38,6 +39,7 @@ def load_module(name: str, path: Path) -> ModuleType:
 
 
 RENDERER = load_module("taohtml_reference_vi_renderer", RENDERER_PATH)
+LAYOUT_GRAMMAR = load_module("taohtml_project_theme_layout", LAYOUT_GRAMMAR_PATH)
 
 
 class VisibleTextCollector(HTMLParser):
@@ -71,6 +73,16 @@ class ReferenceVIContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.raw = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
         self.contract = RENDERER.validate_contract(self.raw)
+
+    def layout_contract(self, **values: str) -> dict[str, object]:
+        contract = copy.deepcopy(self.raw)
+        for field, value in values.items():
+            contract["executable_layout"][field] = {
+                "value": value,
+                "status": "unknown" if value == "unknown" else "extension",
+                "basis": f"参数化布局合同：{field}={value}",
+            }
+        return contract
 
     def test_single_static_result_has_no_dynamic_analysis_fields_or_copy(self) -> None:
         source_uri = RENDERER.source_data_uri(SOURCE_PATH)
@@ -268,6 +280,163 @@ class ReferenceVIContractTests(unittest.TestCase):
         fabricated["executable_layout"]["visual_focus"]["value"] = "image-first"
         with self.assertRaisesRegex(ValueError, "must be 'unknown'"):
             RENDERER.validate_contract(fabricated)
+
+    def test_executable_layout_compatibility_matrices_accept_every_defined_combination(self) -> None:
+        cover_cases = (
+            {"cover_structure": "split", "cover_split": "7:5", "image_placement": "left"},
+            {"cover_structure": "split", "cover_split": "5:7", "image_placement": "right"},
+            {"cover_structure": "split", "cover_split": "1:1", "image_placement": "right"},
+            {
+                "cover_structure": "single-column",
+                "cover_split": "none",
+                "image_placement": "top",
+                "data_structure": "chart-focus",
+                "data_columns": "1",
+            },
+            {
+                "cover_structure": "single-column",
+                "cover_split": "none",
+                "image_placement": "bottom",
+                "data_structure": "table-focus",
+                "data_columns": "1",
+            },
+            {
+                "cover_structure": "single-column",
+                "cover_split": "none",
+                "image_placement": "background",
+                "image_fit": "cover",
+                "data_structure": "metrics-grid",
+                "data_columns": "3",
+            },
+        )
+        content_cases = (
+            ("card-grid", "1"),
+            ("card-grid", "2"),
+            ("card-grid", "3"),
+            ("stack", "1"),
+            ("single-focus", "1"),
+        )
+        data_cases = (
+            ("source-chart-split", "2"),
+            ("chart-focus", "1"),
+            ("table-focus", "1"),
+            ("metrics-grid", "1"),
+            ("metrics-grid", "2"),
+            ("metrics-grid", "3"),
+        )
+
+        for values in cover_cases:
+            with self.subTest(cover=values):
+                RENDERER.validate_contract(self.layout_contract(**values))
+        for structure, columns in content_cases:
+            with self.subTest(content=(structure, columns)):
+                RENDERER.validate_contract(
+                    self.layout_contract(
+                        content_structure=structure, content_columns=columns
+                    )
+                )
+        for structure, columns in data_cases:
+            with self.subTest(data=(structure, columns)):
+                RENDERER.validate_contract(
+                    self.layout_contract(
+                        data_structure=structure, data_columns=columns
+                    )
+                )
+
+        self.assertEqual(
+            set(LAYOUT_GRAMMAR.COVER_SPLIT_BY_STRUCTURE),
+            RENDERER.EXECUTABLE_LAYOUT_OPTIONS["cover_structure"] - {"unknown"},
+        )
+        self.assertEqual(
+            set().union(*LAYOUT_GRAMMAR.COVER_SPLIT_BY_STRUCTURE.values()),
+            RENDERER.EXECUTABLE_LAYOUT_OPTIONS["cover_split"] - {"unknown"},
+        )
+        self.assertEqual(
+            set().union(*LAYOUT_GRAMMAR.COVER_PLACEMENT_BY_STRUCTURE.values()),
+            RENDERER.EXECUTABLE_LAYOUT_OPTIONS["image_placement"] - {"unknown"},
+        )
+        self.assertEqual(
+            set(LAYOUT_GRAMMAR.CONTENT_COLUMNS_BY_STRUCTURE),
+            RENDERER.EXECUTABLE_LAYOUT_OPTIONS["content_structure"] - {"unknown"},
+        )
+        self.assertEqual(
+            set().union(*LAYOUT_GRAMMAR.CONTENT_COLUMNS_BY_STRUCTURE.values()),
+            RENDERER.EXECUTABLE_LAYOUT_OPTIONS["content_columns"] - {"unknown"},
+        )
+        self.assertEqual(
+            set(LAYOUT_GRAMMAR.DATA_COLUMNS_BY_STRUCTURE),
+            RENDERER.EXECUTABLE_LAYOUT_OPTIONS["data_structure"] - {"unknown"},
+        )
+        self.assertEqual(
+            set().union(*LAYOUT_GRAMMAR.DATA_COLUMNS_BY_STRUCTURE.values()),
+            RENDERER.EXECUTABLE_LAYOUT_OPTIONS["data_columns"] - {"unknown"},
+        )
+
+    def test_executable_layout_compatibility_matrices_reject_undefined_programs(self) -> None:
+        invalid_cases = (
+            (
+                {"cover_structure": "split", "cover_split": "7:5", "image_placement": "top"},
+                "cover_structure=split is incompatible with image_placement=top",
+            ),
+            (
+                {"cover_structure": "single-column", "cover_split": "none", "image_placement": "left"},
+                "cover_structure=single-column is incompatible with image_placement=left",
+            ),
+            (
+                {"cover_structure": "split", "cover_split": "none"},
+                "cover_structure=split is incompatible with cover_split=none",
+            ),
+            (
+                {
+                    "cover_structure": "single-column",
+                    "cover_split": "none",
+                    "image_placement": "background",
+                    "image_fit": "contain",
+                    "data_structure": "chart-focus",
+                    "data_columns": "1",
+                },
+                "image_placement=background requires image_fit=cover",
+            ),
+            (
+                {"content_structure": "stack", "content_columns": "2"},
+                "content_structure=stack is incompatible with content_columns=2",
+            ),
+            (
+                {"content_structure": "single-focus", "content_columns": "3"},
+                "content_structure=single-focus is incompatible with content_columns=3",
+            ),
+            (
+                {"data_structure": "chart-focus", "data_columns": "3"},
+                "data_structure=chart-focus is incompatible with data_columns=3",
+            ),
+            (
+                {"data_structure": "source-chart-split", "data_columns": "1"},
+                "data_structure=source-chart-split is incompatible with data_columns=1",
+            ),
+            (
+                {
+                    "cover_structure": "single-column",
+                    "cover_split": "none",
+                    "image_placement": "top",
+                    "data_structure": "source-chart-split",
+                    "data_columns": "2",
+                },
+                "data_structure=source-chart-split is incompatible with image_placement=top",
+            ),
+        )
+        for values, message in invalid_cases:
+            with self.subTest(values=values):
+                with self.assertRaisesRegex(ValueError, re.escape(message)):
+                    RENDERER.validate_contract(self.layout_contract(**values))
+
+        for field, removed in (
+            ("image_placement", "inline"),
+            ("visual_focus", "headline-only"),
+            ("visual_focus", "data-first"),
+        ):
+            with self.subTest(removed=(field, removed)):
+                with self.assertRaisesRegex(ValueError, "must be one of"):
+                    RENDERER.validate_contract(self.layout_contract(**{field: removed}))
 
     def test_reference_workflow_embeds_a_valid_contract_example(self) -> None:
         workflow = (SKILL_ROOT / "references" / "static-reference-vi.md").read_text(

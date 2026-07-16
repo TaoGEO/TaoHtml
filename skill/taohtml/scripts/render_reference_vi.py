@@ -15,6 +15,16 @@ from pathlib import Path
 from typing import Any
 
 
+SCRIPT_ROOT = Path(__file__).resolve().parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from project_theme_layout import (
+    EXECUTABLE_LAYOUT_OPTIONS_WITH_UNKNOWN,
+    resolve_layout_items,
+)
+
+
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = SKILL_ROOT / "assets" / "reference-vi-board" / "template.html"
 SCHEMA_VERSION = "1.1"
@@ -60,23 +70,7 @@ ITEM_FIELDS = {
     "guardrails": {"mode", "title", "description", "status", "basis"},
 }
 EXECUTABLE_LAYOUT_ITEM_FIELDS = {"value", "status", "basis"}
-EXECUTABLE_LAYOUT_OPTIONS = {
-    "page_axis": {"row", "column", "unknown"},
-    "alignment": {"start", "center", "end", "unknown"},
-    "cover_structure": {"split", "single-column", "unknown"},
-    "cover_split": {"7:5", "5:7", "1:1", "none", "unknown"},
-    "content_structure": {"card-grid", "stack", "single-focus", "unknown"},
-    "content_columns": {"1", "2", "3", "unknown"},
-    "image_placement": {"left", "right", "top", "bottom", "background", "inline", "unknown"},
-    "image_aspect_ratio": {"16:9", "4:3", "3:2", "1:1", "3:4", "unknown"},
-    "image_fit": {"cover", "contain", "unknown"},
-    "image_treatment": {"natural", "muted", "monochrome", "high-contrast", "unknown"},
-    "data_structure": {"source-chart-split", "chart-focus", "table-focus", "metrics-grid", "unknown"},
-    "data_columns": {"1", "2", "3", "unknown"},
-    "module_organization": {"hard-grid", "soft-stack", "open-field", "unknown"},
-    "density": {"low", "medium", "high", "unknown"},
-    "visual_focus": {"headline-and-image", "headline-only", "image-first", "data-first", "balanced", "unknown"},
-}
+EXECUTABLE_LAYOUT_OPTIONS = EXECUTABLE_LAYOUT_OPTIONS_WITH_UNKNOWN
 EXECUTABLE_LAYOUT_LABELS = {
     "page_axis": "页面主轴",
     "alignment": "主要对齐",
@@ -277,12 +271,7 @@ def _validate_executable_layout(raw: object) -> dict[str, dict[str, str]]:
         if status != "unknown" and value == "unknown":
             raise ValueError(f"{path}.value cannot be 'unknown' when status is {status}.")
         normalized[field] = {"value": value, "status": status, "basis": basis}
-    cover = normalized["cover_structure"]["value"]
-    split = normalized["cover_split"]["value"]
-    if cover == "single-column" and split not in {"none", "unknown"}:
-        raise ValueError("executable_layout.cover_split must be none for a single-column cover.")
-    if cover == "split" and split == "none":
-        raise ValueError("executable_layout.cover_split cannot be none for a split cover.")
+    resolve_layout_items(normalized)
     return normalized
 
 

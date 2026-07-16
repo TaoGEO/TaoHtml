@@ -82,7 +82,7 @@ TaoHtml 在内部记录：
 
 只在当前 VI 已得到“确认 VI”后执行。TaoHtml 创建一份最小 handoff JSON，记录项目 id 与名称、确认状态与短语、VI JSON 和参考图的相对路径及 SHA-256、目标阅读/演讲模式、已并入当前 VI 的客户修正。路径、schema、文件或哈希任何一项不匹配，编译都必须在写输出前失败。
 
-确定性编译器输出当前项目专用的 `theme.json`、`theme.css`、`templates.html` 和 `provenance.json`。它直接从可执行布局语法选择不同的 DOM 分支、结构 CSS、layout variants 与 composition；输出同时实现颜色、字体层级、间距/网格、卡片/面板/标签/边框、图片处理、证据/图表语言，以及封面、内容、数据和收束页面结构，不能只换颜色。标题等低层元素的 margin 统一归零，标签到标题、标题到导语、页头到正文等关系由密度映射出的语义 `gap` token 和最近容器负责，避免 reset 优先级把间距压没；浏览器 QA 会核对声明 token 与实际几何距离。
+确定性编译器输出当前项目专用的 `theme.json`、`theme.css`、`templates.html` 和 `provenance.json`。它直接从可执行布局语法选择不同的 DOM 分支、结构 CSS、layout variants 与 composition；输出同时实现颜色、字体层级、间距/网格、卡片/面板/标签/边框、图片处理、证据/图表语言，以及封面、内容、数据和收束页面结构，不能只换颜色。封面结构与图片位置、内容结构与列数、数据结构与列数使用同一份机器兼容矩阵；每个合法组合必须改变真实 DOM/CSS 构图，没有定义的组合在 VI 校验阶段报出冲突字段与允许值，不做静默归一化。标题等低层元素的 margin 统一归零，标签到标题、标题到导语、页头到正文等关系由密度映射出的语义 `gap` token 和最近容器负责，避免 reset 优先级把间距压没；浏览器 QA 会核对声明 token 与实际几何距离。
 
 `observed` 和 `extension` 只是 eligible；只有实际进入 token、CSS、模板、manifest 执行字段或明确 guardrail 的记录才可写 `compiled: true`，并必须列出具体 usage targets。未使用项保持 `compiled: false`；`unknown` 始终不编译。运行所需而 VI 未提供的值只能使用中性可逆 fallback，并在 provenance 中单独记录，不能升级为参考事实。动效沿用 TaoHtml Runtime 与正式报告任务的通用 `fragment` / `data-step` 语法，manifest 明确标记它不是从静态参考观察或推断得到。
 

@@ -16,6 +16,7 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 import render_reference_vi
+from project_theme_layout import resolve_layout_items
 
 
 SCHEMA_VERSION = "1.0"
@@ -418,57 +419,28 @@ def _compile_tokens(
     return tokens, sources
 
 
-LAYOUT_FALLBACKS = {
-    "page_axis": "column",
-    "alignment": "start",
-    "cover_structure": "single-column",
-    "cover_split": "none",
-    "content_structure": "stack",
-    "content_columns": "1",
-    "image_placement": "bottom",
-    "image_aspect_ratio": "16:9",
-    "image_fit": "contain",
-    "image_treatment": "natural",
-    "data_structure": "chart-focus",
-    "data_columns": "1",
-    "module_organization": "open-field",
-    "density": "medium",
-    "visual_focus": "balanced",
-}
-
-
 def _layout_plan(
     contract: dict[str, Any],
 ) -> tuple[dict[str, str], dict[str, dict[str, str]], list[dict[str, Any]]]:
-    plan: dict[str, str] = {}
+    plan, fallback_bases = resolve_layout_items(contract["executable_layout"])
     sources: dict[str, dict[str, str]] = {}
     fallbacks: list[dict[str, Any]] = []
     for field, item in contract["executable_layout"].items():
         path = f"executable_layout.{field}"
         if item["status"] == "unknown":
-            value = LAYOUT_FALLBACKS[field]
-            plan[field] = value
             sources[field] = {"status": "fallback", "source": "compiler-neutral-default"}
             fallbacks.append(
                 {
                     "field": path,
-                    "value": value,
+                    "value": plan[field],
                     "status": "fallback",
                     "source": "compiler-neutral-default",
-                    "basis": "Unknown VI layout value replaced by a neutral reversible structural default.",
+                    "basis": fallback_bases[field],
                     "usage": [],
                 }
             )
         else:
-            plan[field] = item["value"]
             sources[field] = {"status": item["status"], "source": path}
-    if plan["cover_structure"] == "single-column" and sources["cover_split"]["status"] == "fallback":
-        plan["cover_split"] = "none"
-    elif plan["cover_structure"] == "split" and plan["cover_split"] == "none":
-        plan["cover_split"] = "1:1"
-    for record in fallbacks:
-        field = record["field"].split(".", 1)[1]
-        record["value"] = plan[field]
     return plan, sources, fallbacks
 
 
@@ -479,6 +451,9 @@ def _layout_variants(plan: dict[str, str]) -> list[dict[str, str]]:
         if plan["cover_structure"] == "split"
         else f"cover-single-column-image-{plan['image_placement']}-{plan['alignment']}"
     )
+    data_variant = f"data-{plan['data_structure']}-{plan['data_columns']}-col"
+    if plan["data_structure"] == "source-chart-split":
+        data_variant += f"-image-{plan['image_placement']}"
     return [
         {"id": cover, "role": "cover"},
         {
@@ -490,7 +465,7 @@ def _layout_variants(plan: dict[str, str]) -> list[dict[str, str]]:
             "role": "content",
         },
         {
-            "id": f"data-{plan['data_structure']}-{plan['data_columns']}-col-image-{plan['image_placement']}",
+            "id": data_variant,
             "role": "evidence-data",
         },
         {
@@ -544,16 +519,49 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
     }[plan["image_treatment"]]
     text_align = {"start": "left", "center": "center", "end": "right"}[plan["alignment"]]
     align_items = {"start": "flex-start", "center": "center", "end": "flex-end"}[plan["alignment"]]
-    split_columns = {"7:5": "7fr 5fr", "5:7": "5fr 7fr", "1:1": "1fr 1fr", "none": "1fr"}[plan["cover_split"]]
-    aspect_ratio = plan["image_aspect_ratio"].replace(":", " / ")
-    focus_width = {"headline-and-image": "100%", "headline-only": "72%", "image-first": "78%", "data-first": "86%", "balanced": "88%"}[plan["visual_focus"]]
-    cover_layout = (
-        f"display:grid;grid-template-columns:{split_columns};gap:var(--pt-section-gap);align-items:center"
-        if plan["cover_structure"] == "split"
-        else f"display:flex;flex-direction:column;align-items:{align_items};justify-content:center;gap:var(--pt-section-gap);text-align:{text_align}"
+    copy_image_columns = {
+        "7:5": ("7fr", "5fr"),
+        "5:7": ("5fr", "7fr"),
+        "1:1": ("1fr", "1fr"),
+        "none": ("1fr", "1fr"),
+    }[plan["cover_split"]]
+    physical_columns = (
+        reversed(copy_image_columns)
+        if plan["image_placement"] == "left"
+        else copy_image_columns
     )
+    split_columns = " ".join(physical_columns)
+    ratio_width, ratio_height = (
+        int(part) for part in plan["image_aspect_ratio"].split(":")
+    )
+    aspect_ratio = f"{ratio_width} / {ratio_height}"
+    title_width, focus_art_width, focus_art_height = {
+        "headline-and-image": ("100%", 100, 480),
+        "image-first": ("78%", 100, 540),
+        "balanced": ("88%", 88, 460),
+    }[plan["visual_focus"]]
+    cover_art_width = focus_art_width
+    cover_art_height = focus_art_height
+    if plan["image_fit"] == "contain":
+        cover_art_width = round(cover_art_width * 0.86)
+        cover_art_height = round(cover_art_height * 0.82)
+    cover_art_width_cap = round(cover_art_height * ratio_width / ratio_height)
+    if plan["cover_structure"] == "split":
+        cover_layout = (
+            f"display:grid;grid-template-columns:{split_columns};gap:var(--pt-section-gap);"
+            "align-items:center"
+        )
+    else:
+        cover_layout = (
+            f"display:flex;flex-direction:column;align-items:{align_items};justify-content:center;"
+            f"gap:var(--pt-section-gap);text-align:{text_align}"
+        )
+        if plan["image_placement"] == "background":
+            cover_layout += ";position:relative;overflow:hidden;isolation:isolate"
     content_columns = plan["content_columns"]
     data_columns = plan["data_columns"]
+    evidence_columns = "2" if plan["data_structure"] == "source-chart-split" else "1"
+    metric_columns = data_columns if plan["data_structure"] == "metrics-grid" else "3"
     process_layout = (
         "grid-template-columns:repeat(4,minmax(0,1fr))"
         if plan["page_axis"] == "row"
@@ -598,18 +606,19 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
 .pt-heading-block {{display:grid;justify-items:{plan['alignment']};gap:var(--pt-rhythm-label-title);text-align:var(--pt-text-align)}}
 .pt-heading-copy,.pt-cover-title-group {{display:grid;justify-items:{plan['alignment']};gap:var(--pt-rhythm-title-lede)}}
 .pt-kicker {{ display: inline-flex; padding: 7px 11px; color: var(--pt-ink); background: var(--pt-accent); border: var(--pt-border); border-radius:var(--pt-radius); font-size: var(--pt-caption); font-weight: 900; letter-spacing: .08em; }}
-.pt-title {{ max-width: {focus_width}; font-size: var(--pt-heading); line-height: 1.02; font-weight: 950; text-align:var(--pt-text-align); }}
+.pt-title {{ max-width: {title_width}; font-size: var(--pt-heading); line-height: 1.02; font-weight: 950; text-align:var(--pt-text-align); }}
 .pt-lede {{ max-width: 1040px; font-size: var(--pt-body); line-height: 1.42; text-align:var(--pt-text-align); }}
 .pt-footer {{ position: absolute; left: var(--pt-canvas-x); right: var(--pt-canvas-x); bottom: 28px; padding-top: 10px; border-top: 2px solid var(--pt-ink); font-size: var(--pt-caption); font-weight: 800; }}
 .pt-cover-layout {{ {cover_layout}; height: 100%; }}
 .pt-cover h1 {{font-size:var(--pt-display);line-height:.98;font-weight:950;letter-spacing:-.035em}}
 .pt-cover-copy {{display:grid;justify-items:{plan['alignment']};gap:var(--pt-rhythm-label-title);text-align:{text_align}}}
-.pt-cover-art {{ position: relative; width:{focus_width}; max-height:510px; aspect-ratio:{aspect_ratio}; overflow: hidden; background: var(--pt-panel); border: var(--pt-border); border-radius:var(--pt-radius); box-shadow:var(--pt-shadow); }}
-.pt-cover-single-column .pt-cover-art {{width:auto;height:360px;max-width:{focus_width}}}
-.pt-cover-image-left .pt-cover-art {{order:-1}} .pt-cover-image-top .pt-cover-art {{order:-1}}
-.pt-cover-art::before {{ content: ""; position: absolute; width: 78%; height: 38%; left: -8%; top: 18%; background: var(--pt-signal); clip-path: polygon(0 72%, 20% 38%, 42% 62%, 65% 5%, 100% 54%, 100% 100%, 0 100%); }}
-.pt-cover-art::after {{ content: ""; position: absolute; width: 170px; height: 170px; right: 11%; top: 10%; border-radius: 50%; background: var(--pt-accent); }}
+.pt-cover-art {{ position: relative; width:min({cover_art_width}%,{cover_art_width_cap}px); height:auto; aspect-ratio:{aspect_ratio}; justify-self:center; align-self:center; overflow:hidden; background:var(--pt-panel); border:var(--pt-border); border-radius:var(--pt-radius); box-shadow:var(--pt-shadow); }}
+.pt-cover-image-background .pt-cover-art {{position:absolute;left:50%;top:50%;z-index:0;width:100%;height:auto;transform:translate(-50%,-50%)}}
+.pt-cover-image-background .pt-cover-copy {{position:relative;z-index:1;padding:34px;max-width:900px;background:color-mix(in srgb,var(--pt-canvas),transparent 12%);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
+.pt-cover-art::before {{ content: ""; position: absolute; width: 78%; height: 38%; left: -8%; top: 18%; background: var(--pt-signal); filter:{image_filter}; clip-path: polygon(0 72%, 20% 38%, 42% 62%, 65% 5%, 100% 54%, 100% 100%, 0 100%); }}
+.pt-cover-art::after {{ content: ""; position: absolute; width: 170px; height: 170px; right: 11%; top: 10%; border-radius: 50%; background: var(--pt-accent); filter:{image_filter}; }}
 .pt-claim {{ position: absolute; left: 28px; right: 28px; bottom: 28px; display:grid; justify-items:start; gap:var(--pt-rhythm-card-title-body); padding: 20px 22px; color: var(--pt-canvas); background: var(--pt-ink); border-left: 10px solid var(--pt-signal); font-size: 21px; line-height: 1.32; font-weight: 800; }}
+.pt-background-claim {{display:grid;justify-items:start;gap:var(--pt-rhythm-card-title-body);padding:20px 22px;color:var(--pt-canvas);background:var(--pt-ink);border-left:10px solid var(--pt-signal);font-size:21px;line-height:1.32;font-weight:800}}
 .pt-card-grid {{ display: grid; grid-template-columns: repeat({content_columns}, minmax(0,1fr)); gap: var(--pt-gap); }}
 .pt-card {{ display:grid;align-content:start;gap:var(--pt-rhythm-label-title);min-height:250px;padding:25px;background:var(--pt-paper);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
 .pt-card-copy,.pt-item-copy {{display:grid;gap:var(--pt-rhythm-card-title-body)}}
@@ -627,8 +636,7 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
 .pt-step strong {{ display: block; color: var(--pt-signal); font-size: 62px; line-height: 1; font-weight: 950; }}
 .pt-step h3 {{font-size:28px}}
 .pt-step p {{ font-size: 17px; line-height: 1.42; }}
-.pt-evidence-layout {{ display: grid; grid-template-columns: repeat({data_columns},minmax(0,1fr)); gap: var(--pt-gap); }}
-.pt-evidence-layout[data-image-placement="left"] .pt-source-frame {{order:-1}} .pt-evidence-layout[data-image-placement="top"] .pt-source-frame {{order:-1}}
+.pt-evidence-layout {{ display: grid; grid-template-columns: repeat({evidence_columns},minmax(0,1fr)); gap: var(--pt-gap); }}
 .pt-source-frame {{ width:100%; aspect-ratio:{aspect_ratio}; margin:0; overflow:hidden; background:var(--pt-panel);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
 .pt-source-frame img {{ width: 100%; height: 100%; object-fit: {plan['image_fit']}; filter: {image_filter}; }}
 .pt-data-panel,.pt-chart-focus,.pt-table-focus-wrap,.pt-metrics-grid {{display:grid;gap:var(--pt-rhythm-evidence-source);padding:24px;color:var(--pt-canvas);background:var(--pt-panel);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
@@ -639,7 +647,7 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
 .pt-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
 .pt-table th, .pt-table td {{ padding: 9px 10px; border-bottom: 1px solid color-mix(in srgb, var(--pt-canvas), transparent 60%); text-align: left; }}
 .pt-line-chart svg {{width:100%;height:260px}} .pt-line-chart polyline {{fill:none;stroke:var(--pt-accent);stroke-width:16;stroke-linecap:round;stroke-linejoin:round}}
-.pt-line-values {{display:flex;justify-content:space-around;font-size:30px}} .pt-metrics-focus {{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--pt-gap)}}
+.pt-line-values {{display:flex;justify-content:space-around;font-size:30px}} .pt-metrics-focus {{display:grid;grid-template-columns:repeat({metric_columns},minmax(0,1fr));gap:var(--pt-gap)}}
 .pt-metrics-focus article {{padding:30px;text-align:center;border:var(--pt-border);border-radius:var(--pt-radius)}} .pt-metrics-focus strong {{display:block;font-size:50px}}
 .pt-citation-focus {{display:grid;place-items:center;gap:var(--pt-rhythm-title-lede);min-height:300px;padding:42px;text-align:center;border:var(--pt-border);border-radius:var(--pt-radius)}}
 .pt-focus-source {{text-align:center;font-size:var(--pt-caption);opacity:.72}}
@@ -677,15 +685,38 @@ def _page_layout(heading: str, body: str) -> str:
 def _templates(
     plan: dict[str, str], variants: list[dict[str, str]], evidence_sample: str
 ) -> str:
+    background_claim = ""
+    if plan["image_placement"] == "background":
+        background_claim = (
+            '<aside class="pt-background-claim fragment" data-step="1" '
+            'data-rhythm-check="--pt-rhythm-card-title-body">'
+            '<span class="pt-label" data-rhythm-from>{{S1_LABEL}}</span>'
+            '<p data-rhythm-to>{{S1_CLAIM}}</p></aside>'
+        )
     cover_copy = (
         '<div class="pt-cover-copy" data-rhythm-check="--pt-rhythm-label-title">'
         '<div class="pt-kicker" data-rhythm-from>{{S1_KICKER}}</div>'
         '<div class="pt-cover-title-group" data-rhythm-to '
         'data-rhythm-check="--pt-rhythm-title-lede">'
         '<h1 data-rhythm-from>{{S1_TITLE_A}}<br>{{S1_TITLE_B}}</h1>'
-        '<p class="pt-lede" data-rhythm-to>{{S1_LEDE}}</p></div></div>'
+        '<p class="pt-lede" data-rhythm-to>{{S1_LEDE}}</p></div>'
+        f'{background_claim}</div>'
     )
-    cover_art = '<div class="pt-cover-art" role="img" aria-label="项目主题几何主视觉"><aside class="pt-claim fragment" data-step="1" data-rhythm-check="--pt-rhythm-card-title-body"><span class="pt-label" data-rhythm-from>{{S1_LABEL}}</span><p data-rhythm-to>{{S1_CLAIM}}</p></aside></div>'
+    art_claim = ""
+    if plan["image_placement"] != "background":
+        art_claim = (
+            '<aside class="pt-claim fragment" data-step="1" '
+            'data-rhythm-check="--pt-rhythm-card-title-body">'
+            '<span class="pt-label" data-rhythm-from>{{S1_LABEL}}</span>'
+            '<p data-rhythm-to>{{S1_CLAIM}}</p></aside>'
+        )
+    cover_art = (
+        f'<div class="pt-cover-art" role="img" aria-label="项目主题几何主视觉" '
+        f'data-image-fit="{plan["image_fit"]}" '
+        f'data-image-treatment="{plan["image_treatment"]}" '
+        f'data-image-aspect-ratio="{plan["image_aspect_ratio"]}">'
+        f'{art_claim}</div>'
+    )
     cover_children = cover_art + cover_copy if plan["image_placement"] in {"left", "top"} else cover_copy + cover_art
     cover = f'<section class="slide active pt-cover" data-title="核心命题" data-layout="{variants[0]["id"]}"><div class="pt-cover-layout pt-cover-{plan["cover_structure"]} pt-cover-image-{plan["image_placement"]}" data-cover-split="{plan["cover_split"]}">{cover_children}</div><div class="pt-footer">{{{{FOOTER}}}}</div></section>'
 
@@ -727,7 +758,13 @@ def _templates(
     chart = _evidence_markup(evidence_sample)
     source_frame = '<figure class="pt-source-frame fragment" data-step="1"><img src="{{SOURCE_URI}}" alt="{{SOURCE_LABEL}}"></figure>'
     if plan["data_structure"] == "source-chart-split":
-        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}">{source_frame}<div class="pt-data-panel" data-rhythm-check="--pt-rhythm-evidence-source"><div data-rhythm-from>{chart}</div><table class="pt-table fragment" data-step="3" data-rhythm-to><thead><tr><th>{{{{S4_TABLE_H1}}}}</th><th>{{{{S4_TABLE_H2}}}}</th><th>{{{{S4_TABLE_H3}}}}</th></tr></thead><tbody><tr><td>{{{{S4_R1_C1}}}}</td><td>{{{{S4_R1_C2}}}}</td><td>{{{{S4_R1_C3}}}}</td></tr><tr><td>{{{{S4_R2_C1}}}}</td><td>{{{{S4_R2_C2}}}}</td><td>{{{{S4_R2_C3}}}}</td></tr><tr><td>{{{{S4_R3_C1}}}}</td><td>{{{{S4_R3_C2}}}}</td><td>{{{{S4_R3_C3}}}}</td></tr></tbody></table></div></div>'
+        data_panel = f'<div class="pt-data-panel" data-rhythm-check="--pt-rhythm-evidence-source"><div data-rhythm-from>{chart}</div><table class="pt-table fragment" data-step="3" data-rhythm-to><thead><tr><th>{{{{S4_TABLE_H1}}}}</th><th>{{{{S4_TABLE_H2}}}}</th><th>{{{{S4_TABLE_H3}}}}</th></tr></thead><tbody><tr><td>{{{{S4_R1_C1}}}}</td><td>{{{{S4_R1_C2}}}}</td><td>{{{{S4_R1_C3}}}}</td></tr><tr><td>{{{{S4_R2_C1}}}}</td><td>{{{{S4_R2_C2}}}}</td><td>{{{{S4_R2_C3}}}}</td></tr><tr><td>{{{{S4_R3_C1}}}}</td><td>{{{{S4_R3_C2}}}}</td><td>{{{{S4_R3_C3}}}}</td></tr></tbody></table></div>'
+        data_children = (
+            source_frame + data_panel
+            if plan["image_placement"] == "left"
+            else data_panel + source_frame
+        )
+        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}">{data_children}</div>'
     elif plan["data_structure"] == "table-focus":
         data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}"><div class="pt-table-focus-wrap" data-rhythm-check="--pt-rhythm-evidence-source"><div data-rhythm-from>{_evidence_markup("table")}</div><p class="pt-focus-source" data-rhythm-to>{{{{S4_SOURCE}}}}</p></div></div>'
     elif plan["data_structure"] == "metrics-grid":
@@ -765,23 +802,45 @@ GRAMMAR_USAGE = {
     "page_axis": ["templates.html:process DOM axis", "theme.css:.pt-process", "theme.json:identity.composition"],
     "alignment": ["templates.html:heading wrappers", "theme.css:--pt-text-align", "theme.json:identity.composition"],
     "cover_structure": ["templates.html:cover DOM wrapper", "theme.css:.pt-cover-layout", "theme.json:layout_variants[0]"],
-    "cover_split": ["theme.css:.pt-cover-layout grid-template-columns", "theme.json:layout_variants[0]"],
+    "cover_split": ["templates.html:.pt-cover-layout data-cover-split", "theme.json:layout_variants[0]"],
     "content_structure": ["templates.html:content and closing DOM branches", "theme.json:layout_variants[1,4]"],
-    "content_columns": ["theme.css:.pt-card-grid/.pt-actions-grid", "theme.json:layout_variants[1]"],
-    "image_placement": ["templates.html:cover/data source DOM order", "theme.css:image placement rules", "theme.json:layout_variants[0,3]"],
-    "image_aspect_ratio": ["theme.css:.pt-cover-art/.pt-source-frame aspect-ratio", "theme.json:components.image"],
-    "image_fit": ["theme.css:.pt-source-frame img object-fit", "theme.json:components.image"],
-    "image_treatment": ["theme.css:.pt-source-frame img filter", "theme.json:identity.image_treatment"],
-    "data_structure": ["templates.html:data DOM branch", "theme.json:layout_variants[3]"],
-    "data_columns": ["theme.css:.pt-evidence-layout grid-template-columns", "theme.json:layout_variants[3]"],
+    "content_columns": ["theme.css:content/closing grid-template-columns", "theme.json:layout_variants[1]"],
+    "image_placement": ["templates.html:cover DOM order/background layer", "theme.css:.pt-cover-layout placement geometry", "theme.json:layout_variants[0]"],
+    "image_aspect_ratio": ["templates.html:.pt-cover-art data-image-aspect-ratio", "theme.css:.pt-cover-art aspect-ratio", "theme.json:components.image"],
+    "image_fit": ["templates.html:.pt-cover-art data-image-fit", "theme.css:.pt-cover-art width/background fill", "theme.json:components.image"],
+    "image_treatment": ["templates.html:.pt-cover-art data-image-treatment", "theme.css:.pt-cover-art shape filter", "theme.json:identity.image_treatment"],
+    "data_structure": ["templates.html:data DOM branch", "theme.css:data branch geometry", "theme.json:layout_variants[3]"],
+    "data_columns": ["theme.css:structure-specific data grid-template-columns", "theme.json:layout_variants[3]"],
     "module_organization": ["theme.css:--pt-border/--pt-radius/--pt-shadow", "theme.json:identity.module_language"],
     "density": [
         "theme.css:semantic rhythm custom properties",
         "templates.html:data-rhythm-check contracts",
         "theme.json:layout_variants[2,4]",
     ],
-    "visual_focus": ["theme.css:.pt-title/.pt-cover-art width", "theme.json:identity.composition"],
+    "visual_focus": ["theme.css:.pt-title/.pt-cover-art width and height", "theme.json:identity.composition"],
 }
+
+
+def _grammar_usage(field: str, plan: dict[str, str]) -> list[str]:
+    usage = list(GRAMMAR_USAGE[field])
+    if field == "cover_split":
+        usage.append(
+            "theme.css:.pt-cover-layout grid-template-columns"
+            if plan["cover_structure"] == "split"
+            else "compiler guardrail:single-column cover requires cover_split=none"
+        )
+    if plan["data_structure"] == "source-chart-split":
+        conditional = {
+            "image_placement": "templates.html:data source DOM order",
+            "image_aspect_ratio": "theme.css:.pt-source-frame aspect-ratio",
+            "image_fit": "theme.css:.pt-source-frame img object-fit",
+            "image_treatment": "theme.css:.pt-source-frame img filter",
+        }.get(field)
+        if conditional:
+            usage.append(conditional)
+        if field == "image_placement":
+            usage.append("theme.json:layout_variants[3]")
+    return usage
 
 
 def _token_targets(source_key: str) -> list[str]:
@@ -825,7 +884,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
     for field, source in structure_sources.items():
         targets = [
             f"theme.json:executable_layout.{field}",
-            *GRAMMAR_USAGE[field],
+            *_grammar_usage(field, plan),
             *usage_map.get(source["source"], []),
         ]
         targets = sorted(set(targets))
@@ -835,7 +894,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
     for record in structure_fallbacks:
         field = record["field"].split(".", 1)[1]
         record["usage"] = [
-            f"theme.json:executable_layout.{field}", *GRAMMAR_USAGE[field]
+            f"theme.json:executable_layout.{field}", *_grammar_usage(field, plan)
         ]
         fallback_records.append(record)
     if evidence_path is not None:
@@ -880,6 +939,15 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         f"{plan['page_axis']} process; {plan['data_structure']} data page in {plan['data_columns']} column(s); "
         f"{plan['module_organization']} modules, {plan['density']} density, {plan['visual_focus']} focus."
     )
+    image_component = (
+        f"Cover visual at {plan['image_placement']}, {plan['image_aspect_ratio']}, "
+        f"{plan['image_fit']} fit, with the local evidence source sharing that placement; "
+        "source_kind remains renderer-controlled."
+        if plan["data_structure"] == "source-chart-split"
+        else f"Cover visual at {plan['image_placement']}, {plan['image_aspect_ratio']}, "
+        f"{plan['image_fit']} fit; this data structure does not place a local source image, "
+        "and source_kind remains renderer-controlled."
+    )
     manifest: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "kind": "project",
@@ -899,7 +967,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         "identity": {
             "composition": composition,
             "hierarchy": f"{plan['alignment']}-aligned {plan['visual_focus']} hierarchy at {plan['density']} information density.",
-            "image_treatment": f"{plan['image_treatment']} local imagery, {plan['image_fit']} fit, {plan['image_aspect_ratio']} ratio.",
+            "image_treatment": f"{plan['image_treatment']} cover visual and applicable local evidence imagery, {plan['image_fit']} fit, {plan['image_aspect_ratio']} ratio.",
             "module_language": f"{plan['module_organization']} organization with {plan['content_structure']} content modules.",
             "chart_evidence": evidence_rule,
             "motion": "TaoHtml Runtime reveal syntax; not observed or inferred from the static reference.",
@@ -919,7 +987,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "panel": f"{plan['data_structure']} evidence panel at {plan['density']} density.",
             "label": "Compact solid section tag with no provenance implication.",
             "border": f"Border, radius, and shadow are compiled from {plan['module_organization']}.",
-            "image": f"Embedded local source at {plan['image_placement']}, {plan['image_aspect_ratio']}, {plan['image_fit']}; source_kind remains renderer-controlled.",
+            "image": image_component,
             "chart": evidence_rule,
         },
         "preserve": preserve,

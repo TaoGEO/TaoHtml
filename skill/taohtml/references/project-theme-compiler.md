@@ -103,6 +103,10 @@ The output is project-local. Do not copy it into `assets/visual-systems/`, renam
 
 The compiler reads structure only from the exact `executable_layout` object defined in `static-reference-vi.md`. It uses those enums to choose cover split versus single-column DOM, card grid versus stack/single-focus content, row versus column process, evidence/data DOM, image placement/ratio/fit/treatment, module border/radius/shadow language, density, alignment, and focus. Natural-language descriptions remain review context and may supply parseable scalar tokens such as an explicit margin, but they are not the primary source of structural branching.
 
+`scripts/project_theme_layout.py` is the machine single source for the enum sets, neutral fallbacks, and cover/image, content/columns, and data/columns compatibility matrices. Both VI validation and the production theme loader call it. Every accepted concrete value must reach a DOM branch, computed CSS geometry, manifest execution field, and accurate provenance usage; a class name or layout id alone does not count. Undefined combinations fail during VI validation with the incompatible fields and allowed values. Do not silently normalize a concrete contract. Compatibility-aware unknown fallbacks remain allowed only when they are separately recorded and the unknown boundary stays `compiled: false`.
+
+The v1 image placement program is exact: split covers accept left/right, single-column covers accept top/bottom/background, and a source/chart split additionally requires left/right. Background creates an absolute visual layer and requires cover fit. Content stacks and single-focus pages are one-column; card grids accept one to three. Chart/table focus pages are one-column, source/chart splits are two-column, and metric grids apply one to three columns to their inner metric cards.
+
 The compiler may derive a fixed pixel value from an explicit VI measurement, such as converting a confirmed five-percent outer margin against the 1600px theme canvas. Record that deterministic derivation in the token basis. Do not use free-form model judgment inside the script.
 
 ## Semantic Rhythm Policy
@@ -153,11 +157,12 @@ For the compiled theme and at least one full sample deck:
 
 1. Compile twice into separate directories and compare every output file hash.
 2. Compile a second, schema-complete VI with an intentionally opposite layout grammar. Compare `templates.html`, key DOM classes, structural CSS, `layout_variants`, and `identity.composition`; all must differ.
-3. Inspect `provenance.json` for distinct observed, extension, unknown, and fallback records, concrete usage targets, and at least one eligible-but-unused record that remains `compiled: false`.
-4. Run `check_assets.py --strict-offline` on the HTML.
-5. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080; require empty overflow and semantic-rhythm failure lists on every page.
-6. Build a contact sheet from the 1600×900 screenshots.
-7. Compare the original reference, rendered VI board, and final themed sample. Confirm that composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
+3. Parameterize every allowed compatibility-matrix pair and every remaining scalar enum. Require an expected DOM order/branch or structural CSS value for each legal case, and a clear validation error for every illegal pair.
+4. Inspect `provenance.json` for distinct observed, extension, unknown, and fallback records, concrete usage targets, and at least one eligible-but-unused record that remains `compiled: false`.
+5. Run `check_assets.py --strict-offline` on the HTML.
+6. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080; require empty overflow and semantic-rhythm failure lists on every page.
+7. Build a contact sheet from the 1600×900 screenshots.
+8. Compare the original reference, rendered VI board, and final themed sample. Confirm that composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
 
 Use fixed synthetic sample content for visual acceptance and label it as illustrative. Do not present the sample as customer evidence or achieved results.
 

@@ -90,7 +90,7 @@ Use the bundled scripts where relevant:
 - `scripts/package_deck.py`: package HTML plus local assets when a single file is not appropriate.
 - `scripts/render_visual_system.py`: render content through one built-in id or an explicit `--project-theme` directory while retaining the shared runtime shell. Pass a real local source image as `--source-kind verified`; verified provenance is never inferred from a local path. If `source_kind` / `--source-kind` is omitted, the Python API and CLI default to `illustrative` even when a local image is supplied. When no real evidence image exists, use the renderer's automatically labeled illustrative placeholder or pass a local image as `--source-kind illustrative`. The renderer never labels illustrative material as verified evidence.
 - `scripts/render_reference_vi.py`: validate the single-static-reference VI contract, embed the verified reference, render the standards-board HTML, and export a 3200×2400 PNG. It does not analyze the image or compile a project theme.
-- `scripts/compile_project_theme.py`: validate the exact confirmed-VI handoff and deterministically write project-local manifest, CSS, templates, and provenance. It does not call a model or add a built-in theme.
+- `scripts/compile_project_theme.py`: validate the exact confirmed-VI handoff and shared executable-layout compatibility matrix, then deterministically write project-local manifest, CSS, templates, and provenance. It does not call a model or add a built-in theme.
 
 ## Current Runtime Boundary
 

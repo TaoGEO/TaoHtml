@@ -59,6 +59,29 @@ def stage_handoff(root: Path) -> tuple[Path, dict[str, object]]:
     return handoff, raw
 
 
+def compile_layout(
+    root: Path, label: str, **values: str
+) -> Path:
+    stage = root / f"{label}-input"
+    stage.mkdir()
+    for source in (VI_FIXTURE, REFERENCE_FIXTURE):
+        shutil.copy2(source, stage / source.name)
+    contract_path = stage / VI_FIXTURE.name
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    for field, value in values.items():
+        contract["executable_layout"][field] = {
+            "value": value,
+            "status": "unknown" if value == "unknown" else "extension",
+            "basis": f"参数化编译合同：{field}={value}",
+        }
+    write_handoff(contract_path, contract)
+    raw = json.loads(HANDOFF_FIXTURE.read_text(encoding="utf-8"))
+    raw["confirmation"]["vi_contract_sha256"] = sha256(contract_path)
+    handoff = stage / "handoff.json"
+    write_handoff(handoff, raw)
+    return COMPILER.compile_theme(handoff, root / f"{label}-theme")
+
+
 def write_handoff(path: Path, raw: dict[str, object]) -> None:
     path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -319,6 +342,304 @@ class ProjectThemeCompilationTests(unittest.TestCase):
                 set(city_manifest["structure_sources"]["density"]["usage"]),
             )
 
+    def test_every_legal_cover_combination_compiles_real_order_or_background_geometry(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            programs: set[tuple[str, str]] = set()
+            cases: list[tuple[str, dict[str, str], str, str]] = []
+            for split in ("7:5", "5:7", "1:1"):
+                copy_image = {
+                    "7:5": ("7fr", "5fr"),
+                    "5:7": ("5fr", "7fr"),
+                    "1:1": ("1fr", "1fr"),
+                }[split]
+                cases.extend(
+                    [
+                        (
+                            f"split-left-{split.replace(':', '-')}",
+                            {"cover_structure": "split", "cover_split": split, "image_placement": "left"},
+                            "art-first",
+                            f"grid-template-columns:{copy_image[1]} {copy_image[0]}",
+                        ),
+                        (
+                            f"split-right-{split.replace(':', '-')}",
+                            {"cover_structure": "split", "cover_split": split, "image_placement": "right"},
+                            "copy-first",
+                            f"grid-template-columns:{copy_image[0]} {copy_image[1]}",
+                        ),
+                    ]
+                )
+            cases.extend(
+                [
+                    (
+                        "single-top",
+                        {
+                            "cover_structure": "single-column",
+                            "cover_split": "none",
+                            "image_placement": "top",
+                            "data_structure": "chart-focus",
+                            "data_columns": "1",
+                        },
+                        "art-first",
+                        "flex-direction:column",
+                    ),
+                    (
+                        "single-bottom",
+                        {
+                            "cover_structure": "single-column",
+                            "cover_split": "none",
+                            "image_placement": "bottom",
+                            "data_structure": "chart-focus",
+                            "data_columns": "1",
+                        },
+                        "copy-first",
+                        "flex-direction:column",
+                    ),
+                    (
+                        "single-background",
+                        {
+                            "cover_structure": "single-column",
+                            "cover_split": "none",
+                            "image_placement": "background",
+                            "image_fit": "cover",
+                            "data_structure": "chart-focus",
+                            "data_columns": "1",
+                        },
+                        "copy-first",
+                        "position:relative;overflow:hidden;isolation:isolate",
+                    ),
+                ]
+            )
+
+            for label, values, order, css_marker in cases:
+                with self.subTest(label=label):
+                    theme = compile_layout(root, label, **values)
+                    templates = (theme / "templates.html").read_text(encoding="utf-8")
+                    css = (theme / "theme.css").read_text(encoding="utf-8")
+                    cover = templates.split("</section>", 1)[0]
+                    art_index = cover.index('class="pt-cover-art"')
+                    copy_index = cover.index('class="pt-cover-copy"')
+                    if order == "art-first":
+                        self.assertLess(art_index, copy_index)
+                    else:
+                        self.assertLess(copy_index, art_index)
+                    self.assertIn(css_marker, css)
+                    if values["image_placement"] == "background":
+                        self.assertIn("pt-cover-image-background", cover)
+                        self.assertIn("pt-background-claim", cover)
+                        self.assertNotIn('class="pt-claim fragment"', cover)
+                        self.assertIn(".pt-cover-image-background .pt-cover-art", css)
+                    if values["cover_structure"] == "split":
+                        data_slide = templates.split(
+                            'data-title="证据与数据"', 1
+                        )[1].split("</section>", 1)[0]
+                        source_index = data_slide.index("pt-source-frame")
+                        panel_index = data_slide.index("pt-data-panel")
+                        if values["image_placement"] == "left":
+                            self.assertLess(source_index, panel_index)
+                        else:
+                            self.assertLess(panel_index, source_index)
+                    programs.add((cover, css))
+            self.assertEqual(len(programs), len(cases))
+
+    def test_every_legal_content_structure_column_pair_executes_its_grid(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            cases = (
+                ("card-grid", "1", "pt-card-grid"),
+                ("card-grid", "2", "pt-card-grid"),
+                ("card-grid", "3", "pt-card-grid"),
+                ("stack", "1", "pt-content-stack"),
+                ("single-focus", "1", "pt-content-focus"),
+            )
+            programs: set[tuple[str, str]] = set()
+            for structure, columns, marker in cases:
+                with self.subTest(structure=structure, columns=columns):
+                    theme = compile_layout(
+                        root,
+                        f"content-{structure}-{columns}",
+                        content_structure=structure,
+                        content_columns=columns,
+                    )
+                    templates = (theme / "templates.html").read_text(encoding="utf-8")
+                    css = (theme / "theme.css").read_text(encoding="utf-8")
+                    self.assertIn(marker, templates)
+                    if structure == "card-grid":
+                        self.assertIn(
+                            f"grid-template-columns: repeat({columns}, minmax(0,1fr))",
+                            css,
+                        )
+                    else:
+                        self.assertIn(
+                            f"grid-template-columns:repeat({columns},minmax(0,1fr))",
+                            css,
+                        )
+                    programs.add((templates, css))
+            self.assertEqual(len(programs), len(cases))
+
+    def test_every_legal_data_structure_column_pair_executes_outer_or_metric_grid(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            cases = (
+                ("source-chart-split", "2", "pt-data-panel", "repeat(2,minmax(0,1fr))"),
+                ("chart-focus", "1", "pt-chart-focus", "repeat(1,minmax(0,1fr))"),
+                ("table-focus", "1", "pt-table-focus-wrap", "repeat(1,minmax(0,1fr))"),
+                ("metrics-grid", "1", "pt-metrics-grid", "repeat(1,minmax(0,1fr))"),
+                ("metrics-grid", "2", "pt-metrics-grid", "repeat(2,minmax(0,1fr))"),
+                ("metrics-grid", "3", "pt-metrics-grid", "repeat(3,minmax(0,1fr))"),
+            )
+            programs: set[tuple[str, str]] = set()
+            for structure, columns, marker, grid in cases:
+                with self.subTest(structure=structure, columns=columns):
+                    theme = compile_layout(
+                        root,
+                        f"data-{structure}-{columns}",
+                        data_structure=structure,
+                        data_columns=columns,
+                    )
+                    templates = (theme / "templates.html").read_text(encoding="utf-8")
+                    css = (theme / "theme.css").read_text(encoding="utf-8")
+                    self.assertIn(marker, templates)
+                    self.assertIn(grid, css)
+                    if structure == "source-chart-split":
+                        data_slide = templates.split('data-title="证据与数据"', 1)[1].split(
+                            "</section>", 1
+                        )[0]
+                        self.assertLess(
+                            data_slide.index("pt-data-panel"),
+                            data_slide.index("pt-source-frame"),
+                        )
+                    programs.add((templates, css))
+            self.assertEqual(len(programs), len(cases))
+
+    def test_every_remaining_scalar_enum_value_changes_executable_output(self) -> None:
+        field_values = {
+            "page_axis": ("row", "column"),
+            "alignment": ("start", "center", "end"),
+            "image_aspect_ratio": ("16:9", "4:3", "3:2", "1:1", "3:4"),
+            "image_fit": ("cover", "contain"),
+            "image_treatment": ("natural", "muted", "monochrome", "high-contrast"),
+            "module_organization": ("hard-grid", "soft-stack", "open-field"),
+            "density": ("low", "medium", "high"),
+            "visual_focus": ("headline-and-image", "image-first", "balanced"),
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for field, values in field_values.items():
+                programs: set[tuple[str, str]] = set()
+                for value in values:
+                    with self.subTest(field=field, value=value):
+                        theme = compile_layout(root, f"scalar-{field}-{value}", **{field: value})
+                        programs.add(
+                            (
+                                (theme / "templates.html").read_text(encoding="utf-8"),
+                                (theme / "theme.css").read_text(encoding="utf-8"),
+                            )
+                        )
+                self.assertEqual(len(programs), len(values), field)
+
+    def test_conditional_usage_and_fallback_provenance_match_executed_program(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            city = COMPILER.compile_theme(HANDOFF_FIXTURE, root / "city")
+            centered = COMPILER.compile_theme(CENTERED_HANDOFF_FIXTURE, root / "centered")
+            city_provenance = json.loads(
+                (city / "provenance.json").read_text(encoding="utf-8")
+            )
+            centered_provenance = json.loads(
+                (centered / "provenance.json").read_text(encoding="utf-8")
+            )
+            city_placement = next(
+                record
+                for record in city_provenance["boundary_records"]
+                if record["path"] == "executable_layout.image_placement"
+            )
+            centered_placement = next(
+                record
+                for record in centered_provenance["boundary_records"]
+                if record["path"] == "executable_layout.image_placement"
+            )
+            city_split = next(
+                record
+                for record in city_provenance["boundary_records"]
+                if record["path"] == "executable_layout.cover_split"
+            )
+            centered_split = next(
+                record
+                for record in centered_provenance["boundary_records"]
+                if record["path"] == "executable_layout.cover_split"
+            )
+            self.assertIn("templates.html:data source DOM order", city_placement["usage"])
+            self.assertIn("theme.json:layout_variants[3]", city_placement["usage"])
+            self.assertNotIn(
+                "templates.html:data source DOM order", centered_placement["usage"]
+            )
+            self.assertNotIn("theme.json:layout_variants[3]", centered_placement["usage"])
+            self.assertIn(
+                "theme.css:.pt-cover-layout grid-template-columns",
+                city_split["usage"],
+            )
+            self.assertNotIn(
+                "theme.css:.pt-cover-layout grid-template-columns",
+                centered_split["usage"],
+            )
+            self.assertIn(
+                "compiler guardrail:single-column cover requires cover_split=none",
+                centered_split["usage"],
+            )
+
+            fallback_theme = compile_layout(
+                root, "conditional-fallback", cover_split="unknown"
+            )
+            fallback_manifest = json.loads(
+                (fallback_theme / "theme.json").read_text(encoding="utf-8")
+            )
+            fallback_provenance = json.loads(
+                (fallback_theme / "provenance.json").read_text(encoding="utf-8")
+            )
+            fallback = next(
+                record
+                for record in fallback_provenance["fallback_records"]
+                if record.get("field") == "executable_layout.cover_split"
+            )
+            boundary = next(
+                record
+                for record in fallback_provenance["boundary_records"]
+                if record["path"] == "executable_layout.cover_split"
+            )
+            self.assertEqual(fallback_manifest["executable_layout"]["cover_split"], "1:1")
+            self.assertEqual(fallback["value"], "1:1")
+            self.assertIn("compatible with split", fallback["basis"])
+            self.assertFalse(boundary["compiled"])
+            THEME_RUNTIME.load_project_theme(fallback_theme)
+
+            compatible_theme = compile_layout(
+                root,
+                "compatible-cover-fallbacks",
+                cover_structure="unknown",
+                cover_split="unknown",
+                image_placement="unknown",
+            )
+            compatible_manifest = json.loads(
+                (compatible_theme / "theme.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                {
+                    field: compatible_manifest["executable_layout"][field]
+                    for field in (
+                        "cover_structure",
+                        "cover_split",
+                        "image_placement",
+                    )
+                },
+                {
+                    "cover_structure": "split",
+                    "cover_split": "1:1",
+                    "image_placement": "right",
+                },
+            )
+            THEME_RUNTIME.load_project_theme(compatible_theme)
+
     def test_manifest_encodes_full_visual_grammar_and_static_motion_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             theme = COMPILER.compile_theme(HANDOFF_FIXTURE, Path(temp_dir) / "theme")
@@ -360,6 +681,16 @@ class ProjectThemeCompilationTests(unittest.TestCase):
 
             COMPILER.compile_theme(HANDOFF_FIXTURE, theme)
             manifest_path = theme / "theme.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["executable_layout"]["content_structure"] = "stack"
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ValueError,
+                "content_structure=stack is incompatible with content_columns=3",
+            ):
+                THEME_RUNTIME.load_project_theme(theme)
+
+            COMPILER.compile_theme(HANDOFF_FIXTURE, theme)
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["layout_variants"][0]["id"] = "drifted-cover"
             manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")

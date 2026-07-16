@@ -5,8 +5,16 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, NamedTuple
+
+
+SCRIPT_ROOT = Path(__file__).resolve().parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from project_theme_layout import EXECUTABLE_LAYOUT_OPTIONS, validate_layout_values
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -19,23 +27,6 @@ BUILT_IN_THEME_IDS = (
 )
 PROJECT_THEME_FILES = {"theme.json", "theme.css", "templates.html", "provenance.json"}
 PROJECT_ID = re.compile(r"^project-[a-z0-9]+(?:-[a-z0-9]+)*$")
-EXECUTABLE_LAYOUT_OPTIONS = {
-    "page_axis": {"row", "column"},
-    "alignment": {"start", "center", "end"},
-    "cover_structure": {"split", "single-column"},
-    "cover_split": {"7:5", "5:7", "1:1", "none"},
-    "content_structure": {"card-grid", "stack", "single-focus"},
-    "content_columns": {"1", "2", "3"},
-    "image_placement": {"left", "right", "top", "bottom", "background", "inline"},
-    "image_aspect_ratio": {"16:9", "4:3", "3:2", "1:1", "3:4"},
-    "image_fit": {"cover", "contain"},
-    "image_treatment": {"natural", "muted", "monochrome", "high-contrast"},
-    "data_structure": {"source-chart-split", "chart-focus", "table-focus", "metrics-grid"},
-    "data_columns": {"1", "2", "3"},
-    "module_organization": {"hard-grid", "soft-stack", "open-field"},
-    "density": {"low", "medium", "high"},
-    "visual_focus": {"headline-and-image", "headline-only", "image-first", "data-first", "balanced"},
-}
 REMOTE_ASSET = re.compile(
     r"(?:src|href)\s*=\s*['\"]\s*(?:https?:)?//|@import\b|url\(\s*['\"]?\s*(?:https?:)?//",
     re.IGNORECASE,
@@ -104,6 +95,7 @@ def _validate_project_structure(
     for field, options in EXECUTABLE_LAYOUT_OPTIONS.items():
         if layout[field] not in options:
             raise ValueError(f"Project theme executable_layout.{field} is invalid.")
+    validate_layout_values(layout)
 
     raw_records = provenance.get("boundary_records")
     raw_fallbacks = provenance.get("fallback_records")

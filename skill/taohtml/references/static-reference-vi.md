@@ -138,16 +138,38 @@ Every list must be non-empty. `palette` accepts one to six items, so one or two 
 | `cover_split` | `7:5`, `5:7`, `1:1`, `none` |
 | `content_structure` | `card-grid`, `stack`, `single-focus` |
 | `content_columns`, `data_columns` | `1`, `2`, `3` |
-| `image_placement` | `left`, `right`, `top`, `bottom`, `background`, `inline` |
+| `image_placement` | `left`, `right`, `top`, `bottom`, `background` |
 | `image_aspect_ratio` | `16:9`, `4:3`, `3:2`, `1:1`, `3:4` |
 | `image_fit` | `cover`, `contain` |
 | `image_treatment` | `natural`, `muted`, `monochrome`, `high-contrast` |
 | `data_structure` | `source-chart-split`, `chart-focus`, `table-focus`, `metrics-grid` |
 | `module_organization` | `hard-grid`, `soft-stack`, `open-field` |
 | `density` | `low`, `medium`, `high` |
-| `visual_focus` | `headline-and-image`, `headline-only`, `image-first`, `data-first`, `balanced` |
+| `visual_focus` | `headline-and-image`, `image-first`, `balanced` |
 
-Every enum also accepts `unknown`, but only together with `status: unknown`; an unknown field cannot carry a concrete value. A `single-column` cover uses `cover_split: none`, while a `split` cover cannot use `none`. The upstream model must select these values from the confirmed static observation and explicitly labeled report adaptation. Descriptive `layout`, `components`, and `mini_pages` remain useful review material, but they are not the compiler's primary structural input.
+Every enum also accepts `unknown`, but only together with `status: unknown`; an unknown field cannot carry a concrete value. The upstream model must select these values from the confirmed static observation and explicitly labeled report adaptation. Descriptive `layout`, `components`, and `mini_pages` remain useful review material, but they are not the compiler's primary structural input.
+
+The grammar has exact compatibility matrices. A contract outside them is invalid; the compiler never repairs a concrete incompatible value:
+
+| `cover_structure` | Allowed `cover_split` | Allowed `image_placement` | Executed meaning |
+|---|---|---|---|
+| `split` | `7:5`, `5:7`, `1:1` | `left`, `right` | Copy and image are separate horizontal grid children. Ratios mean copy:image, so physical columns reverse when the image is left. |
+| `single-column` | `none` | `top`, `bottom`, `background` | Top/bottom reverse actual DOM order; background creates an absolute visual layer behind a foreground copy panel. |
+
+| `content_structure` | Allowed `content_columns` | Executed meaning |
+|---|---|---|
+| `card-grid` | `1`, `2`, `3` | Card and closing grids use that exact column count. |
+| `stack` | `1` | One vertical sequence of line items. |
+| `single-focus` | `1` | One focal lead followed by one vertical sequence of supporting points. |
+
+| `data_structure` | Allowed `data_columns` | Executed meaning |
+|---|---|---|
+| `source-chart-split` | `2` | Local source and chart/table panel occupy two grid columns; image placement must be `left` or `right` and controls their DOM order. |
+| `chart-focus` | `1` | One chart panel occupies the data grid. |
+| `table-focus` | `1` | One table panel occupies the data grid. |
+| `metrics-grid` | `1`, `2`, `3` | The outer data panel stays single-column while metric cards use the declared inner column count. |
+
+`image_placement: background` additionally requires `image_fit: cover`. `inline`, `headline-only`, and `data-first` are intentionally absent: v1 has no distinct, generally valid program for those labels. Unknown fields use compatibility-aware neutral fallbacks recorded separately in provenance; for example, an unknown split on a confirmed split cover becomes `1:1`, while the original unknown boundary remains uncompiled.
 
 Choose `density` from the visible relationship between labels, titles, explanatory copy, and major modules—not from the number of words in the eventual report. Use `low` for conspicuous whitespace and one dominant focal group, `medium` for a balanced report rhythm, and `high` for deliberately compact information groupings. The compiler turns this enum into semantic relationship spacing; the model must not invent pixel gaps. If the static reference does not establish density, use `unknown` so the compiler can record its neutral medium fallback separately.
 
