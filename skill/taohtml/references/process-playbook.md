@@ -280,7 +280,7 @@ Recommended local tool flow:
 1. Render PDF pages with `scripts/extract_pdf_pages.py` when original source pages are needed as evidence.
 2. Build or edit the HTML deck using the template or existing deck shell.
 3. Check portability with `scripts/check_assets.py`.
-4. Run browser QA with `scripts/check_html_deck.py`.
+4. Run the `browser` profile in `environment-preflight.md`; only after it passes, run browser QA with `scripts/check_html_deck.py`.
 5. Create a contact sheet with `scripts/build_contact_sheet.py`.
 6. Package the folder with `scripts/package_deck.py`.
 
@@ -294,7 +294,7 @@ Use this sequence:
 2. Lock one design thesis and the recurring visual motifs. Reopen that decision only when implementation exposes a concrete failure.
 3. Instantiate `assets/html-deck-template/` and save a complete runnable `index.html` with every planned page, navigation, and essential content present. A simple but coherent first pass is preferred to a half-built high-detail page.
 4. Add evidence, creative supplements, and visual refinement in bounded passes. Embed or render only the source pages needed to support visible source claims; do not package the entire source by default. Add every actual creative supplement to the delivery verification ledger as it is introduced.
-5. Run asset and browser QA as soon as the runnable artifact exists. Fix objective failures before adding optional polish.
+5. Run asset QA as soon as the runnable artifact exists. Run the `browser` preflight before browser QA, and fix objective failures before adding optional polish. A failed or unavailable browser profile is not a passed browser-QA result.
 6. Stop when the confirmed scope, visual direction, runtime contract, and delivery gate are satisfied. Do not add unrequested pages, controls, or runtime features during refinement.
 
 The first runnable artifact is not the final quality bar. It is the production checkpoint that keeps the work inspectable, testable, and recoverable while design quality is improved.
@@ -414,6 +414,7 @@ Interaction:
 
 Technical:
 
+- Did the required environment profile pass before each gated material/QA path, with its JSON result preserved when possible?
 - Does the deck render at 1366x768, 1600x900, and 1920x1080?
 - Is the page count correct?
 - Are hash links and page indicators correct?

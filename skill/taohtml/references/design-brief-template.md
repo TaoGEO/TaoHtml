@@ -52,7 +52,9 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 阅读与演讲行为：...
 
 ## 来源与证据记录
-- 来源：...
+- 来源：路径或上传标识
+- source_binding：current_upload_or_user_explicit / task_instruction_explicit / candidate_confirmed
+- 来源理由：...
 - 支撑观点：...
 - 最终页面是否展示及展示位置：...
 
@@ -83,6 +85,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - During production, record each actual creative supplement in the delivery verification ledger rather than silently converting it into a source fact. Do not list customer-provided or independently verified facts as creative supplements.
 - Never disguise a minimum hard-boundary decision as an inference. Return to the blocked-intake output in `intake-workflow.md` instead.
 - Keep source records in the brief whether or not the final pages visibly cite them.
+- Copy every used material's source identity, `source_binding`, and binding reason from the source ledger. Do not include a merely discovered or conventionally named workspace file, and do not relabel an eligible bound source as a creative supplement.
 - Do not split content into slide copy, speaker notes, and appendix at this stage; production makes that allocation from the confirmed mode.
 
 ## Authorization

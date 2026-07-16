@@ -216,10 +216,12 @@ def package(output_zip: Path, version: str) -> None:
             for path in sorted(package_root.rglob("*")):
                 if not path.is_file():
                     continue
-                info = zipfile.ZipInfo(path.relative_to(package_root).as_posix())
+                relative = path.relative_to(package_root).as_posix()
+                info = zipfile.ZipInfo(relative)
                 info.date_time = (1980, 1, 1, 0, 0, 0)
                 info.create_system = 3
-                info.external_attr = 0o644 << 16
+                mode = 0o755 if relative == "scripts/preflight.py" else 0o644
+                info.external_attr = mode << 16
                 info.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(info, path.read_bytes())
     print(f"Packaged TaoHtml Skill Hub {version}: {output_zip}")

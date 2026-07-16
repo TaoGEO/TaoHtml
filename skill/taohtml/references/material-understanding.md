@@ -8,6 +8,10 @@ Build a source-grounded understanding that the user can correct. Do not propose 
 
 ## Inspection
 
+Before opening a PDF, run the `pdf` profile in `environment-preflight.md`. Inspect
+only materials already eligible under the intake workflow's source-binding rules.
+Do not open a workspace candidate to decide whether it should be bound.
+
 Inspect the complete available source, not only the first pages. Extract:
 
 - Topic and intended purpose stated by the material
@@ -52,6 +56,11 @@ Use this adaptive structure:
 - 观点：...
   - 支撑材料：...
 
+## 材料来源绑定
+- 材料：路径或上传标识
+  - source_binding：current_upload_or_user_explicit / task_instruction_explicit / candidate_confirmed
+  - 来源理由：用户当前上传或明确指定 / 当前任务说明明确声明 / Agent 展示候选路径后获用户确认
+
 ## 发现的问题
 - 重复、缺口、冲突或数据口径问题
 
@@ -62,6 +71,10 @@ Use this adaptive structure:
 ```
 
 Remove empty sections rather than filling them with placeholders.
+
+Keep `材料来源绑定` for every material actually used. This is provenance, not a
+creative-supplement disclosure. Do not describe an explicitly bound material as
+TaoHtml-generated content.
 
 ## Evidence And Data
 

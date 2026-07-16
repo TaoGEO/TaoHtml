@@ -2,6 +2,13 @@
 
 Read this reference only when the customer chooses “use my reference”. The shared route accepts one static PNG/JPEG/WebP screenshot for `reconstruct`, or one to three same-family static screenshots for `corporate_fidelity`; it turns the supported inputs into one customer-viewable VI design standards board, waits for “确认 VI”, and only then hands the exact contract to project-theme compilation.
 
+Before opening, decoding, or visually analyzing any reference image, run the
+`static-reference` profile in `environment-preflight.md`. Both reference modes depend
+on the same Pillow, PyYAML, Python Playwright, and Chromium chain. On failure, stop
+before image processing and apply that reference's two-choice recovery contract.
+Never offer manual corporate fidelity or describe `reconstruct` as a technical
+downgrade.
+
 ## Contents
 
 - Scope, one-time mode routing, and readability gate

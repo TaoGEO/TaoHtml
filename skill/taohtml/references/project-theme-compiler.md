@@ -2,6 +2,11 @@
 
 Read this reference only after the customer has explicitly replied “确认 VI” for the current static-reference board. This shared step compiles either one-image `reconstruct` or one-to-three-image `corporate_fidelity` into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
 
+The `static-reference` environment profile must already have passed before the
+reference images were processed. If compilation moves to another interpreter or
+machine, rerun that profile before reading the bound VI/reference inputs; never assume
+the earlier environment result transfers across machines.
+
 ## Contents
 
 - Responsibility and handoff contract

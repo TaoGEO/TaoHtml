@@ -34,6 +34,13 @@ jobs:
           python -m pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
+      - name: Run capability preflights
+        run: |
+          python skill/taohtml/scripts/preflight.py --profile core --workspace .
+          python skill/taohtml/scripts/preflight.py --profile pdf --workspace .
+          python skill/taohtml/scripts/preflight.py --profile static-reference --workspace .
+          python skill/taohtml/scripts/preflight.py --profile browser --workspace .
+
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
@@ -66,3 +73,41 @@ jobs:
           path: .artifacts/
           if-no-files-found: error
           include-hidden-files: true
+
+  windows-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install skill dependencies and Chromium
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r skill/taohtml/requirements.txt
+          python -m playwright install chromium
+
+      - name: Smoke dependency imports
+        run: python -c "import fitz, PIL, yaml; import playwright.sync_api; print('DEPENDENCY_IMPORTS_OK')"
+
+      - name: Run preflight regression tests
+        run: python -m unittest discover -s tests -p "test_preflight.py" -v
+
+      - name: Run Windows capability preflights
+        run: |
+          python skill/taohtml/scripts/preflight.py --profile core --workspace .
+          python skill/taohtml/scripts/preflight.py --profile pdf --workspace .
+          python skill/taohtml/scripts/preflight.py --profile static-reference --workspace .
+          python skill/taohtml/scripts/preflight.py --profile browser --workspace .
+
+      - name: Smoke corporate reference VI and project-theme chain
+        run: |
+          python skill/taohtml/scripts/render_reference_vi.py --data tests/fixtures/corporate-template-vi-contract.json --source-image tests/fixtures/corporate-template-reference.png --output .artifacts/windows/corporate-reference-vi
+          python skill/taohtml/scripts/compile_project_theme.py --request tests/fixtures/corporate-template-handoff.json --output-theme .artifacts/windows/project-theme

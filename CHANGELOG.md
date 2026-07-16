@@ -4,6 +4,28 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-16
+
+### Added
+
+- Add a standard-library environment preflight with capability-specific `core`, `pdf`, `static-reference`, and `browser` profiles, machine-readable JSON, customer-readable recovery choices, isolated dependency imports, and a real Chromium launch/minimal-screenshot probe.
+- Add a skill-local dependency declaration carried by raw Skill, marketplace, and Skill Hub packages, plus a `windows-latest` smoke job for imports, preflight, Chromium, static-reference VI rendering, and project-theme compilation.
+
+### Changed
+
+- Start every new invocation with a route handshake: explicit topics and task-bound materials advance immediately, while input-free invocations show the three entry routes before any material analysis, brief, or HTML work.
+- Bind compact answers only to the Agent's latest active conversation options, and require every used material to record a current upload/user instruction, explicit task instruction, or user-confirmed candidate path as its source binding.
+- Require capability preflight immediately before PDF extraction, customer-reference image processing, and browser QA without making idea-only reports on built-in visual systems depend on the heavier reference/browser chain.
+
+### Fixed
+
+- Prevent low-information platform placeholder text and stale workspace conventions such as `input/prompt.md` from being interpreted as a report route or current source.
+- Fail fast when the customer-reference rendering chain is unavailable: do not bypass deterministic corporate fidelity manually, and do not present reference-style reconstruction as a downgrade because it uses the same Pillow/Playwright/Chromium path.
+
+### Verification scope
+
+- Windows claims are limited to the automated `windows-latest` smoke path. WorkBuddy's managed Windows runtime, policies, installed browser, and native stability still require an on-device acceptance run; this release does not claim support for every WorkBuddy Windows environment.
+
 ## [0.3.1] - 2026-07-16
 
 ### Fixed
