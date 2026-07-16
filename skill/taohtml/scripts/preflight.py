@@ -409,6 +409,10 @@ def run_preflight(
 
 
 def main() -> int:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(
         description="Run a fail-fast TaoHtml environment capability preflight."
     )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -173,6 +174,8 @@ class PreflightContractTests(unittest.TestCase):
         self.assertEqual(PREFLIGHT.DEFAULT_TIMEOUT_SECONDS, 20.0)
 
     def test_cli_stdout_is_json_and_stderr_is_customer_readable(self) -> None:
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "cp1252"
         with tempfile.TemporaryDirectory() as temp_dir:
             completed = subprocess.run(
                 [
@@ -186,6 +189,8 @@ class PreflightContractTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                env=env,
             )
         payload = json.loads(completed.stdout)
         self.assertTrue(payload["ok"])
