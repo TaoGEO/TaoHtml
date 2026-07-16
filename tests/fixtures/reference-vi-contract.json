@@ -1,0 +1,197 @@
+{
+  "schema_version": "1.0",
+  "board": {
+    "title": "城市更新观察｜VI 设计标准图",
+    "subtitle": "基于单张静态参考的视觉语言确认稿",
+    "reference_label": "城市更新观察静态参考样张"
+  },
+  "palette": [
+    {
+      "name": "暖纸白",
+      "value": "#F4EFE5",
+      "role": "画布底色与大面积留白",
+      "status": "observed",
+      "basis": "参考画布与内页纸张使用同一暖白色系"
+    },
+    {
+      "name": "深墨黑",
+      "value": "#17191A",
+      "role": "主标题、结构线与边框",
+      "status": "observed",
+      "basis": "主标题、分隔线和全部模块边框重复出现"
+    },
+    {
+      "name": "砖红",
+      "value": "#B94B3F",
+      "role": "结论强调与主要数据柱",
+      "status": "observed",
+      "basis": "标题下划线、山形图块与第一数据柱"
+    },
+    {
+      "name": "黄铜金",
+      "value": "#C8A64B",
+      "role": "章节标签与次级强调",
+      "status": "observed",
+      "basis": "页首标签、圆形图块与第二数据柱"
+    },
+    {
+      "name": "深松绿",
+      "value": "#233C37",
+      "role": "图片面板与反白数据区",
+      "status": "observed",
+      "basis": "右上主视觉和右下数据面板使用同一深色"
+    }
+  ],
+  "typography": [
+    {
+      "level": "H1",
+      "sample": "旧街区不是负担",
+      "spec": "约 76px / 超粗黑体 / 0.98 行距",
+      "status": "observed",
+      "basis": "左上两行主标题占据画面首要层级"
+    },
+    {
+      "level": "H2",
+      "sample": "三项证据决定优先级",
+      "spec": "约 31px / 粗黑体 / 单行结论",
+      "status": "observed",
+      "basis": "中部横线下方的结论式章节标题"
+    },
+    {
+      "level": "BODY",
+      "sample": "把空间与社区证据放进同一张地图",
+      "spec": "约 19–25px / 常规黑体 / 宽松行距",
+      "status": "observed",
+      "basis": "导语、卡片说明和页脚形成三级正文层级"
+    }
+  ],
+  "layout": [
+    {
+      "label": "外边距",
+      "value": "约画布宽度 5%",
+      "status": "observed",
+      "basis": "四周 56–88px 的稳定边界清楚可见"
+    },
+    {
+      "label": "主网格",
+      "value": "上部 7:5，底部三模块",
+      "status": "observed",
+      "basis": "标题与主视觉分栏，证据区按三列对齐"
+    },
+    {
+      "label": "模块间距",
+      "value": "约 22px，组间以粗线分区",
+      "status": "observed",
+      "basis": "底部卡片等距排列并由中部横线分隔"
+    }
+  ],
+  "components": [
+    {
+      "name": "章节标签",
+      "description": "黄铜色实底、紧凑大写、无圆角",
+      "status": "observed",
+      "basis": "左上 URBAN NOTE 标签"
+    },
+    {
+      "name": "证据卡片",
+      "description": "白底粗黑边，数字与说明上下分层",
+      "status": "observed",
+      "basis": "底部前两张指标卡"
+    },
+    {
+      "name": "反白面板",
+      "description": "深松绿底、浅色坐标线、直接数值",
+      "status": "observed",
+      "basis": "右下柱图面板"
+    },
+    {
+      "name": "报告页签",
+      "description": "沿用硬边与小号编号，作为跨页定位",
+      "status": "extension",
+      "basis": "把参考中的章节标签延展为报告导航组件"
+    }
+  ],
+  "imagery": [
+    {
+      "label": "主图裁切",
+      "description": "直角硬裁切，深色底上叠加几何色块",
+      "status": "observed",
+      "basis": "右上 360×314 主视觉面板"
+    },
+    {
+      "label": "人物摄影",
+      "description": "参考未展示人物，肤色与肖像裁切规则未知",
+      "status": "unknown",
+      "basis": "画面只有几何主视觉，没有人物照片"
+    }
+  ],
+  "evidence_language": [
+    {
+      "label": "柱图",
+      "description": "三根粗柱、零基线、数值直接写在柱顶",
+      "sample": "bar",
+      "status": "observed",
+      "basis": "右下证据面板明确展示三列柱图"
+    },
+    {
+      "label": "来源脚注",
+      "description": "适配为页底单行来源，不抢占结论层级",
+      "sample": "citation",
+      "status": "extension",
+      "basis": "参考已有克制页脚，可承接报告证据来源"
+    }
+  ],
+  "mini_pages": [
+    {
+      "kind": "cover",
+      "title": "代表性封面",
+      "description": "延展双行结论标题、黄铜标签与几何主图",
+      "status": "extension",
+      "basis": "将上半部主视觉语法适配为报告封面"
+    },
+    {
+      "kind": "content",
+      "title": "代表性内容页",
+      "description": "延展粗线分区、双栏网格与硬边证据卡",
+      "status": "extension",
+      "basis": "将底部模块语法适配为正文页"
+    },
+    {
+      "kind": "data",
+      "title": "代表性数据页",
+      "description": "延展深色证据面板、直接标注柱图与结论标题",
+      "status": "extension",
+      "basis": "将右下柱图语法扩展到完整数据页"
+    }
+  ],
+  "guardrails": [
+    {
+      "mode": "preserve",
+      "title": "结论先行",
+      "description": "保持大标题先于解释文字",
+      "status": "observed",
+      "basis": "主标题和章节标题都直接表达判断"
+    },
+    {
+      "mode": "preserve",
+      "title": "硬边分区",
+      "description": "保持粗线、直角和明确模块边界",
+      "status": "observed",
+      "basis": "外框、卡片和图表面板均使用硬边"
+    },
+    {
+      "mode": "avoid",
+      "title": "禁用柔光卡片",
+      "description": "不加入玻璃拟态与大面积柔和阴影",
+      "status": "extension",
+      "basis": "避免削弱参考中的硬朗边界"
+    },
+    {
+      "mode": "avoid",
+      "title": "禁用彩虹图表",
+      "description": "数据色限定在砖红、黄铜与深墨层级",
+      "status": "extension",
+      "basis": "延续参考的三色证据系统"
+    }
+  ]
+}

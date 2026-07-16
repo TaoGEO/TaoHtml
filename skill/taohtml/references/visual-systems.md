@@ -4,9 +4,11 @@ Use this router only after content and chapter structure are clear. Its purpose 
 
 ## Reference Precedence
 
-When the user provides a clear reference, use it directly. Extract its composition, hierarchy, image treatment, module language, evidence treatment, and motion grammar; do not force one of the built-in systems or reduce the reference to colors.
+When the user chooses “use my reference” and supplies exactly one static image, do not use this router. Read `static-reference-vi.md`, apply its current-session readability gate, extract only visible static composition, hierarchy, image treatment, module language, and evidence treatment, render the VI standards board, and wait for “确认 VI”. Do not infer dynamic rules, force one of the built-in systems, or reduce the reference to colors.
 
-When no clear reference exists, recommend 2-3 systems from the table. Show the exact name, description, and bundled preview. Let the user choose once or delegate. Never ask an open-ended taste question. Theme selection shares the existing six-question budget; at the cap, after three no-gain rounds, or under delegation, choose the lowest-risk fit and disclose it in the Report Design Brief.
+If the current session cannot reliably locate static visual facts, follow the two recovery paths in `static-reference-vi.md`; do not guess or maintain a model matrix here. A clear PPT, webpage, video, multi-image set, or state sequence is an unsupported reference input rather than “no clear reference”: ask for one representative static screenshot and do not enter this router unless the customer explicitly abandons the reference route. Never infer movement from those sources.
+
+When no clear reference exists, recommend 2-3 systems from the four built-in systems in the table. Show the exact name, description, and bundled preview. Let the user choose once or delegate. Never ask an open-ended taste question. Theme selection shares the existing six-question budget; at the cap, after three no-gain rounds, or under delegation, choose the lowest-risk fit and disclose it in the Report Design Brief.
 
 ## Customer-Facing Route Table
 

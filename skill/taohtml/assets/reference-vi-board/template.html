@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=3200, initial-scale=1">
+  <title>{{DOCUMENT_TITLE}}</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --board-bg: #ecebe6;
+      --board-ink: #151719;
+      --board-paper: #fbfaf7;
+      --board-line: #c9cbc6;
+      --board-muted: #626967;
+      --observed: #0e6659;
+      --observed-soft: #d9eee9;
+      --extension: #a14b13;
+      --extension-soft: #f7e5d5;
+      --unknown: #58616a;
+      --unknown-soft: #e5e8eb;
+      --sample-1: var(--board-ink);
+      --sample-2: var(--unknown-soft);
+      --sample-3: var(--unknown);
+      --sample-4: var(--board-paper);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 3200px; min-width: 3200px; height: 2400px; min-height: 2400px; margin: 0; overflow: hidden; }
+    body { background: var(--board-bg); color: var(--board-ink); font-family: Arial, "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+
+    .vi-board {
+      width: 3200px;
+      height: 2400px;
+      padding: 64px;
+      background:
+        linear-gradient(90deg, rgba(21, 23, 25, .026) 1px, transparent 1px),
+        linear-gradient(rgba(21, 23, 25, .026) 1px, transparent 1px),
+        var(--board-bg);
+      background-size: 32px 32px;
+    }
+
+    .board-header {
+      height: 242px;
+      display: grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap: 40px;
+      padding: 40px 46px;
+      border: 3px solid var(--board-ink);
+      background: var(--board-paper);
+      box-shadow: 12px 12px 0 var(--board-ink);
+    }
+
+    .eyebrow { margin: 0 0 17px; color: var(--observed); font-size: 24px; font-weight: 800; letter-spacing: .16em; }
+    h1 { margin: 0; font-size: 80px; line-height: .98; letter-spacing: -.045em; }
+    .subtitle { margin: 20px 0 0; color: var(--board-muted); font-size: 28px; line-height: 1.35; }
+    .legend { display: grid; align-content: center; gap: 14px; }
+    .legend-item { display: grid; grid-template-columns: 176px 1fr; align-items: center; gap: 16px; font-size: 22px; line-height: 1.25; }
+
+    .status { display: inline-flex; align-items: center; justify-content: center; width: max-content; min-width: 146px; padding: 9px 14px; border: 2px solid currentColor; border-radius: 999px; font-size: 18px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
+    .status-observed { color: var(--observed); background: var(--observed-soft); }
+    .status-extension { color: var(--extension); background: var(--extension-soft); }
+    .status-unknown { color: var(--unknown); background: var(--unknown-soft); }
+
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: 490px 450px 430px 470px;
+      gap: 24px;
+      height: 1912px;
+      margin-top: 26px;
+    }
+
+    .panel { min-width: 0; overflow: hidden; padding: 28px 30px; border: 2px solid var(--board-line); background: rgba(251, 250, 247, .97); }
+    .panel-title { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 0 20px; padding-bottom: 16px; border-bottom: 2px solid var(--board-ink); }
+    .panel-title h2 { margin: 0; font-size: 32px; line-height: 1; letter-spacing: -.02em; }
+    .panel-index { color: var(--board-muted); font-size: 18px; font-weight: 800; letter-spacing: .12em; }
+
+    .reference-panel { grid-column: span 3; grid-row: span 2; display: flex; flex-direction: column; }
+    .reference-frame { flex: 1; min-height: 0; margin: 0; padding: 14px; border: 3px solid var(--board-ink); background: #fff; }
+    .reference-frame img { display: block; width: 100%; height: 100%; object-fit: contain; background: #f1f0eb; }
+    .reference-caption { margin-top: 18px; }
+    .reference-caption strong { display: block; margin-bottom: 8px; font-size: 25px; }
+    .reference-caption p { margin: 0; color: var(--board-muted); font-size: 20px; line-height: 1.4; }
+
+    .palette-panel { grid-column: span 4; }
+    .palette-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(30%, 1fr)); gap: 8px; }
+    .swatch { min-width: 0; display: grid; grid-template-columns: 58px 1fr; gap: 10px; align-items: stretch; padding: 8px; border: 1px solid var(--board-line); background: #fff; }
+    .swatch-color { width: 58px; min-height: 72px; border: 1px solid #0003; }
+    .swatch-color-unknown {
+      display: grid;
+      place-items: center;
+      border: 2px dashed var(--unknown);
+      background: repeating-linear-gradient(135deg, #fff 0 8px, var(--unknown-soft) 8px 16px);
+    }
+    .swatch-color-unknown::after { content: "?"; color: var(--unknown); font-size: 30px; font-weight: 900; }
+    .swatch-unknown code { color: var(--unknown); font-family: inherit; }
+    .swatch h3 { margin: 0 0 5px; font-size: 19px; }
+    .swatch code { display: block; margin-bottom: 6px; font: 800 17px/1.1 "SFMono-Regular", Consolas, monospace; }
+    .swatch p { margin: 0 0 7px; color: var(--board-muted); font-size: 15px; line-height: 1.2; }
+
+    .type-panel { grid-column: span 5; }
+    .type-list { display: grid; gap: 11px; }
+    .type-row { display: grid; grid-template-columns: 76px 1fr 250px; gap: 14px; align-items: center; min-height: 82px; padding: 8px 12px; border-left: 8px solid var(--sample-2); background: #fff; }
+    .type-level { font: 900 21px/1 "SFMono-Regular", Consolas, monospace; }
+    .type-sample { overflow: hidden; font-size: 34px; font-weight: 800; line-height: 1.1; white-space: nowrap; text-overflow: ellipsis; }
+    .type-spec { color: var(--board-muted); font-size: 17px; line-height: 1.35; }
+    .type-spec > p { margin: 5px 0 0; font-size: 15px; line-height: 1.2; }
+    .type-spec .item-basis { margin-top: 4px; font-size: 13px; line-height: 1.18; }
+
+    .layout-panel { grid-column: span 4; }
+    .layout-wrap { display: grid; grid-template-columns: 1fr 1.15fr; gap: 18px; height: 316px; }
+    .layout-demo { position: relative; min-width: 0; border: 2px solid var(--board-ink); background: var(--sample-4); }
+    .layout-demo::before { content: ""; position: absolute; inset: 24px; background: repeating-linear-gradient(90deg, var(--sample-1) 0 3px, transparent 3px calc(25% - 1px)); opacity: .2; }
+    .layout-demo::after { content: "SAFE\A AREA"; white-space: pre; position: absolute; inset: 58px 38px; display: grid; place-items: center; border: 3px dashed var(--sample-3); color: var(--sample-3); font: 900 20px/1.2 Arial, sans-serif; letter-spacing: .12em; text-align: center; }
+    .compact-list { display: grid; gap: 10px; align-content: start; }
+    .layout-panel .info-item { padding: 8px 10px; }
+    .layout-panel .item-basis { margin-top: 4px; font-size: 13px; line-height: 1.18; }
+
+    .components-panel { grid-column: span 5; }
+    .component-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .component { min-width: 0; min-height: 126px; padding: 13px 15px; border: 3px solid var(--sample-1); background: #fff; box-shadow: 6px 6px 0 color-mix(in srgb, var(--sample-1) 25%, transparent); }
+    .component h3 { margin: 8px 0 5px; font-size: 21px; }
+    .component p { margin: 0; color: var(--board-muted); font-size: 16px; line-height: 1.28; }
+    .component .item-basis { margin-top: 4px; font-size: 13px; line-height: 1.18; }
+
+    .imagery-panel, .evidence-panel, .guardrails-panel { grid-column: span 4; }
+    .imagery-body { display: grid; grid-template-columns: 180px 1fr; gap: 18px; }
+    .crop-demo { height: 270px; overflow: hidden; border: 3px solid var(--sample-1); background: var(--sample-2); }
+    .crop-demo img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.76) contrast(1.08); transform: scale(1.14); }
+    .stack { display: grid; gap: 10px; align-content: start; }
+
+    .evidence-body { display: grid; grid-template-columns: 190px 1fr; gap: 18px; }
+    .evidence-sample { height: 262px; background: #fff; color: var(--sample-1); }
+    .evidence-bar { display: flex; align-items: end; gap: 16px; padding: 22px 20px; border-left: 3px solid var(--sample-1); border-bottom: 3px solid var(--sample-1); }
+    .evidence-bar i { flex: 1; display: block; background: var(--sample-3); border: 2px solid var(--sample-1); }
+    .evidence-bar i:nth-child(1) { height: 38%; }
+    .evidence-bar i:nth-child(2) { height: 68%; background: var(--sample-2); }
+    .evidence-bar i:nth-child(3) { height: 91%; background: var(--sample-1); }
+    .evidence-line { display: grid; place-items: center; border: 3px solid var(--sample-1); color: var(--sample-3); }
+    .evidence-line svg { width: 88%; height: 88%; }
+    .evidence-table { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 3px; padding: 18px; border: 3px solid var(--sample-1); background: var(--sample-1); }
+    .evidence-table i { display: block; background: #fff; }
+    .evidence-table i:nth-child(-n+3) { background: var(--sample-2); }
+    .evidence-metric { display: grid; place-items: center; align-content: center; gap: 10px; border: 3px solid var(--sample-1); }
+    .evidence-metric strong { color: var(--sample-3); font-size: 88px; line-height: .9; }
+    .evidence-metric span { font-size: 20px; font-weight: 800; }
+    .evidence-citation { display: grid; align-content: center; gap: 18px; padding: 28px; border: 3px solid var(--sample-1); }
+    .evidence-citation i { display: block; height: 12px; background: var(--sample-1); }
+    .evidence-citation i:nth-child(2) { width: 72%; background: var(--sample-3); }
+    .evidence-citation i:nth-child(3) { width: 86%; }
+    .evidence-citation i:nth-child(4) { width: 54%; background: var(--sample-2); }
+    .evidence-empty { display: grid; place-items: center; align-content: center; gap: 10px; border: 3px dashed var(--unknown); color: var(--unknown); text-align: center; }
+    .evidence-empty strong { font-size: 22px; }
+    .evidence-empty span { max-width: 140px; font-size: 16px; line-height: 1.35; }
+
+    .guardrail-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .guardrail-group { min-width: 0; padding: 10px; border: 2px solid var(--board-line); background: #fff; }
+    .guardrail-group h3 { margin: 0 0 12px; font-size: 24px; }
+    .guardrail-group.preserve { border-top: 10px solid var(--observed); }
+    .guardrail-group.avoid { border-top: 10px solid var(--extension); }
+
+    .info-item { min-width: 0; padding: 11px 13px; border: 1px solid var(--board-line); background: #fff; }
+    .info-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .info-head strong { overflow: hidden; font-size: 19px; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; }
+    .info-value { margin: 6px 0 0; font-size: 19px; font-weight: 750; line-height: 1.25; }
+    .item-basis { margin: 7px 0 0; color: var(--board-muted); font-size: 15px; line-height: 1.3; }
+    .item-basis::before { content: "依据｜"; font-weight: 800; }
+    .compact-list .status, .component .status, .guardrail-group .status, .type-row .status, .swatch .status { min-width: 116px; padding: 5px 9px; font-size: 14px; }
+    .guardrail-group .info-item { padding: 9px 10px; }
+    .guardrail-group .item-basis { margin-top: 4px; font-size: 13px; line-height: 1.18; }
+
+    .mini-pages-panel { grid-column: span 12; padding: 26px 30px; }
+    .mini-page-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; height: 344px; }
+    .mini-page-card { min-width: 0; display: grid; grid-template-columns: 1.06fr .94fr; gap: 18px; padding: 18px; border: 2px solid var(--board-line); background: #fff; }
+    .mini-canvas { position: relative; overflow: hidden; min-height: 0; border: 3px solid var(--sample-1); background: var(--sample-4); }
+    .mini-canvas::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: var(--sample-2); }
+    .mini-cover .mini-canvas { padding: 58px 34px 30px; }
+    .mini-cover .mini-canvas::after { content: "VI"; position: absolute; right: 30px; bottom: 18px; color: var(--sample-3); font-size: 102px; font-weight: 950; line-height: 1; }
+    .mini-title { position: relative; z-index: 2; max-width: 76%; font-size: 42px; font-weight: 950; line-height: .98; }
+    .mini-rule { width: 56%; height: 8px; margin-top: 24px; background: var(--sample-3); }
+    .mini-content .mini-canvas { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 54px 28px 26px; }
+    .mini-content .mini-canvas div { border-top: 8px solid var(--sample-3); background: #fff; box-shadow: inset 0 0 0 2px var(--sample-1); }
+    .mini-data .mini-canvas { display: flex; align-items: end; gap: 19px; padding: 72px 34px 34px; }
+    .mini-data .mini-canvas i { flex: 1; background: var(--sample-3); border: 3px solid var(--sample-1); }
+    .mini-data .mini-canvas i:nth-child(1) { height: 42%; }
+    .mini-data .mini-canvas i:nth-child(2) { height: 70%; background: var(--sample-2); }
+    .mini-data .mini-canvas i:nth-child(3) { height: 88%; background: var(--sample-1); }
+    .mini-copy { min-width: 0; align-self: center; }
+    .mini-copy h3 { margin: 16px 0 12px; font-size: 28px; line-height: 1.05; }
+    .mini-copy p { margin: 0 0 13px; color: var(--board-muted); font-size: 18px; line-height: 1.42; }
+
+    .board-footer { height: 70px; display: flex; align-items: end; justify-content: space-between; gap: 30px; padding: 0 8px 5px; color: var(--board-muted); font-size: 18px; font-weight: 700; letter-spacing: .04em; }
+  </style>
+</head>
+<body>
+  <article class="vi-board" id="vi-board" data-schema-version="1.0" style="{{BOARD_STYLE}}">
+    <header class="board-header">
+      <div>
+        <p class="eyebrow">TAOHTML · STATIC REFERENCE VI BOARD</p>
+        <h1>{{BOARD_TITLE}}</h1>
+        <p class="subtitle">{{BOARD_SUBTITLE}}</p>
+      </div>
+      <div class="legend" aria-label="边界状态图例">
+        <div class="legend-item"><span class="status status-observed">直接观察</span><span>由参考图中可定位的视觉证据支持</span></div>
+        <div class="legend-item"><span class="status status-extension">报告适配建议</span><span>面向报告页面的可确认延展</span></div>
+        <div class="legend-item"><span class="status status-unknown">参考中无法判断</span><span>未展示或证据不足，保持未知</span></div>
+      </div>
+    </header>
+
+    <main class="board-grid">
+      <section class="panel reference-panel">
+        <div class="panel-title"><h2>参考缩略图</h2><span class="panel-index">01 / SOURCE</span></div>
+        <figure class="reference-frame">{{REFERENCE_IMAGE}}</figure>
+        <div class="reference-caption"><strong>{{REFERENCE_LABEL}}</strong><p>单张静态参考｜仅确认可见的设计语言</p></div>
+      </section>
+
+      <section class="panel palette-panel">
+        <div class="panel-title"><h2>颜色与色值</h2><span class="panel-index">02 / COLOR</span></div>
+        <div class="palette-list">{{PALETTE_ITEMS}}</div>
+      </section>
+
+      <section class="panel type-panel">
+        <div class="panel-title"><h2>字体层级</h2><span class="panel-index">03 / TYPE</span></div>
+        <div class="type-list">{{TYPOGRAPHY_ITEMS}}</div>
+      </section>
+
+      <section class="panel layout-panel">
+        <div class="panel-title"><h2>网格 · 留白 · 间距</h2><span class="panel-index">04 / GRID</span></div>
+        <div class="layout-wrap"><div class="layout-demo" aria-label="网格和安全区示意"></div><div class="compact-list">{{LAYOUT_ITEMS}}</div></div>
+      </section>
+
+      <section class="panel components-panel">
+        <div class="panel-title"><h2>卡片 · 面板 · 标签 · 边框</h2><span class="panel-index">05 / UI</span></div>
+        <div class="component-list">{{COMPONENT_ITEMS}}</div>
+      </section>
+
+      <section class="panel imagery-panel">
+        <div class="panel-title"><h2>图片裁切与处理</h2><span class="panel-index">06 / IMAGE</span></div>
+        <div class="imagery-body"><div class="crop-demo">{{CROP_IMAGE}}</div><div class="stack">{{IMAGERY_ITEMS}}</div></div>
+      </section>
+
+      <section class="panel evidence-panel">
+        <div class="panel-title"><h2>图表与证据语言</h2><span class="panel-index">07 / EVIDENCE</span></div>
+        <div class="evidence-body">{{EVIDENCE_SAMPLE}}<div class="stack">{{EVIDENCE_ITEMS}}</div></div>
+      </section>
+
+      <section class="panel guardrails-panel">
+        <div class="panel-title"><h2>保留项与禁用项</h2><span class="panel-index">08 / RULES</span></div>
+        <div class="guardrail-columns">{{GUARDRAIL_GROUPS}}</div>
+      </section>
+
+      <section class="panel mini-pages-panel">
+        <div class="panel-title"><h2>代表性页面微缩示例</h2><span class="panel-index">09 / PAGE SYSTEM</span></div>
+        <div class="mini-page-list">{{MINI_PAGE_ITEMS}}</div>
+      </section>
+    </main>
+
+    <footer class="board-footer"><span>三类边界已显式标注｜缺失类别保持未知</span><span>TaoHtml · VI Board v1 · 3200 × 2400</span></footer>
+  </article>
+</body>
+</html>
