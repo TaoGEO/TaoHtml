@@ -1,6 +1,6 @@
 # Report Design Brief Template
 
-Generate this brief only after the route-appropriate source gate and the design-ready gate in `intake-workflow.md` both pass. Word/PDF requires a confirmed Material Understanding Summary; an idea-only route does not. If a minimum hard-boundary gap remains, use the blocked-intake output instead of this template. Ordinary missing details may be completed after confirmation and disclosed in the delivery verification list.
+Generate this brief only after the route-appropriate source gate and the design-ready gate in `intake-workflow.md` both pass. A bound Word/PDF/PPT/HTML material route requires a confirmed Material Understanding Summary; an idea-only route does not. If a minimum hard-boundary gap remains, use the blocked-intake output instead of this template. Ordinary missing details may be completed after confirmation and disclosed in the delivery verification list.
 
 Keep it readable by the customer. Include only fields that affect this project. Do not emit a separate JSON configuration and do not pre-design every page.
 
@@ -52,7 +52,9 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 阅读与演讲行为：...
 
 ## 来源与证据记录
-- 来源：...
+- 来源：路径或上传标识
+- source_binding：current_upload_or_user_explicit / task_instruction_explicit / candidate_confirmed
+- 来源理由：...
 - 支撑观点：...
 - 最终页面是否展示及展示位置：...
 
@@ -65,7 +67,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 数据修正及原因：...
 - 其他会影响成品的判断：...
 
-回复“确认”后，TaoHtml 将按这份设计简报开始制作 HTML。
+请确认或修正这份当前设计简报；明确确认将绑定此版本与当前会话记录，并作为正式 HTML 制作授权。
 ```
 
 ## Adaptation Rules
@@ -74,7 +76,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - If the user supplied a clear visual reference, record `reference_mode`. Do not reduce `corporate_fidelity` to “closely reproduced”: state the screenshot-visible fidelity boundary, locked elements, editable region, and extension/unknown limits explicitly.
 - If the user supplied a clear visual reference, do not add a competing built-in-theme requirement.
-- For supported static-reference inputs, include the confirmed unified VI board path and confirmation state. In corporate fidelity, copy the exact source-role, canvas, shared-asset, shell placement, editable-region, extension, and limitation summary from the confirmed contract; do not silently alter it after “确认 VI”. Do not include a dynamic-analysis field or infer sequential behavior from multiple stills.
+- For supported static-reference inputs, include the confirmed unified VI board path and confirmation state. In corporate fidelity, copy the exact source-role, canvas, shared-asset, shell placement, editable-region, extension, and limitation summary from the confirmed contract; do not silently alter it after current-board confirmation. Do not include a dynamic-analysis field or infer sequential behavior from multiple stills.
 - Treat VI confirmation and Report Design Brief confirmation as separate gates. A confirmed VI board may enter the separate project-theme handoff, but it does not authorize report production.
 - If TaoHtml recommends or selects a built-in visual system, copy its full customer-facing name and one-line description, explain why it suits the topic, audience, and use mode, and record every necessary deviation. Write `无` when there is no deviation.
 - Include `行动闭环` only when the confirmed goal requires the audience to complete an external action. Omit it for explanatory, educational, or internal reports that do not require conversion; do not add a gratuitous CTA.
@@ -83,6 +85,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - During production, record each actual creative supplement in the delivery verification ledger rather than silently converting it into a source fact. Do not list customer-provided or independently verified facts as creative supplements.
 - Never disguise a minimum hard-boundary decision as an inference. Return to the blocked-intake output in `intake-workflow.md` instead.
 - Keep source records in the brief whether or not the final pages visibly cite them.
+- Copy every used material's source identity, `source_binding`, and binding reason from the source ledger. Do not include a merely discovered or conventionally named workspace file, and do not relabel an eligible bound source as a creative supplement.
 - Do not split content into slide copy, speaker notes, and appendix at this stage; production makes that allocation from the confirmed mode.
 
 ## Authorization

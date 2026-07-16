@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Valid scaled block flow</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .fractional-stage {
+      margin: 180px 0 0 340px;
+      width: 360px;
+      transform: translate(0.35px, 0.45px) scale(0.9375);
+      transform-origin: top left;
+    }
+    .quiet-caption {
+      display: block;
+      position: static;
+      margin: 0 0 3px;
+      font-size: 12px;
+      line-height: 10px;
+    }
+    .strong-reading {
+      display: block;
+      position: static;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 30px;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Valid normal flow metrics">
+      <h1>Normal block-flow type</h1>
+      <div class="fractional-stage">
+        <div class="quiet-caption" data-qa-text-label>Weekly capacity</div>
+        <div class="strong-reading" data-qa-text-label>128 units</div>
+      </div>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

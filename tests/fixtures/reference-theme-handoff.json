@@ -1,12 +1,12 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "project": {
     "id": "urban-renewal-observation",
     "display_name": "城市更新观察｜项目专用主题"
   },
   "confirmation": {
     "status": "confirmed",
-    "phrase": "确认 VI",
+    "confirmation_ref": "synthetic-current-turn-vi-approval",
     "vi_contract_sha256": "9f17afa4f4961eacd40ed26582274f6d36766ed5fd499bee46e3ea6c7d7bd266",
     "reference_image_sha256": "2d6a209c101f22ed701aa65485507f27dbcb61a02f5e6e971b9cbb162662293b"
   },

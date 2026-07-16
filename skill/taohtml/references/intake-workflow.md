@@ -8,10 +8,11 @@ Move through these states in order:
 
 | State | Result | Exit condition |
 |---|---|---|
-| S0 Startup | Idea, Word/PDF, or PPT/HTML plus reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
+| S0 Route handshake | Idea, Word/PDF, or PPT/HTML is bound to this invocation | A specific topic, an eligible bound source, or the user's answer to the latest active route options establishes the route |
+| S0A Startup completion | Reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
 | S2 Design completion | Only outcome-changing decisions and hard-boundary gaps are resolved, and the visual route is selected | The project passes the design-ready gate, or intake stops on a minimum hard boundary |
-| S3 Reference VI | On the supported static-reference route, one unified VI design standards board is shown; other visual routes bypass this state | The user explicitly replies “确认 VI” for the current board, or the state is not applicable |
+| S3 Reference VI | On the supported static-reference route, one unified VI design standards board is shown; other visual routes bypass this state | The user clearly confirms the exact current board and its conversation reference is recorded, or the state is not applicable |
 | S4 Design brief | One customer-readable brief is shown | The user explicitly confirms the current brief |
 | S5 Production | HTML, visual system, presentation behavior, and objective QA are completed | Objective failures are fixed |
 | S6 Delivery | Files, checks, and a structured verification handoff are reported | Deliverables are usable and creative supplements are easy for the customer to review |
@@ -20,10 +21,87 @@ Apply the source gate as follows:
 
 - **Idea only**: seed the ledger from the conversation. Do not create or ask the user to confirm a fictional Material Understanding Summary.
 - **Word/PDF**: show the Material Understanding Summary defined in `material-understanding.md` and wait for confirmation or correction.
-- **PPT/HTML**: inspect the available artifact and preserve its confirmed core viewpoints; resolve faithful migration versus reorganization only if both remain reasonable.
+- **PPT/HTML**: show the same source-grounded Material Understanding Summary, preserve its confirmed core viewpoints, and resolve faithful migration versus reorganization only if both remain reasonable.
 
 Never write a Report Design Brief while a minimum hard-boundary gap remains. Never write HTML before the current brief is explicitly confirmed. Ordinary absent facts are not a reason to stop: plan reasonable creative supplements, finish the report, and disclose the generated details at delivery.
 On the static-reference route, never write the brief before the current VI board is confirmed.
+
+Maintain the exact current-task state and allowed actions in
+`production-authorization.md`. A Material Understanding Summary, VI standards board,
+and Report Design Brief are confirmation artifacts. Formal report HTML, browser QA,
+and delivery remain forbidden until the machine gate authorizes them for the current
+task. Do not treat a formal or nearly finished HTML deck as a confirmation preview.
+
+## New Invocation Handshake
+
+Every new explicit TaoHtml invocation starts at S0 even when the platform requires
+the user to attach some text to send the Skill. Establish only the current task entry
+in this first phase.
+
+Treat the current message as route-bearing only when it contains at least one of:
+
+- a specific topic, question, claim, or outcome that the user clearly wants TaoHtml
+  to turn into a report; or
+- an upload, path, filename, or material description explicitly identified as input
+  for this task and eligible under `Source Binding` below.
+
+When either is present, infer the matching route and continue to the next genuinely
+missing startup decision without asking for the route again. When neither is present,
+show exactly one route choice with **Idea only / Word or PDF / Existing PPT or HTML**,
+record that option set as `latest_options`, and stop. Do not inspect the workspace,
+read `input/prompt.md`, summarize materials, draft a brief, or create HTML while S0 is
+unresolved.
+
+Judge semantic binding from the message's task meaning, not from a blacklist or an
+enumeration of tokens. Text that merely enables sending, acknowledges the Skill, or
+signals attention without identifying a report topic or material supplies no route.
+This rule must generalize across languages, punctuation, emoji, and platform UI.
+
+### Conversation-Scoped Option Binding
+
+Maintain at most one active option record:
+
+```text
+latest_options = decision id | Agent turn | exact choices | active/inactive
+```
+
+A short label, ordinal, or compact answer binds only when it is a plausible direct
+answer to the Agent's most recent active option record in this same conversation.
+Consume the record after one answer and invalidate it whenever a newer option set or
+changed task supersedes it. Never map a compact answer to section numbering in this
+Skill, an earlier conversation, a platform menu, or a route number remembered from
+documentation. Thus a compact answer after the Agent has just shown the three entry
+routes can select that route; the same compact text attached to a fresh invocation
+cannot.
+
+## Source Binding
+
+Maintain a source ledger separate from the design and creative-supplement ledgers.
+A local or uploaded material is eligible only through one of these bindings:
+
+1. `current_upload_or_user_explicit`: the user uploads it now or explicitly names it
+   as material for this task;
+2. `task_instruction_explicit`: the current task instruction explicitly declares the
+   file or prepared input as this run's source; or
+3. `candidate_confirmed`: after the route exists, the Agent discovers a candidate,
+   states its exact path, and receives user confirmation to use it.
+
+Mere workspace presence, a conventional filename such as `input/prompt.md`, a
+directory convention, or residue from a previous task is never a binding. Do not
+silently promote such a file to `known`, even when its content looks relevant. Before
+route establishment, do not scan for candidates at all. After route establishment,
+candidate discovery is allowed only to present the path for confirmation; do not read
+or process its content before that confirmation.
+
+For every material actually used, record:
+
+```text
+source identity/path | source_binding | binding reason | bound conversation/task turn
+```
+
+Carry these fields into the Material Understanding Summary and the Report Design
+Brief's source records. A customer-bound or independently verified source remains a
+real source and must never be relabeled as a creative supplement.
 
 ## Decision Ledger
 
@@ -71,7 +149,7 @@ Preserve the three product choices:
 - **Use mode**: reading, where each page stands alone and content is visible by default; or presentation, where tighter copy follows a spoken staged sequence.
 - **Length**: concise, standard, or detailed.
 
-Resolve at most one missing startup choice per round and skip every choice already made. If presentation mode is already known, do not ask the user to select the use mode again. Do not bundle route, use mode, and length into one prompt. For an idea-only input, the route is already known. When route and use mode are known but content length is missing, ask one question that offers **concise / standard / detailed**; do not infer a default length without explicit delegation, and do not replace these choices with duration or page-count options.
+Resolve at most one missing startup choice per round and skip every choice already made. Complete the route handshake before asking use mode or length. If presentation mode is already known, do not ask the user to select the use mode again. Do not bundle route, use mode, and length into one prompt. For a message with a specific idea-only topic, the route is already known. When route and use mode are known but content length is missing, ask one question that offers **concise / standard / detailed**; do not infer a default length without explicit delegation, and do not replace these choices with duration or page-count options.
 
 Estimate the page count dynamically from the actual material after the content length is selected, and record that estimate in the design brief. Never assign or present a fixed page range by length label alone.
 
@@ -93,7 +171,7 @@ Treat this as a judgment layer, not a four-question form. Visual style, motion d
 Resolve the visual source only after content and chapter structure are clear enough to judge fit.
 
 - If the user chooses “use my reference”, resolve `reference_mode` once. `reconstruct` accepts exactly one static PNG/JPEG/WebP; `corporate_fidelity` accepts one to three representative static PNG/JPEG/WebP screenshots from the same template family. When the user already asks for “企业模板保真”, “公司模板原样采用”, or equivalent screenshot-visible fidelity, record `corporate_fidelity` without asking again. When intent is still unclear, ask one binary question: **参考风格重构**—提取设计语言，允许重新构图和创新；or **企业模板保真**—锁定截图中可见的企业固定元素，只设计各页面壳的安全内容区. Record `reconstruct` or `corporate_fidelity`, count this as one ordinary clarification question, and never repeat it after the answer is known.
-- For either mode, read `static-reference-vi.md`. Use the current session for only the minimal readability check defined there. When readable, analyze static visual facts, render one VI board through the shared contract, and wait for “确认 VI”. In corporate fidelity, automatically identify each source role unless truly ambiguous; the board must expose all source thumbnails and role bindings, screenshot-visible fidelity boundary, shell-specific locked/editable regions, exact observed/extension/unknown labels, proposed unseen roles, and limitations. Customer corrections before confirmation replace the current contract. Do not require an internal-theme choice, infer dynamic behavior, or begin project-theme generation/report production before confirmation.
+- For either mode, read `static-reference-vi.md`. Use the current session for only the minimal readability check defined there. When readable, analyze static visual facts, render one VI board through the shared contract, and wait for clear confirmation of that exact board without requiring a fixed reply phrase. In corporate fidelity, automatically identify each source role unless truly ambiguous; the board must expose all source thumbnails and role bindings, screenshot-visible fidelity boundary, shell-specific locked/editable regions, exact observed/extension/unknown labels, proposed unseen roles, and limitations. Customer corrections before confirmation replace the current contract. Do not require an internal-theme choice, infer dynamic behavior, or begin project-theme generation/report production before confirmation.
 - If the user has a clear reference but it is a PPT, webpage, video, state sequence, more than three corporate screenshots, or multiple screenshots for reconstruct, stop at the unsupported boundary and ask for a supported representative raster input. This is not the no-reference route: do not infer movement and do not recommend the four built-in systems unless the user explicitly abandons the reference route.
 - Treat model choice as a platform/session-entry decision. WorkBuddy first use gets one recommendation to use Auto; Codex and Claude Code continue with the current session model. Never ask the user to select or repeatedly switch models inside the intake. If the current session cannot locate reliable static facts, say “当前会话无法可靠读取参考图” and offer only a manual model change followed by a restarted task, or a downgrade to the four built-in systems.
 - If no clear reference exists, read `visual-systems.md` and recommend 2-3 genuinely suitable built-in systems. Show each system's exact customer-facing name, one-line description, and bundled preview. Ask the user to choose once, or invite explicit delegation to TaoHtml.
@@ -106,7 +184,7 @@ Resolve the visual source only after content and chapter structure are clear eno
 Before asking, re-read the conversation, available source, ledger, prior attempts, and counters. Then:
 
 1. Remove gaps whose answers are already present or can be safely inferred.
-2. Resolve any missing startup choice according to `Startup Decisions`; after startup, rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
+2. Resolve S0 first, then any missing startup choice according to `Startup Decisions`; after startup, rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
 3. Ask only the largest current gap whose answer would change the report design.
 
 Ask exactly one decision question per round. Do not pack independent questionnaire fields together. Offer 2-3 options only when they are real alternatives and state their design impact briefly.
@@ -183,6 +261,7 @@ Treat a project as design-ready when:
 - The visual source is recorded as one selected built-in visual system or a user reference with known `reference_mode`; corporate fidelity also records the screenshot-visible fidelity boundary, locked elements, and editable region. Any necessary deviation is explicit.
 - On the static-reference route, the current VI board is explicitly confirmed and its contract/output paths are recorded; VI approval is not inferred from earlier agreement to use the reference.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
+- Every material in use has an eligible `source_binding` and recorded binding reason; no workspace convention or residue is acting as an implicit source.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No minimum hard-boundary item remains in `missing`; ordinary creative supplements may remain pending customer verification.
 
@@ -192,20 +271,16 @@ Stop asking as soon as these conditions are met. A clear idea can therefore proc
 
 ### Material summary gate
 
-For Word/PDF only, ask the user to confirm or correct the displayed Material Understanding Summary. If they correct it, issue an updated summary before continuing. Do not impose this gate on an idea-only input.
+For any bound Word/PDF/PPT/HTML material route, ask the user to confirm or correct the displayed Material Understanding Summary. If they correct it, issue an updated summary before continuing. Do not impose this gate on an idea-only input.
 
 ### Static-reference VI gate
 
-After the content and structure are clear enough to interpret visual fit, follow `static-reference-vi.md`, show the rendered VI PNG, and ask the user to confirm or correct the current board. Use the exact authorization phrase “确认 VI”. If the user corrects any visual item or boundary status, rerender the complete board and request confirmation again.
+After the content and structure are clear enough to interpret visual fit, follow `static-reference-vi.md`, show the rendered VI PNG, and ask the user to confirm or correct the current board. Bind any clear confirmation to the exact current artifact and conversation turn; never use a fixed authorization phrase as a cross-task token. If the user corrects any visual item or boundary status, rerender the complete board and request confirmation again.
 
 VI confirmation authorizes only the confirmed-VI handoff to the separate project-theme step. It does not confirm the Report Design Brief and does not authorize formal report production. If the project-specific theme output is not yet available, stop at the handoff boundary rather than substituting a built-in theme.
 
 ### Design brief gate
 
-Show one current Report Design Brief and end with:
-
-> 回复“确认”后，TaoHtml 将按这份设计简报开始制作 HTML。
-
-Only a reply that clearly confirms this displayed brief opens production. Earlier approval to discuss, use TaoHtml, or begin intake does not count. Brief confirmation is authorization, not clarification, so it remains required even when the clarification counter is already six.
+Show one current Report Design Brief and ask the user to confirm or correct that exact artifact. Only a reply that clearly confirms this displayed brief opens production; record its current conversation reference rather than matching a fixed reply phrase. Earlier approval to discuss, use TaoHtml, or begin intake does not count. Brief confirmation is authorization, not clarification, so it remains required even when the clarification counter is already six.
 
 If the user adds source material or changes a core viewpoint after confirmation, invalidate the brief, update it, and ask for confirmation again. During production, resolve non-core omissions with a reasonable default or creative supplement, add the exact item to the delivery verification ledger, and continue instead of repeatedly interrupting the user.

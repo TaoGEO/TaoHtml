@@ -57,6 +57,34 @@ class QualityBenchmarkDefinitionTests(unittest.TestCase):
                 (BENCHMARK / "executor" / "scenarios" / scenario_id / "prompt.md").is_file()
             )
 
+    def test_executor_prompts_explicitly_bind_prepared_inputs(self) -> None:
+        prompts = {
+            scenario_id: (
+                BENCHMARK / "executor" / "scenarios" / scenario_id / "prompt.md"
+            ).read_text(encoding="utf-8")
+            for scenario_id in (
+                "idea-live-conversion",
+                "pdf-evidence-report",
+                "existing-html-upgrade",
+            )
+        }
+        for prompt in prompts.values():
+            self.assertIn("`input/prompt.md`", prompt)
+        self.assertIn("明确将", prompts["idea-live-conversion"])
+        self.assertIn("没有其他报告材料", prompts["idea-live-conversion"])
+        self.assertIn(
+            "explicitly binds `input/prompt.md` as the current task instruction",
+            prompts["pdf-evidence-report"],
+        )
+        self.assertIn(
+            "`input/materials/orbit-pilot-review.pdf` as the source material",
+            prompts["pdf-evidence-report"],
+        )
+        self.assertIn(
+            "`input/materials/legacy-deck.html` as the source material",
+            prompts["existing-html-upgrade"],
+        )
+
     def test_result_schema_records_required_comparison_fields(self) -> None:
         schema = json.loads(
             (BENCHMARK / "schemas" / "run-result.schema.json").read_text(encoding="utf-8")
@@ -172,6 +200,11 @@ class PrepareRunTests(unittest.TestCase):
             }
             self.assertIn("input/prompt.md", relative_files)
             self.assertIn("skill/taohtml/SKILL.md", relative_files)
+            prepared_prompt = (workspace / "input" / "prompt.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("明确将 `input/prompt.md` 绑定为当前任务说明", prepared_prompt)
+            self.assertIn("没有其他报告材料", prepared_prompt)
             self.assertFalse(any("controller" in path for path in relative_files))
             json_files = {path for path in relative_files if path.endswith(".json")}
             self.assertEqual(

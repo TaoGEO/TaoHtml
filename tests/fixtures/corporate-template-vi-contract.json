@@ -164,7 +164,7 @@
     {
       "mode": "preserve",
       "title": "固定企业外框",
-      "description": "确认 VI 后不得改动位置、尺寸或像素内容",
+      "description": "当前 VI 产物确认后不得改动位置、尺寸或像素内容",
       "status": "observed",
       "basis": "企业保真模式锁定全部已识别固定元素"
     },

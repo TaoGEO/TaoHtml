@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Transformed HTML overlap</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .flow-stack { margin: 210px 0 0 390px; width: 420px; }
+    .baseline-note,
+    .shifted-note {
+      display: block;
+      position: static;
+      margin: 0;
+      font-size: 30px;
+      line-height: 38px;
+    }
+    .shifted-note { transform: translate(70px, -30px); }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Transformed collision">
+      <h1>Independent labels</h1>
+      <div class="flow-stack">
+        <div class="baseline-note" data-qa-text-label>Primary marker</div>
+        <div class="shifted-note" data-qa-text-label>Shifted marker</div>
+      </div>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

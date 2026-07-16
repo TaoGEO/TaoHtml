@@ -102,10 +102,10 @@ def apply_text_only_channel_copy(text: str, version: str) -> str:
             "而不是被选题差异干扰；以下表格直接说明各自的画面特征。"
         ),
         (
-            "这两条路线共享“静态参考 → VI 设计标准图 → 确认 VI → 项目专用主题”的确认链，但保真目标不同。"
+            "这两条路线共享“静态参考 → VI 设计标准图 → 当前版本确认 → 项目专用主题”的确认链，但保真目标不同。"
             "下方全部使用仓库自制、无真实品牌的合成样例。"
         ): (
-            "这两条路线共享“静态参考 → VI 设计标准图 → 确认 VI → 项目专用主题”的确认链，但保真目标不同。"
+            "这两条路线共享“静态参考 → VI 设计标准图 → 当前版本确认 → 项目专用主题”的确认链，但保真目标不同。"
             "以下说明基于仓库自制、无真实品牌的合成样例。"
         ),
         (
@@ -216,10 +216,12 @@ def package(output_zip: Path, version: str) -> None:
             for path in sorted(package_root.rglob("*")):
                 if not path.is_file():
                     continue
-                info = zipfile.ZipInfo(path.relative_to(package_root).as_posix())
+                relative = path.relative_to(package_root).as_posix()
+                info = zipfile.ZipInfo(relative)
                 info.date_time = (1980, 1, 1, 0, 0, 0)
                 info.create_system = 3
-                info.external_attr = 0o644 << 16
+                mode = 0o755 if relative == "scripts/preflight.py" else 0o644
+                info.external_attr = mode << 16
                 info.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(info, path.read_bytes())
     print(f"Packaged TaoHtml Skill Hub {version}: {output_zip}")

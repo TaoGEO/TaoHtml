@@ -22,7 +22,7 @@ python3 -m venv .venv
 
 ## 2. 在客户端中执行
 
-所有客户端使用相同控制：全新会话、workspace 为唯一工作目录、加载 `skill/taohtml`、只提交 `input/prompt.md` 的原文和 `input/materials/`。不给旧输出、预期答案、失败清单、评分细则、controller 路径或仓库根目录。
+所有客户端使用相同控制：全新会话、workspace 为唯一工作目录、加载 `skill/taohtml`、只提交 `input/prompt.md` 的原文和 `input/materials/`。每个 executor prompt 都必须在原文中明确声明 `input/prompt.md` 是本次任务说明，并明确绑定该场景使用的 prepared material（idea-only 明确声明没有其他材料）；不能依赖执行 Agent 扫描 workspace 或根据目录约定猜测。不给旧输出、预期答案、失败清单、评分细则、controller 路径或仓库根目录。
 
 - **Codex**：新建独立任务，把准备好的 workspace 设为工作目录，指定使用当地 `skill/taohtml` 后粘贴原始提示。
 - **Claude Code**：从该 workspace 启动新会话，用客户端的本地 Skill 机制加载同一份 `skill/taohtml`，粘贴同一原始提示。

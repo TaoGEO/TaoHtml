@@ -77,6 +77,24 @@ class PluginPackagingTests(unittest.TestCase):
                     archive.read(skill_path),
                     (ROOT / "skill" / "taohtml" / "SKILL.md").read_bytes(),
                 )
+                for relative in (
+                    "requirements.txt",
+                    "scripts/preflight.py",
+                    "scripts/check_production_authorization.py",
+                    "references/production-authorization.md",
+                ):
+                    bundled = (
+                        f"{ARCHIVE_ROOT}/plugins/taohtml/skills/taohtml/{relative}"
+                    )
+                    self.assertIn(bundled, names)
+                    self.assertEqual(
+                        archive.read(bundled),
+                        (ROOT / "skill" / "taohtml" / relative).read_bytes(),
+                    )
+                preflight_info = archive.getinfo(
+                    f"{ARCHIVE_ROOT}/plugins/taohtml/skills/taohtml/scripts/preflight.py"
+                )
+                self.assertEqual((preflight_info.external_attr >> 16) & 0o777, 0o755)
 
                 codex_manifest = json.loads(archive.read(codex_manifest_path))
                 claude_manifest = json.loads(archive.read(claude_manifest_path))
@@ -158,9 +176,10 @@ class PluginPackagingTests(unittest.TestCase):
             "Copy-Item -Recurse -Force .\\skill\\taohtml $env:USERPROFILE\\.codex\\skills\\taohtml",
             readme,
         )
-        self.assertIn("taohtml-marketplace-v0.3.1.zip", readme)
-        for version in ("v0.3.1", "v0.3.0", "v0.2.0", "v0.1.0"):
+        self.assertIn("taohtml-marketplace-v0.3.2.zip", readme)
+        for version in ("v0.3.2", "v0.3.1", "v0.3.0", "v0.2.0", "v0.1.0"):
             self.assertIn(version, readme)
+        self.assertIn("CHANGELOG.md#032---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#031---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#030---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#020---2026-07-15", readme)
@@ -223,6 +242,22 @@ class PluginPackagingTests(unittest.TestCase):
                 names = set(archive.namelist())
                 self.assertIn("SKILL.md", names)
                 self.assertIn("references/agent-workflow.md", names)
+                self.assertIn("requirements.txt", names)
+                self.assertIn("scripts/preflight.py", names)
+                self.assertIn("scripts/check_production_authorization.py", names)
+                self.assertIn("references/production-authorization.md", names)
+                self.assertEqual(
+                    archive.read("requirements.txt"),
+                    (ROOT / "skill" / "taohtml" / "requirements.txt").read_bytes(),
+                )
+                self.assertEqual(
+                    archive.read("scripts/preflight.py"),
+                    (ROOT / "skill" / "taohtml" / "scripts" / "preflight.py").read_bytes(),
+                )
+                self.assertEqual(
+                    (archive.getinfo("scripts/preflight.py").external_attr >> 16) & 0o777,
+                    0o755,
+                )
                 self.assertEqual(
                     [name for name in names if name.endswith("SKILL.md")],
                     ["SKILL.md"],
@@ -386,6 +421,11 @@ class PluginPackagingTests(unittest.TestCase):
         )
         self.assertIn("scripts/package_plugin_marketplace.py", workflow)
         self.assertIn("scripts/package_skillhub.py", workflow)
+        self.assertIn("windows-smoke:", workflow)
+        self.assertIn("runs-on: windows-latest", workflow)
+        self.assertIn("--profile static-reference", workflow)
+        self.assertIn("render_reference_vi.py", workflow)
+        self.assertIn("compile_project_theme.py", workflow)
 
 
 if __name__ == "__main__":

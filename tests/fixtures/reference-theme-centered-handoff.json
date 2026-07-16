@@ -1,12 +1,12 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "project": {
     "id": "quiet-field-note",
     "display_name": "静谧场域笔记｜项目专用主题"
   },
   "confirmation": {
     "status": "confirmed",
-    "phrase": "确认 VI",
+    "confirmation_ref": "synthetic-current-turn-centered-vi-approval",
     "vi_contract_sha256": "aef18658632a15d94b33e53938acc5a1d3404375dd3218ea74f4217523b5fa63",
     "reference_image_sha256": "7bd9e99e574211ca08ee8084fdd7b09f635c180eba629e4ae111c8dfd67c6489"
   },

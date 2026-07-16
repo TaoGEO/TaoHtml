@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HTML label overlap</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .plot-label { position: absolute; top: 300px; font-size: 30px; }
+    .plot-label.first { left: 420px; }
+    .plot-label.second { left: 500px; }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="HTML chart labels">
+      <h1>Synthetic HTML chart</h1>
+      <span class="plot-label first" data-qa-text-label>Plan alpha</span>
+      <span class="plot-label second" data-qa-text-label>Plan beta</span>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

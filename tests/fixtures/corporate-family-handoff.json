@@ -1,12 +1,12 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "2.1",
   "project": {
     "id": "orbital-corporate-family",
     "display_name": "Orbital 合成企业模板族｜项目专用主题"
   },
   "confirmation": {
     "status": "confirmed",
-    "phrase": "确认 VI",
+    "confirmation_ref": "synthetic-current-turn-family-vi-approval",
     "vi_contract_sha256": "e4d6b9ae2ab9cae973c0829fe6a516a3975d84029f8e532ac26687223fb037a9",
     "reference_images_sha256": [
       "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",

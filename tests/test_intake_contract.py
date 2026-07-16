@@ -14,9 +14,82 @@ BRIEF = (SKILL_DIR / "references" / "design-brief-template.md").read_text(
 PLAYBOOK = (SKILL_DIR / "references" / "process-playbook.md").read_text(
     encoding="utf-8"
 )
+MATERIAL = (SKILL_DIR / "references" / "material-understanding.md").read_text(
+    encoding="utf-8"
+)
+ENVIRONMENT = (SKILL_DIR / "references" / "environment-preflight.md").read_text(
+    encoding="utf-8"
+)
+AUTHORIZATION = (
+    SKILL_DIR / "references" / "production-authorization.md"
+).read_text(encoding="utf-8")
 
 
 class IntakeContractTests(unittest.TestCase):
+    def test_fresh_placeholder_cannot_bind_stale_workspace_prompt(self) -> None:
+        combined = SKILL + INTAKE
+        self.assertIn("Start every new invocation with a route handshake", SKILL)
+        self.assertIn("do not scan the workspace for a presumed input", SKILL)
+        self.assertIn("`input/prompt.md`", INTAKE)
+        self.assertIn("is never a binding", INTAKE)
+        self.assertIn("do not scan for candidates at all", INTAKE)
+        self.assertIn("show exactly one route choice", INTAKE)
+        self.assertIn("Do not inspect the workspace", combined)
+
+    def test_recent_agent_options_can_bind_a_compact_answer(self) -> None:
+        self.assertIn("latest_options = decision id", INTAKE)
+        self.assertIn("most recent active option record in this same conversation", INTAKE)
+        self.assertIn("Consume the record after one answer", INTAKE)
+        self.assertIn("the same compact text attached to a fresh invocation", INTAKE)
+        self.assertIn("cannot", INTAKE)
+
+    def test_user_explicit_input_prompt_path_is_eligible_and_recorded(self) -> None:
+        self.assertIn("current_upload_or_user_explicit", INTAKE)
+        self.assertIn("task_instruction_explicit", INTAKE)
+        self.assertIn("candidate_confirmed", INTAKE)
+        self.assertIn("source identity/path | source_binding | binding reason", INTAKE)
+        self.assertIn("conventional filename such as `input/prompt.md`", INTAKE)
+        self.assertIn("the user uploads it now or explicitly names it", INTAKE)
+        self.assertIn("source_binding", MATERIAL)
+        self.assertIn("source_binding", BRIEF)
+        self.assertIn("must never be relabeled as a creative supplement", INTAKE)
+
+    def test_startup_uses_semantic_state_not_an_invalid_token_list(self) -> None:
+        self.assertIn("not from a blacklist", INTAKE)
+        self.assertIn("enumeration of tokens", INTAKE)
+        self.assertIn("generalize across languages, punctuation, emoji, and platform UI", INTAKE)
+        self.assertIn("section numbering", INTAKE)
+
+    def test_preflight_is_capability_scoped_and_fail_fast(self) -> None:
+        self.assertIn("smallest profile needed", ENVIRONMENT)
+        self.assertIn("blocked by Pillow, Playwright, or Chromium", ENVIRONMENT)
+        self.assertIn("before opening or extracting a PDF", SKILL)
+        self.assertIn("before opening or analyzing any reference image", SKILL)
+        self.assertIn("run the `browser` profile before browser QA", SKILL)
+        self.assertIn("Do not offer “manual corporate fidelity.”", ENVIRONMENT)
+        self.assertIn("Do not call `reconstruct`", ENVIRONMENT)
+        self.assertIn("technical", ENVIRONMENT)
+        self.assertIn("downgrade because it requires the same", ENVIRONMENT)
+
+    def test_formal_html_uses_current_state_and_allowed_action_matrix(self) -> None:
+        self.assertIn("Allowed-Action Matrix", AUTHORIZATION)
+        self.assertIn("current-invocation-id", AUTHORIZATION)
+        self.assertIn("--action formal-html", AUTHORIZATION)
+        self.assertIn("--action deliver-formal-html", AUTHORIZATION)
+        self.assertIn("not formal report HTML", AUTHORIZATION)
+        self.assertIn(
+            "scripts/check_production_authorization.py --artifact-root <current-task-root> --action formal-html",
+            SKILL,
+        )
+        self.assertIn("never use a fixed authorization phrase", INTAKE)
+        for marker in (
+            "artifact_path",
+            "artifact_sha256",
+            "confirmation_ref",
+            "does not access or independently",
+        ):
+            self.assertIn(marker, AUTHORIZATION)
+
     def test_clear_idea_can_stop_with_zero_questions(self) -> None:
         self.assertIn("Allow **0 clarification questions**", INTAKE)
         self.assertIn("proceed directly to a brief with zero clarification questions", INTAKE)
@@ -160,7 +233,7 @@ class IntakeContractTests(unittest.TestCase):
     def test_skill_asks_one_design_decision_per_round_and_has_no_dbs_dependency(
         self,
     ) -> None:
-        self.assertIn("Identify the route, use mode, and content length one decision at a time", SKILL)
+        self.assertIn("identify use mode and content length one decision at a time", SKILL)
         self.assertIn("Ask one decision question per round", SKILL)
         self.assertIn("Do not bundle independent startup choices", SKILL)
         self.assertNotIn("compact startup", (SKILL + INTAKE).lower())

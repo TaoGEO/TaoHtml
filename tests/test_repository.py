@@ -11,6 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RepositoryMetadataTests(unittest.TestCase):
+    def test_hash_bound_text_fixtures_keep_lf_bytes_cross_platform(self) -> None:
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+        self.assertIn("tests/fixtures/*.json text eol=lf", attributes)
+        self.assertIn("tests/fixtures/*.svg text eol=lf", attributes)
+
     def test_version_uses_semver(self) -> None:
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
         self.assertRegex(version, r"^\d+\.\d+\.\d+$")
@@ -100,7 +105,6 @@ class RepositoryMetadataTests(unittest.TestCase):
         qa_script = (skill_dir / "scripts" / "check_html_deck.py").read_text(
             encoding="utf-8"
         )
-
         previous_step = re.search(
             r"function previousStep\(\) \{(?P<body>.*?)\n    \}",
             template,
@@ -135,6 +139,29 @@ class RepositoryMetadataTests(unittest.TestCase):
         )
         self.assertIn("fullscreen_idle_hidden", qa_script)
         self.assertIn("fullscreen_pointer_revealed", qa_script)
+
+    def test_runtime_names_controlled_steps_canvas_and_text_collision_gates(self) -> None:
+        skill_dir = ROOT / "skill" / "taohtml"
+        template = (
+            skill_dir / "assets" / "html-deck-template" / "index.html"
+        ).read_text(encoding="utf-8")
+        contract = (skill_dir / "references" / "runtime-contract.md").read_text(
+            encoding="utf-8"
+        )
+        qa_script = (skill_dir / "scripts" / "check_html_deck.py").read_text(
+            encoding="utf-8"
+        )
+        renderer = (skill_dir / "scripts" / "render_visual_system.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('data-taohtml-step-contract="fragment-v1"', template)
+        self.assertIn("CONTROLLED_STEP_CONTRACT = \"fragment-v1\"", qa_script)
+        self.assertIn("CONTROLLED_STEP_SELECTOR = '.fragment'", template)
+        self.assertIn("CONTROLLED_STEP_CONTRACT = \"fragment-v1\"", renderer)
+        self.assertIn("CANVAS_COVERAGE_CHECK", qa_script)
+        self.assertIn("TEXT_COLLISION_CHECK", qa_script)
+        self.assertIn("data-qa-ignore-text-collision", contract)
+        self.assertIn("SVG `<text>`", contract)
 
 
 if __name__ == "__main__":

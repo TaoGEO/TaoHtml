@@ -19,8 +19,25 @@ import render_reference_vi
 from project_theme_layout import resolve_layout_items
 
 
-SCHEMA_VERSION = "1.0"
-FAMILY_HANDOFF_SCHEMA_VERSION = "1.1"
+THEME_SCHEMA_VERSION = "1.0"
+LEGACY_SINGLE_HANDOFF_SCHEMA_VERSION = "1.0"
+LEGACY_FAMILY_HANDOFF_SCHEMA_VERSION = "1.1"
+CURRENT_SINGLE_HANDOFF_SCHEMA_VERSION = "2.0"
+CURRENT_FAMILY_HANDOFF_SCHEMA_VERSION = "2.1"
+HANDOFF_SCHEMA_VERSIONS = {
+    LEGACY_SINGLE_HANDOFF_SCHEMA_VERSION,
+    LEGACY_FAMILY_HANDOFF_SCHEMA_VERSION,
+    CURRENT_SINGLE_HANDOFF_SCHEMA_VERSION,
+    CURRENT_FAMILY_HANDOFF_SCHEMA_VERSION,
+}
+FAMILY_HANDOFF_SCHEMA_VERSIONS = {
+    LEGACY_FAMILY_HANDOFF_SCHEMA_VERSION,
+    CURRENT_FAMILY_HANDOFF_SCHEMA_VERSION,
+}
+CURRENT_HANDOFF_SCHEMA_VERSIONS = {
+    CURRENT_SINGLE_HANDOFF_SCHEMA_VERSION,
+    CURRENT_FAMILY_HANDOFF_SCHEMA_VERSION,
+}
 TOP_LEVEL_KEYS = {
     "schema_version",
     "project",
@@ -101,10 +118,14 @@ def load_handoff(
         raise ValueError(f"Handoff request is not valid JSON: {exc}") from exc
     request = _exact_object(raw, TOP_LEVEL_KEYS, "handoff")
     handoff_schema = request["schema_version"]
-    if handoff_schema not in {SCHEMA_VERSION, FAMILY_HANDOFF_SCHEMA_VERSION}:
+    if handoff_schema not in HANDOFF_SCHEMA_VERSIONS:
         raise ValueError(
-            f"handoff.schema_version must be {SCHEMA_VERSION} or {FAMILY_HANDOFF_SCHEMA_VERSION}."
+            "handoff.schema_version must be one of: "
+            + ", ".join(sorted(HANDOFF_SCHEMA_VERSIONS))
+            + "."
         )
+    is_family_handoff = handoff_schema in FAMILY_HANDOFF_SCHEMA_VERSIONS
+    is_current_handoff = handoff_schema in CURRENT_HANDOFF_SCHEMA_VERSIONS
 
     project = _exact_object(request["project"], {"id", "display_name"}, "handoff.project")
     project_id = _text(project["id"], "handoff.project.id", 48)
@@ -112,21 +133,42 @@ def load_handoff(
         raise ValueError("handoff.project.id must be a lowercase hyphenated slug.")
     display_name = _text(project["display_name"], "handoff.project.display_name", 80)
 
-    confirmation_fields = (
-        {"status", "phrase", "vi_contract_sha256", "reference_image_sha256"}
-        if handoff_schema == SCHEMA_VERSION
-        else {"status", "phrase", "vi_contract_sha256", "reference_images_sha256"}
-    )
+    confirmation_fields = {
+        "status",
+        "confirmation_ref" if is_current_handoff else "phrase",
+        "vi_contract_sha256",
+        "reference_images_sha256" if is_family_handoff else "reference_image_sha256",
+    }
     confirmation = _exact_object(
         request["confirmation"], confirmation_fields, "handoff.confirmation"
     )
-    if confirmation["status"] != "confirmed" or confirmation["phrase"] != "确认 VI":
-        raise ValueError('VI is not confirmed; status must be "confirmed" and phrase must be "确认 VI".')
+    if confirmation["status"] != "confirmed":
+        raise ValueError('VI is not confirmed; status must be "confirmed".')
+    if is_current_handoff:
+        confirmation_ref = _text(
+            confirmation["confirmation_ref"],
+            "handoff.confirmation.confirmation_ref",
+            160,
+        )
+        legacy_phrase = None
+        confirmation_method = "conversation_ref"
+    else:
+        legacy_phrase = _text(
+            confirmation["phrase"],
+            "handoff.confirmation.phrase",
+            20,
+        )
+        if legacy_phrase != "确认 VI":
+            raise ValueError(
+                'Legacy VI handoff is not confirmed; phrase must match its published schema.'
+            )
+        confirmation_ref = None
+        confirmation_method = "legacy_phrase"
     if not isinstance(confirmation["vi_contract_sha256"], str) or not SHA256.fullmatch(
         confirmation["vi_contract_sha256"]
     ):
         raise ValueError("handoff.confirmation.vi_contract_sha256 must be a lowercase SHA-256 digest.")
-    if handoff_schema == SCHEMA_VERSION:
+    if not is_family_handoff:
         reference_hashes = [confirmation["reference_image_sha256"]]
         if not isinstance(reference_hashes[0], str) or not SHA256.fullmatch(reference_hashes[0]):
             raise ValueError(
@@ -165,7 +207,7 @@ def load_handoff(
             value,
             (
                 "handoff.inputs.reference_image"
-                if handoff_schema == SCHEMA_VERSION
+                if not is_family_handoff
                 else f"handoff.inputs.reference_images[{index}]"
             ),
         )
@@ -189,18 +231,33 @@ def load_handoff(
 
     contract = render_reference_vi.load_contract(vi_path)
     if contract.get("schema_version") == render_reference_vi.SCHEMA_VERSION:
-        if handoff_schema != FAMILY_HANDOFF_SCHEMA_VERSION:
-            raise ValueError("VI schema 1.3 requires handoff schema 1.1 with reference_images.")
-    elif handoff_schema != SCHEMA_VERSION:
-        raise ValueError("Legacy v1.1/v1.2 VI contracts require handoff schema 1.0.")
+        if not is_family_handoff:
+            raise ValueError(
+                "VI schema 1.3 requires a family handoff schema with reference_images."
+            )
+    elif is_family_handoff:
+        raise ValueError(
+            "Legacy v1.1/v1.2 VI contracts require a single-reference handoff schema."
+        )
     render_reference_vi.validate_source_bindings(contract, reference_paths)
     normalized = {
         "schema_version": handoff_schema,
         "project": {"id": project_id, "display_name": display_name},
-        "confirmation": dict(confirmation),
+        "confirmation": {
+            "status": "confirmed",
+            "confirmation_method": confirmation_method,
+            "confirmation_ref": confirmation_ref,
+            "legacy_phrase": legacy_phrase,
+            "vi_contract_sha256": confirmation["vi_contract_sha256"],
+            **(
+                {"reference_images_sha256": reference_hashes}
+                if is_family_handoff
+                else {"reference_image_sha256": reference_hashes[0]}
+            ),
+        },
         "inputs": (
             {"vi_contract": vi_path.name, "reference_image": reference_paths[0].name}
-            if handoff_schema == SCHEMA_VERSION
+            if not is_family_handoff
             else {
                 "vi_contract": vi_path.name,
                 "reference_images": [path.name for path in reference_paths],
@@ -213,7 +270,7 @@ def load_handoff(
         normalized,
         contract,
         vi_path,
-        reference_paths[0] if handoff_schema == SCHEMA_VERSION else reference_paths,
+        reference_paths[0] if not is_family_handoff else reference_paths,
     )
 
 
@@ -1251,7 +1308,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         "and source_kind remains renderer-controlled."
     )
     manifest: dict[str, Any] = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": THEME_SCHEMA_VERSION,
         "kind": "project",
         "id": theme_id,
         "display_name": request["project"]["display_name"],
@@ -1303,7 +1360,10 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "disabled": ["reference-inferred timing", "reference-inferred transitions", "cross-page morph"],
         },
         "compilation": {
-            "confirmation": "确认 VI",
+            "confirmation_status": request["confirmation"]["status"],
+            "confirmation_method": request["confirmation"]["confirmation_method"],
+            "confirmation_ref": request["confirmation"]["confirmation_ref"],
+            "legacy_phrase": request["confirmation"]["legacy_phrase"],
             "vi_schema_version": contract["schema_version"],
             "vi_contract_sha256": request["confirmation"]["vi_contract_sha256"],
             **(
@@ -1406,7 +1466,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         manifest["motion"]["fixed_elements"] = "none"
         manifest["motion"]["scope"] = "editable_regions_only"
     provenance = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": THEME_SCHEMA_VERSION,
         "theme_id": theme_id,
         "confirmed_inputs": {
             "vi_contract": vi_path.name,
@@ -1425,7 +1485,9 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
                 }
             ),
             "confirmation_status": request["confirmation"]["status"],
-            "confirmation_phrase": request["confirmation"]["phrase"],
+            "confirmation_method": request["confirmation"]["confirmation_method"],
+            "confirmation_ref": request["confirmation"]["confirmation_ref"],
+            "legacy_phrase": request["confirmation"]["legacy_phrase"],
             "target_mode": request["target_mode"],
             "customer_corrections": request["customer_corrections"],
             "reference_mode": reference_mode,

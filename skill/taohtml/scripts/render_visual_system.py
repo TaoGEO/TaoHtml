@@ -48,6 +48,7 @@ SOURCE_KINDS = ("verified", "illustrative")
 ILLUSTRATIVE_MARKER = re.compile(
     r"示意|模拟|待核实|illustrative|simulation|pending verification", re.IGNORECASE
 )
+CONTROLLED_STEP_CONTRACT = "fragment-v1"
 
 
 def load_content(path: Path) -> dict[str, str]:
@@ -224,9 +225,10 @@ def _render_bundle(
         f' data-mode="{bundle.target_mode}"' if bundle.target_mode is not None else ""
     )
     rendered = rendered.replace(
-        '<main class="deck" id="deck">',
+        f'<main class="deck" id="deck" data-taohtml-step-contract="{CONTROLLED_STEP_CONTRACT}">',
         f'<main class="deck" id="deck" data-theme="{bundle.theme_id}" '
-        f'data-theme-name="{display_name}" data-theme-kind="{bundle.kind}"{mode_attribute}>',
+        f'data-theme-name="{display_name}" data-theme-kind="{bundle.kind}" '
+        f'data-taohtml-step-contract="{CONTROLLED_STEP_CONTRACT}"{mode_attribute}>',
         1,
     )
 

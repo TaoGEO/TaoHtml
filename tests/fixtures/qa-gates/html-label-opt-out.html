@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Audited HTML label opt-out</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .overlay-label { position: absolute; top: 300px; left: 420px; font-size: 30px; }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Audited overlay">
+      <h1>Synthetic audited overlay</h1>
+      <span class="overlay-label foreground" data-qa-text-label>Foreground label</span>
+      <span class="overlay-label watermark" data-qa-text-label data-qa-ignore-text-collision="intentional local watermark">Watermark label</span>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

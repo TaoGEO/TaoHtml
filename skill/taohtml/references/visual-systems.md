@@ -4,7 +4,7 @@ Use this router only after content and chapter structure are clear. Its purpose 
 
 ## Reference Precedence
 
-When the user chooses “use my reference” and supplies one supported reconstruct still or one to three supported corporate-family stills, do not use this router. Read `static-reference-vi.md`, apply its current-session readability gate, extract only visible static composition, hierarchy, image treatment, module language, and evidence treatment, render the unified VI standards board, and wait for “确认 VI”. Do not infer dynamic rules, force one of the built-in systems, or reduce the reference to colors.
+When the user chooses “use my reference” and supplies one supported reconstruct still or one to three supported corporate-family stills, do not use this router. Read `static-reference-vi.md`, apply its current-session readability gate, extract only visible static composition, hierarchy, image treatment, module language, and evidence treatment, render the unified VI standards board, and wait for clear confirmation of that exact current board. Do not infer dynamic rules, force one of the built-in systems, or reduce the reference to colors.
 
 If the current session cannot reliably locate static visual facts, follow the two recovery paths in `static-reference-vi.md`; do not guess or maintain a model matrix here. A clear PPT, webpage, video, state sequence, more than three corporate screenshots, or multiple reconstruct screenshots is an unsupported reference input rather than “no clear reference”: ask for a supported representative raster input and do not enter this router unless the customer explicitly abandons the reference route. Never infer movement from those sources.
 
@@ -35,7 +35,7 @@ Use `preview.svg` only when presenting the choice. Do not load all four manifest
 
 Treat `assets/html-deck-template/index.html` as the runtime shell and the selected system as the presentation layer. Replace content sections and inject theme CSS, but keep runtime controls, navigation, hash routing, reveal state, fullscreen behavior, and offline constraints unchanged. A theme switch must never add a new state machine or require a remote asset.
 
-This router remains exactly four built-in systems. A theme compiled after “确认 VI” is project-local and must be loaded explicitly with `--project-theme` under `project-theme-compiler.md`; never add it to this table or built-in asset directory.
+This router remains exactly four built-in systems. A theme compiled after current-board confirmation is project-local and must be loaded explicitly with `--project-theme` under `project-theme-compiler.md`; never add it to this table or built-in asset directory.
 
 Use the production renderer with an explicit source kind. For a real local source image:
 
