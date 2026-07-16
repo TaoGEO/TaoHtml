@@ -1,6 +1,6 @@
 # Confirmed VI To Project Theme
 
-Read this reference only after the customer has explicitly replied “确认 VI” for the current single-static-reference board. This shared step compiles either `reconstruct` or `corporate_fidelity` into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
+Read this reference only after the customer has explicitly replied “确认 VI” for the current static-reference board. This shared step compiles either one-image `reconstruct` or one-to-three-image `corporate_fidelity` into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
 
 ## Contents
 
@@ -8,23 +8,23 @@ Read this reference only after the customer has explicitly replied “确认 VI�
 - Fail-closed compilation
 - Executable layout and provenance policy
 - Shared Runtime rendering
-- Corporate fixed shell boundary
+- Corporate template-family shell boundary
 - Verification and remaining model work
 
 ## Responsibility Boundary
 
-- The model understands the single still image and produces the confirmed VI JSON under `static-reference-vi.md`.
+- The model understands supported static inputs, identifies corporate source-page roles, and produces the confirmed VI JSON under `static-reference-vi.md`.
 - The Skill maintains the observed / extension / unknown boundary and requires the confirmation handoff below.
 - `scripts/compile_project_theme.py` validates the handoff and deterministically writes the project theme.
 - `scripts/render_visual_system.py --project-theme ...` injects that theme into the existing shared Runtime shell.
 
-In `corporate_fidelity`, the model identifies and records visible fixed elements and the safe area, but never recreates their pixels. `render_reference_vi.py` and `compile_project_theme.py` verify the source binding, crop fixed regions, hash the crops, embed the crop bytes offline, and place them at the confirmed normalized coordinates. All report DOM, layout, and reveal behavior stays inside the editable region.
+In `corporate_fidelity`, the model identifies each source role, shared fixed assets, shell placements, and safe areas, but never recreates fixed pixels. `render_reference_vi.py` and `compile_project_theme.py` verify ordered source bindings and cropped canvases, crop shared assets, hash the crops, embed the bytes offline, and place them at each confirmed shell coordinate. Report DOM, layout, and reveal behavior stays inside the selected shell's editable region.
 
-Never infer motion, transitions, timing, interaction, or sequential state from a still image. The project manifest records motion as a TaoHtml Runtime and report-task decision with `observed_from_reference: false`.
+Never infer motion, transitions, timing, interaction, or sequential state from static inputs. The project manifest records motion as a TaoHtml Runtime and report-task decision with `observed_from_reference: false`.
 
 ## Minimal Handoff Contract
 
-Create one UTF-8 JSON file beside the confirmed VI JSON and reference image. Use exactly these keys:
+Create one UTF-8 JSON file beside the confirmed VI JSON and reference input(s). Handoff v1.0 remains the exact one-image contract:
 
 ```json
 {
@@ -50,7 +50,28 @@ Create one UTF-8 JSON file beside the confirmed VI JSON and reference image. Use
 }
 ```
 
-Use `reading` or `presentation` for `target_mode`. Use a lowercase hyphenated slug for `project.id`. Keep input paths relative to the handoff file and inside the same handoff directory. Compute SHA-256 after the current VI JSON and reference image are final. The hashes bind “确认 VI” to exact bytes; changing either file invalidates the handoff and requires a new confirmation.
+For VI schema v1.3, use handoff v1.1 and replace the singular fields with ordered arrays:
+
+```json
+{
+  "schema_version": "1.1",
+  "project": {"id": "corporate-family", "display_name": "企业模板族｜项目专用主题"},
+  "confirmation": {
+    "status": "confirmed",
+    "phrase": "确认 VI",
+    "vi_contract_sha256": "<64 lowercase hex characters>",
+    "reference_images_sha256": ["<cover hash>", "<toc hash>", "<section hash>"]
+  },
+  "inputs": {
+    "vi_contract": "corporate-family-vi.json",
+    "reference_images": ["cover.png", "toc.png", "section.png"]
+  },
+  "target_mode": "presentation",
+  "customer_corrections": []
+}
+```
+
+Use `reading` or `presentation` for `target_mode`. Use a lowercase hyphenated slug for `project.id`. Keep input paths relative to the handoff file and inside the same handoff directory. Array order must exactly match `reference_pages[]`. Compute SHA-256 after the current VI JSON and all reference inputs are final. The hashes bind “确认 VI” to exact bytes; changing any bound file invalidates the handoff and requires a new confirmation. Legacy v1.1/v1.2 VI contracts require handoff v1.0; VI v1.3 requires handoff v1.1.
 
 Do not record an approval timestamp, machine path, or volatile build metadata in the contract. The minimal contract stays portable and produces byte-identical theme assets from identical inputs.
 
@@ -61,11 +82,12 @@ Compilation must stop before creating the output directory when any of these is 
 - confirmation status is not `confirmed` or phrase is not exactly `确认 VI`;
 - the handoff has missing or extra schema fields;
 - an input path is absolute, leaves the handoff directory, is missing, or is not a regular file;
-- either SHA-256 digest does not match the current file;
+- any bound SHA-256 digest does not match the current file or ordered source arrays disagree;
 - the VI JSON fails the validator in `render_reference_vi.py`;
 - the reference image is unreadable, active SVG, or contains a non-offline SVG reference;
-- a corporate source is not PNG/JPEG/WebP, is below 960×540, disagrees with declared dimensions, or yields a locked crop below 24×24;
-- a normalized bbox leaves 0..1, a locked region overlaps the editable region, or the corporate contract lacks exactly one five-role editable region;
+- a corporate source is not single-frame PNG/JPEG/WebP, its cropped canvas is below 960×540 or outside the 0.25% relative 16:9 tolerance, its hash/dimensions drift, or it yields a crop below 24×24;
+- a normalized bbox leaves 0..1, a locked placement overlaps its shell's editable region, or the corporate family does not define exactly `cover/toc/section/content/data` shells;
+- a source role is duplicated, an observed shell maps to the wrong source page, an extension shell claims a source, or a shared asset/source mapping is inconsistent;
 - a locked element requests model redraw or any extraction other than `crop`, or an unseen page role is mislabeled `observed`;
 - target mode, project id, or customer corrections violate the contract.
 
@@ -91,9 +113,9 @@ project-theme/
 └── provenance.json
 ```
 
-- `theme.json` contains the project identity, `reference_mode`, executable tokens, normalized `executable_layout`, per-field `structure_sources`, generated page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary. Corporate mode also records source dimensions, locked-element bbox/pixel bbox/crop hash, the editable region, extension pages, limitations, `full_screenshot_background: false`, and `logo_redraw: false`.
+- `theme.json` contains the project identity, `reference_mode`, executable tokens, normalized `executable_layout`, per-field `structure_sources`, generated page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary. Corporate v1.3 also records source roles/hashes/dimensions/canvas crops, shared-asset source and crop hashes, five shell variants, per-shell fixed/editable regions, extensions, limitations, `full_screenshot_background: false`, and `logo_redraw: false`.
 - `theme.css` applies palette, type hierarchy, spacing/grid, border language, image crop/treatment, cards, panels, labels, data treatment, cover, content, evidence/data, and closing-page structures selected from the executable layout grammar.
-- `templates.html` provides five reusable, grammar-selected DOM variants using the same placeholders and `fragment` / `data-step` syntax as the built-in systems. Corporate mode repeats one exact fixed crop shell on every page and wraps every dynamic content role in the confirmed editable region. It never embeds the whole source screenshot.
+- `templates.html` provides five reusable, grammar-selected DOM variants using the same placeholders and `fragment` / `data-step` syntax as the built-in systems. Corporate-family mode routes `cover`, `toc`, `section`, `content`, and `data` to the matching shell, embeds only that shell's fixed crops, and wraps report DOM in its confirmed editable region. It never embeds a complete source screenshot.
 - `provenance.json` records every VI item, eligibility, actual compiled state, concrete usage targets, every neutral fallback, the source/crop hashes, and the motion boundary.
 
 The output is project-local. Do not copy it into `assets/visual-systems/`, rename it to one of the four built-in ids, add it to the built-in router, or treat it as a globally available style.
@@ -131,17 +153,18 @@ These compile to `theme.json` tokens and `--pt-rhythm-*` CSS properties, with ex
 
 Generated templates mark the relationship owner and its direct endpoints with `data-rhythm-check`, `data-rhythm-from`, and `data-rhythm-to`. Horizontal relationships additionally use `data-rhythm-axis="inline"`; vertical relationships default to the block axis. `check_html_deck.py` measures the computed browser rectangles and fails when the actual distance differs from the declared token. This check complements overflow QA: a page can fit its viewport and still have a broken visual relationship.
 
-## Corporate Fixed Shell Boundary
+## Corporate Template-Family Shell Boundary
 
-For `corporate_fidelity`, compile one reusable shell from the exact confirmed source and regions:
+For v1.3 `corporate_fidelity`, compile a role-routed shell family from the exact confirmed sources and regions:
 
-- Crop every locked element with floor(left/top) and ceil(right/bottom) pixel bounds after normalized-coordinate validation. Encode each crop as deterministic offline PNG and record its SHA-256 and pixel bbox.
-- Place crop bytes at their exact normalized bbox on every page. Mark fixed elements with `data-locked-region`, the crop hash, and `data-fixed-motion="none"`.
-- Wrap each of the five page roles in the one `data-editable-region`. Report content, layout changes, and Runtime fragments must remain descendants of that wrapper.
-- Apply `animation:none`, `transition:none`, and `transform:none` to the fixed shell and fixed regions. The loader rejects missing crops, hash/region drift, fixed-element fragment classes, incomplete safe-area wrappers, or weakened fixed-motion CSS.
+- Crop every `canvas_bbox` first, then crop each shared asset with floor(left/top) and ceil(right/bottom) pixel bounds in that canvas. Encode each crop as deterministic offline PNG and record source-image, source-page, source bbox/pixel bbox, crop dimensions, and crop SHA-256.
+- Route every report page by `data-shell-role` to exactly one of `cover/toc/section/content/data`; verify `data-source-page-id` for observed shells and the empty mapping for extensions.
+- Place each shell's crop bytes at its exact normalized placement bbox. Mark fixed elements with locked-region id, asset id, source-page id, crop hash, and `data-fixed-motion="none"`.
+- Wrap report content in that shell's one `data-editable-region`. Report DOM, layout changes, and Runtime fragments must remain descendants of that wrapper and use only the shell's allowed role.
+- Apply `animation:none`, `transition:none`, and `transform:none` to every fixed shell and fixed crop. The loader parses actual HTML, decodes every `src` data URI, validates PNG MIME/decodability/dimensions, recomputes SHA-256, and requires exact equality between actual style/bbox and manifest placement. It also rejects role/source mapping drift, crop-count drift, editable-region drift, fixed-element fragment classes, or weakened fixed-motion CSS.
 - Never embed the complete screenshot in `templates.html` or CSS. Example body text, charts, and numbers in the screenshot are extraction exclusions, not reusable background material.
 
-The fixed shell promises screenshot-visible pixels and positions only. It does not reconstruct a source master, vectors, fonts, hidden page types, or movement. Content-page variants proposed from a single screenshot remain `extension` until the customer confirms the VI board.
+The shell family promises screenshot-visible pixels and confirmed positions only. It does not reconstruct a source master, vectors, fonts, hidden page types, or movement. Roles absent from all supplied screenshots remain `extension/proposed` even after VI confirmation; confirmation accepts the proposal, not a false claim that it was observed.
 
 ## Render Through The Shared Runtime
 
@@ -180,10 +203,11 @@ For the compiled theme and at least one full sample deck:
 5. Run `check_assets.py --strict-offline` on the HTML.
 6. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080; require empty overflow and semantic-rhythm failure lists on every page.
 7. Build a contact sheet from the 1600×900 screenshots.
-8. Compare the original reference, rendered VI board, and final themed sample. Confirm that composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
+8. Compare all original references, the unified VI board, and the final themed sample. Confirm role routing, fixed crops, safe regions, composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
+9. Tamper one compiled copy at a time: fixed crop bytes, placement style, shell role, and source-page mapping. Require the project-theme loader to fail closed in every case.
 
 Use fixed synthetic sample content for visual acceptance and label it as illustrative. Do not present the sample as customer evidence or achieved results.
 
 ## Remaining Model Work
 
-The compiler does not understand images, choose report content, decide a narrative, verify evidence provenance, or create project-specific motion. Those remain model/Skill/report-task responsibilities within their existing confirmation and verification gates. This v1 does not support video, multiple references, dynamic-reference analysis, dual-screen presentation, or an HTML editor.
+The compiler does not understand images, choose report content, decide a narrative, verify evidence provenance, or create project-specific motion. Those remain model/Skill/report-task responsibilities within their existing confirmation and verification gates. This slice does not support video, dynamic-reference analysis, more than three corporate stills, multiple reconstruct references, dual-screen presentation, independent Logo upload, or an HTML editor.

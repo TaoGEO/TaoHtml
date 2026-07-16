@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1612" height="912" viewBox="0 0 1612 912">
+  <rect width="1612" height="912" fill="#d9e1e8"/>
+  <g transform="translate(6 6)">
+    <rect width="1600" height="900" fill="#f5f8fa"/>
+    <rect width="576" height="900" fill="#17324d"/>
+    <path d="M0 620 L576 300 L576 900 L0 900 Z" fill="#2d7fb8"/>
+    <path d="M0 710 L576 470 L576 900 L0 900 Z" fill="#4aa6c8" opacity=".72"/>
+    <rect x="576" width="1024" height="27" fill="#2d7fb8"/>
+    <g transform="translate(78 72)" fill="none" stroke="#ffffff" stroke-width="8">
+      <circle cx="30" cy="30" r="26"/><path d="M12 30h36M30 12v36"/>
+    </g>
+    <text x="150" y="112" fill="#ffffff" font-size="28" font-family="Arial" font-weight="700">ORBITAL DEMO</text>
+    <text x="150" y="142" fill="#b8d6e5" font-size="15" font-family="Arial">SYNTHETIC TEMPLATE FAMILY</text>
+    <text x="660" y="340" fill="#17324d" font-size="62" font-family="Arial" font-weight="700">Annual Brief</text>
+    <text x="662" y="392" fill="#5e7182" font-size="24" font-family="Arial">Editable cover content example</text>
+    <rect x="662" y="448" width="690" height="8" rx="4" fill="#d3e0e8"/>
+    <text x="662" y="760" fill="#8293a1" font-size="18" font-family="Arial">Synthetic fixture only</text>
+  </g>
+</svg>

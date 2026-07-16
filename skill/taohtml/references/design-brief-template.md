@@ -40,11 +40,12 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 用户参考（如适用）：本地文件或可定位描述
 - 参考图模式（如适用）：`reconstruct` 参考风格重构 / `corporate_fidelity` 企业模板保真
 - 保真边界（企业模板保真时保留）：只承诺截图中可见效果；不承诺恢复原始 PPT 母版、矢量 Logo、字体源文件或截图外资产
-- 锁定企业元素（企业模板保真时保留）：Logo / 页眉 / 页脚 / 品牌条 / 固定装饰的 id、类型和确认状态
-- 可编辑安全区（企业模板保真时保留）：区域 id、归一化 bbox、允许内容；固定外框不参与排版或动效
-- 参考事实边界（如适用）：`observed` 直接观察 / `extension` 可确认延展 / `unknown` 截图无法判断
-- 延展页面与限制（企业模板保真时保留）：封面 / 章节页 / 数据页小样的 extension 状态，以及更清晰截图或独立 Logo 等阻塞项
-- VI 规范图（单张静态参考时保留）：当前 PNG / HTML 路径 + 已确认状态
+- 来源页面与角色（企业模板保真时保留）：每页 id、自动识别的 cover / toc / section / content / data 角色、源图哈希与尺寸、canvas_bbox、observed 状态
+- 锁定企业元素（企业模板保真时保留）：shared asset 与各 shell 固定 placement 的 id、类型、来源页、归一化 bbox、确认状态
+- 可编辑安全区（企业模板保真时保留）：每个 shell 的区域 id、归一化 bbox、唯一允许内容角色；固定层不参与排版或动效
+- 参考事实边界（如适用）：`observed` 直接观察 / `extension` 可确认延展 / `unknown` 截图无法判断；按 source / shell / asset / page role 分别记录
+- 延展页面与限制（企业模板保真时保留）：所有未观察角色的 proposed extension 状态；更清晰截图等真实阻塞项；不承诺独立 Logo 上传
+- VI 规范图（静态参考时保留）：统一 PNG / HTML 路径 + 已确认状态
 - 所选内置主题（如适用）：完整主题名称 + 一句具体画面描述
 - 选择理由：...
 - 必要偏离说明：无 / 偏离项、原因及仍保留的主题语法
@@ -73,7 +74,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - If the user supplied a clear visual reference, record `reference_mode`. Do not reduce `corporate_fidelity` to “closely reproduced”: state the screenshot-visible fidelity boundary, locked elements, editable region, and extension/unknown limits explicitly.
 - If the user supplied a clear visual reference, do not add a competing built-in-theme requirement.
-- For one static reference image, include the confirmed VI board path and confirmation state. In corporate fidelity, copy the exact locked-element and editable-region summary from the confirmed contract; do not silently alter it after “确认 VI”. Do not include a dynamic-analysis field or infer sequential behavior from the image.
+- For supported static-reference inputs, include the confirmed unified VI board path and confirmation state. In corporate fidelity, copy the exact source-role, canvas, shared-asset, shell placement, editable-region, extension, and limitation summary from the confirmed contract; do not silently alter it after “确认 VI”. Do not include a dynamic-analysis field or infer sequential behavior from multiple stills.
 - Treat VI confirmation and Report Design Brief confirmation as separate gates. A confirmed VI board may enter the separate project-theme handoff, but it does not authorize report production.
 - If TaoHtml recommends or selects a built-in visual system, copy its full customer-facing name and one-line description, explain why it suits the topic, audience, and use mode, and record every necessary deviation. Write `无` when there is no deviation.
 - Include `行动闭环` only when the confirmed goal requires the audience to complete an external action. Omit it for explanatory, educational, or internal reports that do not require conversion; do not add a gratuitous CTA.

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1612" height="912" viewBox="0 0 1612 912">
+  <rect width="1612" height="912" fill="#d9e1e8"/>
+  <g transform="translate(6 6)">
+    <rect width="1600" height="900" fill="#f7fafc"/>
+    <rect width="608" height="900" fill="#17324d"/>
+    <path d="M0 900 L0 470 L608 180 L608 900 Z" fill="#2d7fb8"/>
+    <path d="M0 900 L0 650 L608 390 L608 900 Z" fill="#4aa6c8" opacity=".74"/>
+    <rect x="608" width="992" height="108" fill="#eef4f7"/>
+    <rect x="608" y="108" width="992" height="6" fill="#4aa6c8"/>
+    <text x="680" y="65" fill="#17324d" font-size="25" font-family="Arial" font-weight="700">ORBITAL DEMO</text>
+    <text x="1370" y="65" fill="#5e7182" font-size="17" font-family="Arial">SECTION</text>
+    <text x="720" y="350" fill="#17324d" font-size="74" font-family="Arial" font-weight="700">01</text>
+    <text x="720" y="440" fill="#17324d" font-size="52" font-family="Arial" font-weight="700">Direction</text>
+    <text x="724" y="488" fill="#5e7182" font-size="23" font-family="Arial">Editable section statement</text>
+    <rect y="837" width="1600" height="63" fill="#17324d"/>
+    <text x="70" y="875" fill="#b8d6e5" font-size="15" font-family="Arial">SYNTHETIC FIXTURE · OFFLINE</text>
+    <text x="1500" y="875" fill="#ffffff" font-size="15" font-family="Arial">03</text>
+  </g>
+</svg>

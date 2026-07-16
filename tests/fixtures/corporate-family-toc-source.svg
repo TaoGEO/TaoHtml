@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1612" height="912" viewBox="0 0 1612 912">
+  <rect width="1612" height="912" fill="#d9e1e8"/>
+  <g transform="translate(6 6)">
+    <rect width="1600" height="900" fill="#f7fafc"/>
+    <rect width="1600" height="108" fill="#17324d"/>
+    <rect y="108" width="1600" height="6" fill="#4aa6c8"/>
+    <circle cx="72" cy="54" r="27" fill="none" stroke="#ffffff" stroke-width="7"/>
+    <path d="M54 54h36M72 36v36" stroke="#ffffff" stroke-width="7"/>
+    <text x="125" y="63" fill="#ffffff" font-size="27" font-family="Arial" font-weight="700">ORBITAL DEMO</text>
+    <text x="1320" y="63" fill="#b8d6e5" font-size="17" font-family="Arial">CONTENTS</text>
+    <text x="130" y="250" fill="#17324d" font-size="54" font-family="Arial" font-weight="700">Contents</text>
+    <g font-family="Arial" font-size="28" fill="#2f4a61">
+      <text x="170" y="360">01  Direction</text><text x="850" y="360">02  Operations</text>
+      <text x="170" y="470">03  Portfolio</text><text x="850" y="470">04  Outlook</text>
+    </g>
+    <g stroke="#c4d4df" stroke-width="3"><path d="M170 385h480"/><path d="M850 385h480"/><path d="M170 495h480"/><path d="M850 495h480"/></g>
+    <rect y="837" width="1600" height="63" fill="#17324d"/>
+    <text x="70" y="875" fill="#b8d6e5" font-size="15" font-family="Arial">SYNTHETIC FIXTURE · OFFLINE</text>
+    <text x="1500" y="875" fill="#ffffff" font-size="15" font-family="Arial">02</text>
+  </g>
+</svg>

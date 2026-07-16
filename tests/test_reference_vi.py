@@ -26,6 +26,11 @@ CONTRACT_PATH = ROOT / "tests" / "fixtures" / "reference-vi-contract.json"
 SOURCE_PATH = ROOT / "tests" / "fixtures" / "reference-vi-source.svg"
 CORPORATE_CONTRACT_PATH = ROOT / "tests" / "fixtures" / "corporate-template-vi-contract.json"
 CORPORATE_SOURCE_PATH = ROOT / "tests" / "fixtures" / "corporate-template-reference.png"
+FAMILY_CONTRACT_PATH = ROOT / "tests" / "fixtures" / "corporate-family-vi-contract.json"
+FAMILY_SOURCE_PATHS = [
+    ROOT / "tests" / "fixtures" / f"corporate-family-{role}.png"
+    for role in ("cover", "toc", "section")
+]
 CHECK_ASSETS = SKILL_ROOT / "scripts" / "check_assets.py"
 BUILT_IN_IDS = {
     "black-white-fluorescent-cards",
@@ -569,6 +574,126 @@ class CorporateFidelityVIContractTests(unittest.TestCase):
                 self.assertIn(marker, text)
 
 
+class CorporateTemplateFamilyVIContractTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.raw = json.loads(FAMILY_CONTRACT_PATH.read_text(encoding="utf-8"))
+        self.contract = RENDERER.validate_contract(self.raw)
+
+    def test_family_contract_binds_three_observed_roles_and_two_extensions(self) -> None:
+        self.assertEqual(self.contract["schema_version"], "1.3")
+        self.assertEqual(
+            [page["role"] for page in self.contract["reference_pages"]],
+            ["cover", "toc", "section"],
+        )
+        self.assertEqual(
+            [shell["role"] for shell in self.contract["shell_variants"]],
+            ["cover", "toc", "section", "content", "data"],
+        )
+        self.assertEqual(
+            {item["role"] for item in self.contract["extension_pages"]},
+            {"content", "data"},
+        )
+        drift = copy.deepcopy(self.raw)
+        drift["reference_pages"][1]["role"] = "cover"
+        with self.assertRaisesRegex(ValueError, "unique role"):
+            RENDERER.validate_contract(drift)
+
+    def test_single_image_family_remains_valid_with_four_explicit_extensions(self) -> None:
+        single = copy.deepcopy(self.raw)
+        single["reference_pages"] = single["reference_pages"][:1]
+        single["shared_assets"] = single["shared_assets"][:2]
+        for shell in single["shell_variants"][1:]:
+            role = shell["role"]
+            shell["status"] = "extension"
+            shell["reference_page_id"] = None
+            shell["locked_regions"] = [
+                {
+                    "id": f"{role}-rule",
+                    "type": "brand_bar",
+                    "asset_id": "cover-top-rule",
+                    "bbox": [0.0, 0.0, 1.0, 0.03],
+                    "status": "extension",
+                    "basis": "单图输入中复用已观察的封面品牌线",
+                }
+            ]
+            shell["editable_region"]["bbox"] = [0.08, 0.12, 0.84, 0.72]
+        single["extension_pages"] = [
+            {
+                "role": role,
+                "status": "extension",
+                "basis": "单张封面截图未展示此页面角色",
+            }
+            for role in ("toc", "section", "content", "data")
+        ]
+        normalized = RENDERER.validate_contract(single)
+        bindings = RENDERER.validate_source_bindings(
+            normalized, FAMILY_SOURCE_PATHS[:1]
+        )
+        self.assertEqual([page["role"] for page in normalized["reference_pages"]], ["cover"])
+        self.assertEqual(
+            {item["role"] for item in normalized["extension_pages"]},
+            {"toc", "section", "content", "data"},
+        )
+        self.assertEqual(bindings[0]["canvas_size"], [1600, 900])
+
+    def test_canvas_crop_is_strict_16_by_9_and_multi_frame_rasters_fail(self) -> None:
+        bindings = RENDERER.validate_source_bindings(
+            self.contract, FAMILY_SOURCE_PATHS
+        )
+        self.assertEqual([item["canvas_size"] for item in bindings], [[1600, 900]] * 3)
+
+        bad_ratio = copy.deepcopy(self.raw)
+        bad_ratio["reference_pages"][0]["canvas_bbox"] = [0, 0, 1, 1]
+        with self.assertRaisesRegex(ValueError, "must be 16:9 within"):
+            RENDERER.validate_source_bindings(
+                RENDERER.validate_contract(bad_ratio), FAMILY_SOURCE_PATHS
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            animated = Path(temp_dir) / "animated.webp"
+            frames = [Image.new("RGB", (1200, 675), color) for color in ("red", "blue")]
+            frames[0].save(
+                animated,
+                format="WEBP",
+                save_all=True,
+                append_images=frames[1:],
+                duration=100,
+                loop=0,
+            )
+            with self.assertRaisesRegex(ValueError, "one static raster frame"):
+                RENDERER.source_image_binding(animated)
+
+    def test_assets_crop_from_canvas_not_screenshot_border(self) -> None:
+        first = RENDERER.extract_corporate_assets(
+            self.contract, FAMILY_SOURCE_PATHS
+        )
+        second = RENDERER.extract_corporate_assets(
+            self.contract, FAMILY_SOURCE_PATHS
+        )
+        self.assertEqual(first, second)
+        by_id = {item["id"]: item for item in first}
+        self.assertEqual(by_id["cover-left-composition"]["canvas_pixel_bbox"], [6, 6, 1606, 906])
+        self.assertEqual(by_id["cover-left-composition"]["source_pixel_bbox"], [6, 6, 582, 906])
+        for item in first:
+            payload = base64.b64decode(item["data_uri"].split(",", 1)[1])
+            self.assertEqual(hashlib.sha256(payload).hexdigest(), item["sha256"])
+
+    def test_unified_board_shows_sources_observed_shells_extensions_and_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html_path, png_path = RENDERER.render_board(
+                self.contract,
+                FAMILY_SOURCE_PATHS,
+                Path(temp_dir) / "corporate-family-vi",
+            )
+            document = html_path.read_text(encoding="utf-8")
+            self.assertTrue(png_path.is_file())
+            self.assertEqual(document.count('class="reference-page-card"'), 3)
+            self.assertEqual(document.count('class="crop-preview"'), 6)
+            self.assertEqual(document.count('class="mini-page-card'), 5)
+            for marker in ("source-cover", "source-toc", "source-section", "content", "data", "未知项 / 限制"):
+                self.assertIn(marker, visible_text(document))
+
+
 class ReferenceVIRenderingTests(unittest.TestCase):
     def test_output_png_exists_is_high_resolution_and_html_is_offline(self) -> None:
         contract = RENDERER.load_contract(CONTRACT_PATH)
@@ -638,7 +763,7 @@ class ReferenceVIWorkflowTests(unittest.TestCase):
             "screenshot-visible fidelity only",
             "Never model-redraw a Logo",
             "locked-region and editable-region overlays",
-            "two or three corporate-frame page miniatures",
+            "all five corporate-frame miniatures",
             "does not recover an original PPT master",
         ):
             self.assertIn(marker, reference)
@@ -659,11 +784,11 @@ class ReferenceVIWorkflowTests(unittest.TestCase):
         for text in (skill, intake, workflow):
             self.assertIn("确认 VI", text)
         self.assertIn("start formal report production before this confirmation", skill)
-        self.assertIn("do not begin project-theme generation or report production", intake)
+        self.assertIn("begin project-theme generation/report production before confirmation", intake)
         self.assertIn("VI confirmation is not Report Design Brief confirmation", workflow)
         self.assertIn("VI 规范图", brief)
 
-    def test_clear_non_single_image_reference_stops_at_unsupported_boundary(self) -> None:
+    def test_reference_input_counts_route_by_mode_and_keep_unsupported_inputs_out(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         intake = (SKILL_ROOT / "references" / "intake-workflow.md").read_text(
             encoding="utf-8"
@@ -675,7 +800,8 @@ class ReferenceVIWorkflowTests(unittest.TestCase):
             encoding="utf-8"
         )
         for text in (skill, intake, workflow, router):
-            self.assertIn("one representative static screenshot", text)
+            self.assertIn("one to three", text)
+            self.assertIn("multiple", text)
         self.assertIn("not “no clear reference.”", workflow)
         self.assertIn("Only when no clear reference exists", skill)
         self.assertIn("do not enter this router", router)
