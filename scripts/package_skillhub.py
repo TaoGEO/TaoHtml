@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_SOURCE = ROOT / "skill" / "taohtml"
+README = ROOT / "README.md"
 SLUG = "taohtml"
 DISPLAY_NAME = "TaoHtml"
 SUMMARY = "把想法、Word / PDF、PPT 或 HTML 制作成可直接汇报、阅读和离线交付的 16:9 高设计 HTML 演示文稿。"
@@ -28,6 +29,7 @@ DESCRIPTION = (
 TAGS = ("HTML演示", "PPT转换", "报告设计", "视觉系统", "企业模板保真")
 CATEGORY = "content-creation"
 HOMEPAGE = "https://github.com/TaoGEO/TaoHtml"
+AUTHOR_COLLABORATION_HEADING = "## 作者与合作"
 
 
 def yaml_string(value: str) -> str:
@@ -42,6 +44,22 @@ def canonical_body() -> str:
     if marker < 0:
         raise ValueError("canonical SKILL.md frontmatter is not closed")
     return text[marker + len("\n---\n") :]
+
+
+def author_collaboration_section() -> str:
+    text = README.read_text(encoding="utf-8")
+    marker = f"\n{AUTHOR_COLLABORATION_HEADING}\n"
+    if marker not in text:
+        raise ValueError("README.md must contain the author collaboration section")
+    section = AUTHOR_COLLABORATION_HEADING + "\n" + text.split(marker, 1)[1]
+    next_heading = section.find("\n## ", len(AUTHOR_COLLABORATION_HEADING))
+    if next_heading >= 0:
+        section = section[:next_heading]
+    return section.strip() + "\n"
+
+
+def skillhub_body() -> str:
+    return canonical_body().rstrip() + "\n\n" + author_collaboration_section()
 
 
 def skillhub_frontmatter(version: str) -> str:
@@ -71,7 +89,7 @@ def build_directory(output_dir: Path, version: str) -> None:
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
     )
     (output_dir / "SKILL.md").write_text(
-        skillhub_frontmatter(version) + canonical_body(),
+        skillhub_frontmatter(version) + skillhub_body(),
         encoding="utf-8",
     )
 

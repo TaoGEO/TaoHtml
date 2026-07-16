@@ -239,7 +239,26 @@ class PluginPackagingTests(unittest.TestCase):
                     ROOT / "skill" / "taohtml" / "SKILL.md"
                 ).read_text(encoding="utf-8")
                 canonical_body = canonical_text.split("\n---\n", 1)[1]
-                self.assertEqual(generated_body, canonical_body)
+                self.assertTrue(generated_body.startswith(canonical_body.rstrip()))
+
+                readme = (ROOT / "README.md").read_text(encoding="utf-8")
+                author_section = "## 作者与合作\n" + readme.split(
+                    "\n## 作者与合作\n", 1
+                )[1]
+                next_heading = author_section.find("\n## ", len("## 作者与合作"))
+                if next_heading >= 0:
+                    author_section = author_section[:next_heading]
+                author_section = author_section.strip() + "\n"
+                self.assertTrue(generated_body.endswith(author_section))
+                self.assertIn("微信：`taomir`", author_section)
+                self.assertNotIn("## 作者与合作", canonical_text)
+                self.assertNotIn("taomir", canonical_text)
+                self.assertNotIn("taomir", metadata["summary"])
+                self.assertNotIn("taomir", metadata["description"])
+                self.assertNotIn(
+                    "taomir",
+                    (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"),
+                )
 
     def test_public_channel_descriptions_share_the_v030_positioning(self) -> None:
         canonical = (ROOT / "skill" / "taohtml" / "SKILL.md").read_text(
