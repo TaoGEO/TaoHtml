@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Build a deterministic Skill Hub channel package from the canonical TaoHtml skill."""
+"""Build a deterministic Skill Hub package with separate overview and Agent rules."""
 
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import shutil
@@ -17,26 +18,17 @@ SKILL_SOURCE = ROOT / "skill" / "taohtml"
 README = ROOT / "README.md"
 SLUG = "taohtml"
 DISPLAY_NAME = "TaoHtml"
-SUMMARY = "把想法、Word / PDF、PPT 或 HTML 制作成可直接汇报、阅读和离线交付的 16:9 高设计 HTML 演示文稿。"
-DESCRIPTION = (
-    "把初步想法、Word / PDF、已有 PPT 或 HTML，制作成可直接汇报或阅读的 16:9 HTML 演示文稿，"
-    "作为传统 PPT / PPTX 的高设计替代方案。TaoHtml 会先梳理目标、受众、结构和证据，再生成支持"
-    "阅读与演讲模式、分步动效、键盘 / 鼠标翻页、全屏展示和离线交付的 HTML；可选择四套内置视觉"
-    "系统，也可根据客户提供的参考图建立项目专用视觉风格。适用于“做 PPT”“做幻灯片”“做演示文稿”"
-    "“写报告”“制作 slides / deck”，以及“把 Word、PDF、PPT 转成 HTML”等需求；默认优先交付可直接"
-    "使用的 HTML，而不是等待继续排版的 .pptx 初稿。"
-)
 TAGS = ("HTML演示", "PPT转换", "报告设计", "视觉系统", "企业模板保真")
 CATEGORY = "content-creation"
 HOMEPAGE = "https://github.com/TaoGEO/TaoHtml"
-AUTHOR_COLLABORATION_HEADING = "## 作者与合作"
+AGENT_WORKFLOW_REFERENCE = Path("references/agent-workflow.md")
 
 
 def yaml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def canonical_body() -> str:
+def canonical_execution_body() -> str:
     text = (SKILL_SOURCE / "SKILL.md").read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         raise ValueError("canonical SKILL.md must start with YAML frontmatter")
@@ -46,23 +38,137 @@ def canonical_body() -> str:
     return text[marker + len("\n---\n") :]
 
 
-def author_collaboration_section() -> str:
+def readme_intro_copy() -> tuple[str, str]:
     text = README.read_text(encoding="utf-8")
-    marker = f"\n{AUTHOR_COLLABORATION_HEADING}\n"
-    if marker not in text:
-        raise ValueError("README.md must contain the author collaboration section")
-    section = AUTHOR_COLLABORATION_HEADING + "\n" + text.split(marker, 1)[1]
-    next_heading = section.find("\n## ", len(AUTHOR_COLLABORATION_HEADING))
-    if next_heading >= 0:
-        section = section[:next_heading]
-    return section.strip() + "\n"
+    if not text.startswith("# TaoHtml\n") or "\n## 核心能力\n" not in text:
+        raise ValueError("README.md must start with TaoHtml customer introduction")
+    intro = text.split("\n## 核心能力\n", 1)[0].splitlines()[1:]
+    paragraphs = [
+        paragraph.strip()
+        for paragraph in "\n".join(intro).split("\n\n")
+        if paragraph.strip()
+        and not paragraph.startswith("> English brief:")
+        and not paragraph.startswith("当前版本：")
+    ]
+    if len(paragraphs) < 4:
+        raise ValueError("README.md must contain four Chinese introduction paragraphs")
+    plain = [re.sub(r"[`*_]", "", paragraph) for paragraph in paragraphs[:4]]
+    return plain[0], "".join(plain)
 
 
-def skillhub_body() -> str:
-    return canonical_body().rstrip() + "\n\n" + author_collaboration_section()
+def html_table_to_markdown(match: re.Match[str]) -> str:
+    items: list[str] = []
+    for cell in re.findall(r"<td\b[^>]*>(.*?)</td>", match.group(0), re.DOTALL):
+        cell = re.sub(
+            r"<a\b[^>]*>\s*<img\b[^>]*>\s*</a>", "", cell, flags=re.DOTALL
+        )
+        strong = re.search(r"<strong>(.*?)</strong>", cell, re.DOTALL)
+        if strong is None:
+            continue
+        title = html.unescape(re.sub(r"<[^>]+>", "", strong.group(1))).strip()
+        detail = cell[strong.end() :]
+        detail = re.sub(r"<br\s*/?>", " ", detail, flags=re.IGNORECASE)
+        detail = html.unescape(re.sub(r"<[^>]+>", " ", detail))
+        detail = re.sub(r"\s+", " ", detail).strip()
+        if title and detail:
+            items.append(f"- **{title}**：{detail}")
+    if not items:
+        raise ValueError("README HTML table must contain text-only customer copy")
+    return "\n".join(items)
+
+
+def absolute_repository_links(text: str, version: str) -> str:
+    def replace(match: re.Match[str]) -> str:
+        label, target = match.group(1), match.group(2)
+        if re.match(r"(?:https?://|mailto:|#)", target):
+            return match.group(0)
+        path, separator, fragment = target.partition("#")
+        view = "tree" if path in {"skill/taohtml"} else "blob"
+        absolute = f"{HOMEPAGE}/{view}/v{version}/{path}"
+        if separator:
+            absolute += f"#{fragment}"
+        return f"[{label}]({absolute})"
+
+    return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", replace, text)
+
+
+def apply_text_only_channel_copy(text: str, version: str) -> str:
+    replacements = {
+        (
+            "四套系统的对比使用完全相同的合成内容，各展示 5 页、共 20 页，便于直接比较完整的版式语言，"
+            "而不是被选题差异干扰；即使不查看下方总览图，也可以通过表格了解各自的画面特征。"
+        ): (
+            "四套系统的对比使用完全相同的合成内容，各展示 5 页、共 20 页，便于直接比较完整的版式语言，"
+            "而不是被选题差异干扰；以下表格直接说明各自的画面特征。"
+        ),
+        (
+            "这两条路线共享“静态参考 → VI 设计标准图 → 确认 VI → 项目专用主题”的确认链，但保真目标不同。"
+            "下方全部使用仓库自制、无真实品牌的合成样例。"
+        ): (
+            "这两条路线共享“静态参考 → VI 设计标准图 → 确认 VI → 项目专用主题”的确认链，但保真目标不同。"
+            "以下说明基于仓库自制、无真实品牌的合成样例。"
+        ),
+        (
+            "企业模板保真只承诺截图中可见的像素与页面角色，不宣称恢复原始 PPT 母版、矢量 Logo、字体源文件、"
+            "截图外资产或动效。可查看仓库中的[完整五页 HTML 样例]"
+            "(examples/corporate-template-fidelity/corporate-fidelity-sample.html)和[高清 VI 标准图]"
+            "(examples/corporate-template-fidelity/reference-vi-board.png)。"
+        ): (
+            "企业模板保真只承诺截图中可见的像素与页面角色，不宣称恢复原始 PPT 母版、矢量 Logo、字体源文件、"
+            "截图外资产或动效。可前往[GitHub README 的“使用客户参考图”章节]"
+            f"({HOMEPAGE}/blob/v{version}/README.md#使用客户参考图)查看完整五页 HTML 样例与 VI 标准图。"
+        ),
+    }
+    for source, replacement in replacements.items():
+        if source not in text:
+            raise ValueError(f"README.md text-only channel source copy drifted: {source[:32]}")
+        text = text.replace(source, replacement, 1)
+    return text
+
+
+def readme_customer_overview(version: str) -> str:
+    text = README.read_text(encoding="utf-8")
+    if not text.startswith("# TaoHtml\n"):
+        raise ValueError("README.md must start with '# TaoHtml'")
+    for heading in (
+        "## 核心能力",
+        "## 四套内置视觉系统",
+        "## 使用客户参考图",
+        "## 安装入口",
+        "## 版本更新",
+        "## 作者与合作",
+    ):
+        if f"\n{heading}\n" not in text:
+            raise ValueError(f"README.md is missing required customer heading: {heading}")
+
+    text = apply_text_only_channel_copy(text, version)
+    text = re.sub(r"(?m)^> English brief:.*\n?", "", text)
+    text = re.sub(r"(?s)<table>.*?</table>", html_table_to_markdown, text)
+    text = re.sub(
+        r"(?m)^[ \t]*<a\b[^>]*>\s*<img\b[^>]*>\s*</a>[ \t]*$\n?",
+        "",
+        text,
+    )
+    text = re.sub(
+        r"\[([^\]]+)\]\(([^)]+\.(?:png|jpe?g|webp|gif|svg)(?:#[^)]*)?)\)",
+        r"\1",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = absolute_repository_links(text, version)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip() + "\n"
+    lowered = text.lower()
+    if any(marker in lowered for marker in ("<img", "docs/assets/readme/", ".png)")):
+        raise ValueError("Skill Hub overview must not contain README image references")
+    return text
+
+
+def skillhub_body(version: str) -> str:
+    return readme_customer_overview(version)
 
 
 def skillhub_frontmatter(version: str) -> str:
+    summary, description = readme_intro_copy()
     return "\n".join(
         (
             "---",
@@ -70,8 +176,8 @@ def skillhub_frontmatter(version: str) -> str:
             f"slug: {yaml_string(SLUG)}",
             f"version: {yaml_string(version)}",
             f"displayName: {yaml_string(DISPLAY_NAME)}",
-            f"summary: {yaml_string(SUMMARY)}",
-            f"description: {yaml_string(DESCRIPTION)}",
+            f"summary: {yaml_string(summary)}",
+            f"description: {yaml_string(description)}",
             f"tags: {json.dumps(TAGS, ensure_ascii=False)}",
             f"category: {yaml_string(CATEGORY)}",
             f"license: {yaml_string('MIT')}",
@@ -88,8 +194,12 @@ def build_directory(output_dir: Path, version: str) -> None:
         output_dir,
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
     )
+    (output_dir / AGENT_WORKFLOW_REFERENCE).write_text(
+        canonical_execution_body(),
+        encoding="utf-8",
+    )
     (output_dir / "SKILL.md").write_text(
-        skillhub_frontmatter(version) + skillhub_body(),
+        skillhub_frontmatter(version) + skillhub_body(version),
         encoding="utf-8",
     )
 
