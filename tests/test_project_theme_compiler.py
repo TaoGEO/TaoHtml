@@ -977,6 +977,77 @@ class CorporateTemplateFamilyThemeTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     THEME_RUNTIME.load_project_theme(theme)
 
+    def test_runtime_rejects_late_cascade_overrides_for_fixed_and_editable_regions(self) -> None:
+        attacks = {
+            "fixed animation": (
+                '.deck[data-theme="project-orbital-corporate-family"] '
+                ".pt-corporate-fixed-region { "
+                "animation: spin 1s infinite !important; }",
+                "protected CSS|disable fixed-element animation",
+            ),
+            "editable geometry": (
+                '.deck[data-theme="project-orbital-corporate-family"] '
+                ".pt-corporate-editable { left:0 !important; top:0 !important; "
+                "width:100% !important; height:100% !important; "
+                "overflow:visible !important; }",
+                "protected CSS|preserve protected geometry",
+            ),
+            "generic image motion": (
+                "img { transform:translateX(20px) !important; }",
+                "protected CSS",
+            ),
+        }
+        for label, (attack, message) in attacks.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                theme = COMPILER.compile_theme(
+                    FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+                )
+                css_path = theme / "theme.css"
+                css_path.write_text(
+                    css_path.read_text(encoding="utf-8") + "\n" + attack + "\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, message):
+                    THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_allows_editable_descendant_geometry_without_weakening_container(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            css_path = theme / "theme.css"
+            css_path.write_text(
+                css_path.read_text(encoding="utf-8")
+                + "\n"
+                + '.deck[data-theme="project-orbital-corporate-family"] '
+                + ".pt-corporate-editable .source-btn { top:9px; right:9px; }\n",
+                encoding="utf-8",
+            )
+            THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_rejects_fixed_element_id_class_specificity_bypass(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            templates_path = theme / "templates.html"
+            original = templates_path.read_text(encoding="utf-8")
+            changed = original.replace(
+                'class="pt-corporate-fixed-region"',
+                'id="fixed-bypass" class="pt-corporate-fixed-region bypass"',
+                1,
+            )
+            self.assertNotEqual(changed, original)
+            templates_path.write_text(changed, encoding="utf-8")
+            css_path = theme / "theme.css"
+            css_path.write_text(
+                css_path.read_text(encoding="utf-8")
+                + "\n#fixed-bypass.bypass { transform:translateX(20px) !important; }\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "allowlist"):
+                THEME_RUNTIME.load_project_theme(theme)
+
     def test_family_renders_five_page_offline_report_with_shared_runtime(self) -> None:
         content = RENDERER.load_content(CONTENT_FIXTURE)
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -37,6 +37,34 @@ REMOTE_ASSET = re.compile(
 )
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 FAMILY_ROLES = ("cover", "toc", "section", "content", "data")
+CORPORATE_FIXED_SHELL_CLASS = "pt-corporate-fixed-shell"
+CORPORATE_FIXED_REGION_CLASS = "pt-corporate-fixed-region"
+CORPORATE_EDITABLE_CLASS = "pt-corporate-editable"
+
+
+class _CssDeclaration(NamedTuple):
+    name: str
+    value: str
+    important: bool
+
+
+class _CssRule(NamedTuple):
+    selector: str
+    declarations: tuple[_CssDeclaration, ...]
+
+
+class _ElementShape(NamedTuple):
+    tag: str
+    classes: frozenset[str]
+    element_id: str | None
+
+
+class _ProtectedElement(NamedTuple):
+    label: str
+    tag: str
+    classes: frozenset[str]
+    element_id: str | None
+    ancestors: tuple[_ElementShape, ...]
 
 
 class ThemeBundle(NamedTuple):
@@ -58,11 +86,27 @@ class _CorporateTemplateParser(HTMLParser):
 
     @staticmethod
     def _attrs(raw: list[tuple[str, str | None]]) -> dict[str, str]:
-        return {key: value or "" for key, value in raw}
+        attrs: dict[str, str] = {}
+        for key, value in raw:
+            if key in attrs:
+                raise ValueError(
+                    f"Corporate templates must not duplicate the {key} attribute."
+                )
+            attrs[key] = value or ""
+        return attrs
 
     def handle_starttag(self, tag: str, raw_attrs: list[tuple[str, str | None]]) -> None:
         attrs = self._attrs(raw_attrs)
         classes = set(attrs.get("class", "").split())
+        protected_classes = {
+            CORPORATE_FIXED_SHELL_CLASS,
+            CORPORATE_FIXED_REGION_CLASS,
+            CORPORATE_EDITABLE_CLASS,
+        }
+        if tag in {"style", "link"}:
+            raise ValueError(
+                "Corporate templates must not contain embedded or linked stylesheets."
+            )
         if tag == "section" and "slide" in classes:
             if self._section is not None:
                 raise ValueError("Corporate template sections must not be nested.")
@@ -75,12 +119,16 @@ class _CorporateTemplateParser(HTMLParser):
             self.sections.append(self._section)
             return
         if self._section is None:
+            if classes & protected_classes:
+                raise ValueError(
+                    "Corporate protected elements must remain inside a routed page section."
+                )
             return
-        if tag == "div" and "pt-corporate-fixed-shell" in classes:
+        if tag == "div" and CORPORATE_FIXED_SHELL_CLASS in classes:
             self._section["fixed_shells"].append(attrs)
-        elif tag == "img" and "pt-corporate-fixed-region" in classes:
+        elif tag == "img" and CORPORATE_FIXED_REGION_CLASS in classes:
             self._section["fixed"].append(attrs)
-        elif tag == "div" and "pt-corporate-editable" in classes:
+        elif tag == "div" and CORPORATE_EDITABLE_CLASS in classes:
             self._section["editable"].append(attrs)
 
     def handle_endtag(self, tag: str) -> None:
@@ -164,21 +212,568 @@ def _decode_fixed_crop(attrs: dict[str, str], expected: dict[str, Any], label: s
         raise ValueError(f"{label} embedded crop dimensions do not match the manifest.")
 
 
-def _validate_fixed_css(css: str) -> None:
-    for selector_name in ("pt-corporate-fixed-shell", "pt-corporate-fixed-region"):
-        rule = re.search(rf"\.{selector_name}\s*\{{(?P<body>[^}}]+)\}}", css)
-        if (
-            rule is None
-            or "animation:none !important" not in rule.group("body")
-            or "transition:none !important" not in rule.group("body")
-            or "transform:none !important" not in rule.group("body")
+def _strip_css_comments(css: str) -> str:
+    stripped = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+    if "/*" in stripped or "*/" in stripped:
+        raise ValueError("Corporate theme CSS contains an unterminated comment.")
+    return stripped
+
+
+def _find_css_delimiter(text: str, start: int, delimiter: str) -> int:
+    quote = ""
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = ""
+            continue
+        if char in {'"', "'"}:
+            quote = char
+            continue
+        if char == delimiter:
+            return index
+    return -1
+
+
+def _find_css_block_end(text: str, start: int) -> int:
+    depth = 1
+    quote = ""
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = ""
+            continue
+        if char in {'"', "'"}:
+            quote = char
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+    return -1
+
+
+def _split_css_value(raw: str, delimiter: str) -> list[str]:
+    values: list[str] = []
+    start = 0
+    quote = ""
+    escaped = False
+    parentheses = 0
+    brackets = 0
+    for index, char in enumerate(raw):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = ""
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            parentheses += 1
+        elif char == ")":
+            parentheses -= 1
+        elif char == "[":
+            brackets += 1
+        elif char == "]":
+            brackets -= 1
+        elif char == delimiter and parentheses == 0 and brackets == 0:
+            values.append(raw[start:index].strip())
+            start = index + 1
+        if parentheses < 0 or brackets < 0:
+            raise ValueError("Corporate theme CSS has unbalanced selector syntax.")
+    if quote or parentheses != 0 or brackets != 0:
+        raise ValueError("Corporate theme CSS has unbalanced selector syntax.")
+    values.append(raw[start:].strip())
+    return values
+
+
+def _parse_css_declarations(body: str) -> tuple[_CssDeclaration, ...]:
+    declarations: list[_CssDeclaration] = []
+    for raw in _split_css_value(body, ";"):
+        if not raw:
+            continue
+        parts = _split_css_value(raw, ":")
+        if len(parts) < 2:
+            raise ValueError("Corporate theme CSS contains an invalid declaration.")
+        name = parts[0].strip().lower()
+        value = ":".join(parts[1:]).strip()
+        if not name or not value:
+            raise ValueError("Corporate theme CSS contains an invalid declaration.")
+        important_match = re.search(r"\s*!\s*important\s*$", value, re.IGNORECASE)
+        important = important_match is not None
+        if important_match:
+            value = value[: important_match.start()].strip()
+        declarations.append(
+            _CssDeclaration(name, " ".join(value.lower().split()), important)
+        )
+    return tuple(declarations)
+
+
+def _iter_css_rules(css: str) -> list[_CssRule]:
+    text = _strip_css_comments(css)
+    rules: list[_CssRule] = []
+    cursor = 0
+    while cursor < len(text):
+        if not text[cursor:].strip():
+            break
+        open_index = _find_css_delimiter(text, cursor, "{")
+        if open_index < 0:
+            raise ValueError("Corporate theme CSS has trailing content outside a rule.")
+        prelude = text[cursor:open_index].strip()
+        if not prelude:
+            raise ValueError("Corporate theme CSS contains a rule without a selector.")
+        close_index = _find_css_block_end(text, open_index + 1)
+        if close_index < 0:
+            raise ValueError("Corporate theme CSS contains an unterminated rule.")
+        body = text[open_index + 1 : close_index]
+        cursor = close_index + 1
+        if ";" in prelude:
+            raise ValueError(
+                "Corporate theme CSS statement at-rules are unsupported for protected validation."
+            )
+        if prelude.startswith("@"):
+            at_name = prelude[1:].split(None, 1)[0].lower()
+            if at_name.endswith("keyframes") or at_name in {
+                "font-face",
+                "page",
+                "property",
+                "counter-style",
+            }:
+                continue
+            if "{" in body:
+                rules.extend(_iter_css_rules(body))
+            continue
+        if "{" in body or "}" in body:
+            raise ValueError(
+                "Corporate theme CSS nesting is unsupported for protected validation."
+            )
+        selectors = _split_css_value(prelude, ",")
+        if not selectors or any(not selector for selector in selectors):
+            raise ValueError("Corporate theme CSS contains an invalid selector list.")
+        declarations = _parse_css_declarations(body)
+        if not declarations:
+            raise ValueError("Corporate theme CSS contains an empty rule.")
+        for selector in selectors:
+            rules.append(_CssRule(selector, declarations))
+    return rules
+
+
+def _css_compounds(selector: str) -> list[str]:
+    compounds: list[str] = []
+    start = 0
+    quote = ""
+    escaped = False
+    parentheses = 0
+    brackets = 0
+    for index, char in enumerate(selector):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = ""
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            parentheses += 1
+        elif char == ")":
+            parentheses -= 1
+        elif char == "[":
+            brackets += 1
+        elif char == "]":
+            brackets -= 1
+        elif parentheses == 0 and brackets == 0 and (
+            char.isspace() or char in ">+~"
         ):
-            raise ValueError("Corporate fixed shell CSS must disable fixed-element animation.")
+            value = selector[start:index].strip()
+            if value:
+                compounds.append(value)
+            start = index + 1
+    value = selector[start:].strip()
+    if value:
+        compounds.append(value)
+    return compounds
+
+
+def _top_level_css_compound(compound: str) -> str:
+    output: list[str] = []
+    quote = ""
+    escaped = False
+    parentheses = 0
+    brackets = 0
+    for char in compound:
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = ""
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            parentheses += 1
+        elif char == ")":
+            parentheses -= 1
+        elif char == "[":
+            brackets += 1
+        elif char == "]":
+            brackets -= 1
+        elif parentheses == 0 and brackets == 0:
+            output.append(char)
+    return "".join(output)
+
+
+def _compound_may_match(compound: str, shape: _ElementShape) -> bool:
+    if not compound:
+        return True
+    if "\\" in compound or "|" in compound or "&" in compound:
+        return True
+    if re.search(
+        r"(?::before|:after|::before|::after|::marker|::placeholder|::selection)\s*$",
+        compound,
+        re.IGNORECASE,
+    ):
+        return False
+    functional = re.fullmatch(
+        r":(?:is|where)\((?P<body>.*)\)", compound, re.IGNORECASE | re.DOTALL
+    )
+    if functional:
+        return any(
+            _compound_may_match(option, shape)
+            for option in _split_css_value(functional.group("body"), ",")
+        )
+    top_level = _top_level_css_compound(compound)
+    required_ids = set(re.findall(r"#([A-Za-z_][\w-]*)", top_level))
+    if required_ids and required_ids != ({shape.element_id} if shape.element_id else set()):
+        return False
+    required_classes = set(re.findall(r"\.([A-Za-z_][\w-]*)", top_level))
+    if not required_classes.issubset(shape.classes):
+        return False
+    tag_match = re.match(r"^(?:\*|([A-Za-z][\w-]*))", top_level)
+    if tag_match and tag_match.group(1) and tag_match.group(1).lower() != shape.tag:
+        return False
+    return True
+
+
+def _selector_may_target(selector: str, element: _ProtectedElement) -> bool:
+    if "\\" in selector:
+        return True
+    compounds = _css_compounds(selector)
+    if not compounds:
+        return True
+    element_shape = _ElementShape(
+        element.tag, element.classes, element.element_id
+    )
+    if not _compound_may_match(compounds[-1], element_shape):
+        return False
+    for compound in compounds[:-1]:
+        if not any(
+            _compound_may_match(compound, ancestor)
+            for ancestor in element.ancestors
+        ):
+            return False
+    return True
+
+
+def _is_protected_css_property(name: str) -> bool:
+    if name.startswith("--"):
+        return False
+    if "\\" in name:
+        return True
+    normalized = re.sub(r"^-[a-z]+-", "", name.lower())
+    exact = {
+        "all",
+        "position",
+        "left",
+        "top",
+        "right",
+        "bottom",
+        "width",
+        "height",
+        "inline-size",
+        "block-size",
+        "translate",
+        "rotate",
+        "scale",
+        "display",
+        "visibility",
+        "opacity",
+        "zoom",
+        "z-index",
+        "pointer-events",
+        "object-fit",
+        "box-sizing",
+    }
+    prefixes = (
+        "animation",
+        "transition",
+        "transform",
+        "inset",
+        "overflow",
+        "margin",
+        "min-width",
+        "max-width",
+        "min-height",
+        "max-height",
+        "min-inline-size",
+        "max-inline-size",
+        "min-block-size",
+        "max-block-size",
+        "offset",
+    )
+    return normalized in exact or normalized.startswith(prefixes)
+
+
+def _declaration_map(
+    declarations: tuple[_CssDeclaration, ...], label: str
+) -> dict[str, tuple[str, bool]]:
+    values: dict[str, tuple[str, bool]] = {}
+    for declaration in declarations:
+        if declaration.name in values:
+            raise ValueError(f"{label} repeats the {declaration.name} declaration.")
+        values[declaration.name] = (declaration.value, declaration.important)
+    return values
+
+
+def _validate_fixed_css(css: str, theme_id: str) -> None:
+    scope = f'.deck[data-theme="{theme_id}"]'
+    expected_rules = {
+        f"{scope} .slide.pt-corporate-page": {
+            "position": ("absolute", False),
+            "overflow": ("hidden", False),
+            "padding": ("0", False),
+            "background": ("var(--pt-canvas)", False),
+        },
+        f"{scope} .{CORPORATE_FIXED_SHELL_CLASS}": {
+            "position": ("absolute", False),
+            "inset": ("0", False),
+            "z-index": ("1", False),
+            "overflow": ("hidden", False),
+            "pointer-events": ("none", False),
+            "animation": ("none", True),
+            "transition": ("none", True),
+            "transform": ("none", True),
+        },
+        f"{scope} .{CORPORATE_FIXED_REGION_CLASS}": {
+            "position": ("absolute", False),
+            "z-index": ("1", False),
+            "display": ("block", False),
+            "object-fit": ("fill", False),
+            "pointer-events": ("none", False),
+            "animation": ("none", True),
+            "transition": ("none", True),
+            "transform": ("none", True),
+        },
+        f"{scope} .{CORPORATE_EDITABLE_CLASS}": {
+            "position": ("absolute", False),
+            "z-index": ("2", False),
+            "display": ("grid", False),
+            "align-content": ("center", False),
+            "overflow": ("hidden", False),
+            "padding": ("18px", False),
+        },
+    }
+    html = _ElementShape("html", frozenset(), None)
+    body = _ElementShape("body", frozenset(), None)
+    deck = _ElementShape("main", frozenset({"deck"}), "deck")
+    generic_page = _ElementShape(
+        "section", frozenset({"slide", "pt-corporate-page"}), None
+    )
+    active_family_page = _ElementShape(
+        "section", frozenset({"slide", "active", "pt-corporate-page"}), None
+    )
+    active_legacy_cover = _ElementShape(
+        "section",
+        frozenset({"slide", "active", "pt-cover", "pt-corporate-page"}),
+        None,
+    )
+    page_ancestors = (deck, body, html)
+    page_shapes = (generic_page, active_family_page, active_legacy_cover)
+    shell = _ElementShape(
+        "div", frozenset({CORPORATE_FIXED_SHELL_CLASS}), None
+    )
+    protected = (
+        _ProtectedElement(
+            "corporate page",
+            "section",
+            frozenset({"slide", "pt-corporate-page"}),
+            None,
+            page_ancestors,
+        ),
+        _ProtectedElement(
+            "active corporate page",
+            "section",
+            frozenset({"slide", "active", "pt-corporate-page"}),
+            None,
+            page_ancestors,
+        ),
+        _ProtectedElement(
+            "legacy corporate cover",
+            "section",
+            frozenset({"slide", "active", "pt-cover", "pt-corporate-page"}),
+            None,
+            page_ancestors,
+        ),
+        _ProtectedElement(
+            "fixed shell",
+            "div",
+            frozenset({CORPORATE_FIXED_SHELL_CLASS}),
+            None,
+            page_shapes + page_ancestors,
+        ),
+        _ProtectedElement(
+            "fixed region",
+            "img",
+            frozenset({CORPORATE_FIXED_REGION_CLASS}),
+            None,
+            (shell,) + page_shapes + page_ancestors,
+        ),
+        _ProtectedElement(
+            "editable region",
+            "div",
+            frozenset({CORPORATE_EDITABLE_CLASS}),
+            None,
+            page_shapes + page_ancestors,
+        ),
+    )
+    found = {selector: 0 for selector in expected_rules}
+    for rule in _iter_css_rules(css):
+        if rule.selector in expected_rules:
+            found[rule.selector] += 1
+            actual = _declaration_map(
+                rule.declarations, f"Corporate canonical CSS rule {rule.selector}"
+            )
+            if actual != expected_rules[rule.selector]:
+                raise ValueError(
+                    "Corporate fixed shell CSS must disable fixed-element animation "
+                    "and preserve protected geometry."
+                )
+            continue
+        risky = [
+            declaration
+            for declaration in rule.declarations
+            if _is_protected_css_property(declaration.name)
+        ]
+        if not risky:
+            continue
+        for element in protected:
+            if _selector_may_target(rule.selector, element):
+                properties = ", ".join(
+                    sorted({declaration.name for declaration in risky})
+                )
+                raise ValueError(
+                    f"Corporate protected CSS rule {rule.selector!r} may override "
+                    f"{element.label} properties: {properties}."
+                )
+    if any(count != 1 for count in found.values()):
+        raise ValueError(
+            "Corporate fixed shell CSS must define every canonical protected rule exactly once."
+        )
+
+
+def _validate_exact_attributes(
+    attrs: dict[str, str], expected: dict[str, str], label: str
+) -> None:
+    if attrs != expected:
+        raise ValueError(f"{label} attributes or classes drifted from the allowlist.")
+
+
+def _validate_section_attributes(
+    attrs: dict[str, str], page_index: int, *, family: bool
+) -> None:
+    expected_class = "slide pt-corporate-page"
+    if page_index == 0:
+        expected_class = (
+            "slide active pt-corporate-page"
+            if family
+            else "slide active pt-cover pt-corporate-page"
+        )
+    expected_keys = {"class", "data-title", "data-layout"}
+    if family:
+        expected_keys |= {
+            "data-shell-role",
+            "data-shell-status",
+            "data-source-page-id",
+        }
+    if set(attrs) != expected_keys or attrs.get("class") != expected_class:
+        raise ValueError(
+            f"Corporate page {page_index + 1} attributes or classes drifted from the allowlist."
+        )
+
+
+def _validate_fixed_shell_attributes(attrs: dict[str, str], label: str) -> None:
+    _validate_exact_attributes(
+        attrs,
+        {
+            "class": CORPORATE_FIXED_SHELL_CLASS,
+            "aria-hidden": "true",
+            "data-fixed-motion": "none",
+        },
+        label,
+    )
+
+
+def _validate_editable_attributes(attrs: dict[str, str], label: str) -> None:
+    expected_keys = {
+        "class",
+        "data-editable-region",
+        "data-content-role",
+        "style",
+    }
+    if set(attrs) != expected_keys or attrs.get("class") != CORPORATE_EDITABLE_CLASS:
+        raise ValueError(f"{label} attributes or classes drifted from the allowlist.")
 
 
 def _validate_actual_fixed_element(
     attrs: dict[str, str], expected: dict[str, Any], label: str
 ) -> None:
+    expected_keys = {
+        "class",
+        "data-locked-region",
+        "data-fixed-element-type",
+        "data-crop-sha256",
+        "src",
+        "alt",
+        "style",
+    }
+    if "asset_id" in expected:
+        expected_keys |= {"data-asset-id", "data-source-page-id"}
+    if (
+        set(attrs) != expected_keys
+        or attrs.get("class") != CORPORATE_FIXED_REGION_CLASS
+        or attrs.get("alt") != ""
+    ):
+        raise ValueError(f"{label} attributes or classes drifted from the allowlist.")
     expected_attrs = {
         "data-locked-region": expected.get("id"),
         "data-fixed-element-type": expected.get("type"),
@@ -259,8 +854,13 @@ def _validate_legacy_corporate_shell(
     if not isinstance(editable_id, str) or not isinstance(allowed, list):
         raise ValueError("Corporate editable region contract is invalid.")
     for page_index, section in enumerate(sections):
-        if len(section["fixed_shells"]) != 1 or section["fixed_shells"][0].get("data-fixed-motion") != "none":
+        _validate_section_attributes(section["attrs"], page_index, family=False)
+        if len(section["fixed_shells"]) != 1:
             raise ValueError(f"Corporate page {page_index + 1} must contain one static fixed shell.")
+        _validate_fixed_shell_attributes(
+            section["fixed_shells"][0],
+            f"Corporate page {page_index + 1} fixed shell",
+        )
         actual_fixed = section["fixed"]
         if len(actual_fixed) != len(fixed):
             raise ValueError(f"Corporate page {page_index + 1} fixed crop count drifted.")
@@ -278,6 +878,9 @@ def _validate_legacy_corporate_shell(
         if len(section["editable"]) != 1:
             raise ValueError(f"Corporate page {page_index + 1} must contain one editable region.")
         actual_editable = section["editable"][0]
+        _validate_editable_attributes(
+            actual_editable, f"Corporate page {page_index + 1} editable region"
+        )
         if (
             actual_editable.get("data-editable-region") != editable_id
             or actual_editable.get("data-content-role") not in allowed
@@ -413,7 +1016,8 @@ def _validate_corporate_family(
         raise ValueError("Corporate extension page declarations do not match shell variants.")
 
     actual_roles: list[str] = []
-    for section in sections:
+    for page_index, section in enumerate(sections):
+        _validate_section_attributes(section["attrs"], page_index, family=True)
         attrs = section["attrs"]
         role = attrs.get("data-shell-role")
         actual_roles.append(str(role))
@@ -425,8 +1029,11 @@ def _validate_corporate_family(
             or attrs.get("data-source-page-id") != (shell["reference_page_id"] or "")
         ):
             raise ValueError(f"Corporate {role} page role or source mapping drifted.")
-        if len(section["fixed_shells"]) != 1 or section["fixed_shells"][0].get("data-fixed-motion") != "none":
+        if len(section["fixed_shells"]) != 1:
             raise ValueError(f"Corporate {role} page must contain one static fixed shell.")
+        _validate_fixed_shell_attributes(
+            section["fixed_shells"][0], f"Corporate {role} fixed shell"
+        )
         fixed = shell["fixed_regions"]
         actual_fixed = section["fixed"]
         if len(actual_fixed) != len(fixed):
@@ -441,6 +1048,9 @@ def _validate_corporate_family(
         if len(section["editable"]) != 1:
             raise ValueError(f"Corporate {role} page must contain one editable region.")
         actual_editable = section["editable"][0]
+        _validate_editable_attributes(
+            actual_editable, f"Corporate {role} editable region"
+        )
         editable = shell["editable_region"]
         if (
             actual_editable.get("data-editable-region") != editable.get("id")
@@ -559,7 +1169,10 @@ def _validate_project_structure(
             if not isinstance(shell, dict) or provenance_contract != shell:
                 raise ValueError("Corporate shell manifest and provenance must match exactly.")
             _validate_legacy_corporate_shell(shell, sections)
-        _validate_fixed_css(css)
+        theme_id = manifest.get("id")
+        if not isinstance(theme_id, str):
+            raise ValueError("Corporate project theme id is invalid.")
+        _validate_fixed_css(css, theme_id)
 
 
 def load_built_in_theme(theme_id: str) -> ThemeBundle:
