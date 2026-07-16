@@ -1,0 +1,250 @@
+{
+  "schema_version": "1.2",
+  "reference_mode": "corporate_fidelity",
+  "source_image": {
+    "sha256": "ac0172ff956bed5fcb262adcd97139e9b2d8cd7127ceba3e21a76b6cca35f382",
+    "width": 1600,
+    "height": 900
+  },
+  "board": {
+    "title": "Northstar 企业模板｜VI 设计标准图",
+    "subtitle": "截图中可见效果保真 · 固定外框与安全内容区确认稿",
+    "reference_label": "合成企业模板测试截图"
+  },
+  "palette": [
+    {
+      "name": "企业深蓝",
+      "value": "#102A43",
+      "role": "Logo 底、页脚与主要文字",
+      "status": "observed",
+      "basis": "Logo 区、页脚和正文标题重复使用"
+    },
+    {
+      "name": "品牌亮蓝",
+      "value": "#3E8EDE",
+      "role": "页眉顶线与左侧品牌条",
+      "status": "observed",
+      "basis": "页眉和固定品牌条直接可见"
+    },
+    {
+      "name": "扩展强调色",
+      "value": "unknown",
+      "role": "截图未提供更多企业色",
+      "status": "unknown",
+      "basis": "单张截图不足以建立完整企业色板"
+    }
+  ],
+  "typography": [
+    {
+      "level": "H1",
+      "sample": "企业战略执行仪表盘",
+      "spec": "约 52px / 粗体无衬线 / 深蓝",
+      "status": "observed",
+      "basis": "截图正文主标题直接可见"
+    },
+    {
+      "level": "BODY",
+      "sample": "只设计可编辑安全内容区",
+      "spec": "约 18–22px / 常规无衬线 / 中性蓝灰",
+      "status": "extension",
+      "basis": "把截图正文层级延展为报告安全区排版"
+    }
+  ],
+  "layout": [
+    {
+      "label": "固定外框",
+      "value": "Logo、页眉、左侧品牌条、页脚",
+      "status": "observed",
+      "basis": "四类元素均可从截图精确定位"
+    },
+    {
+      "label": "安全内容区",
+      "value": "x 8% / y 16% / w 84% / h 70%",
+      "status": "observed",
+      "basis": "与全部固定元素保持不相交边界"
+    },
+    {
+      "label": "报告内网格",
+      "value": "安全区内三列或单焦点布局",
+      "status": "extension",
+      "basis": "企业外框锁定后，正文网格可按内容适配"
+    }
+  ],
+  "executable_layout": {
+    "page_axis": {"value": "row", "status": "extension", "basis": "安全区内流程页适配为横向四步"},
+    "alignment": {"value": "start", "status": "observed", "basis": "截图标题、卡片和图表统一左对齐"},
+    "cover_structure": {"value": "split", "status": "extension", "basis": "在固定外框内延展为文字与主视觉分栏"},
+    "cover_split": {"value": "7:5", "status": "extension", "basis": "为企业封面延展稳定的结论与图形比例"},
+    "content_structure": {"value": "card-grid", "status": "extension", "basis": "把正文示例的模块关系延展为卡片网格"},
+    "content_columns": {"value": "3", "status": "extension", "basis": "安全区宽度支持三列企业内容卡"},
+    "image_placement": {"value": "right", "status": "extension", "basis": "封面主视觉放在安全区右侧，不影响固定外框"},
+    "image_aspect_ratio": {"value": "4:3", "status": "extension", "basis": "在安全区内采用可逆的报告图片比例"},
+    "image_fit": {"value": "contain", "status": "extension", "basis": "避免报告图片裁切侵入固定外框"},
+    "image_treatment": {"value": "unknown", "status": "unknown", "basis": "截图无法建立企业摄影处理规范，使用中性回退"},
+    "data_structure": {"value": "metrics-grid", "status": "extension", "basis": "数据页仅延展信息组织，不复用示例正文"},
+    "data_columns": {"value": "3", "status": "extension", "basis": "数据页在安全区内使用三列指标"},
+    "module_organization": {"value": "soft-stack", "status": "observed", "basis": "截图正文卡片使用轻边框和小圆角"},
+    "density": {"value": "medium", "status": "observed", "basis": "页眉、标题、卡片之间保持中等信息密度"},
+    "visual_focus": {"value": "headline-and-image", "status": "extension", "basis": "企业封面在安全区内延展双焦点构图"}
+  },
+  "components": [
+    {
+      "name": "企业 Logo",
+      "description": "仅使用源截图裁切，不重绘、不替换字标",
+      "status": "observed",
+      "basis": "左上 Logo 在截图中清晰可见"
+    },
+    {
+      "name": "页眉条",
+      "description": "固定顶线、栏目名与年份位置",
+      "status": "observed",
+      "basis": "右上页眉区可完整裁切"
+    },
+    {
+      "name": "安全区卡片",
+      "description": "轻边框、小圆角、正文可替换",
+      "status": "extension",
+      "basis": "只延展正文组件，不触碰企业固定层"
+    }
+  ],
+  "imagery": [
+    {
+      "label": "固定元素裁切",
+      "description": "按归一化 bbox 从源截图生成 PNG 裁切",
+      "status": "observed",
+      "basis": "Logo、页眉、品牌条和页脚均有明确边界"
+    },
+    {
+      "label": "企业摄影",
+      "description": "截图未提供可复用摄影语言",
+      "status": "unknown",
+      "basis": "本次输入只有界面与示例图表"
+    }
+  ],
+  "evidence_language": [
+    {
+      "label": "企业指标卡",
+      "description": "安全区内使用直接数值与短标签",
+      "sample": "metric",
+      "status": "extension",
+      "basis": "仅延展可编辑信息语言，不复制示例数字"
+    },
+    {
+      "label": "正式图表规范",
+      "description": "截图不足以建立完整图表系统",
+      "sample": "none",
+      "status": "unknown",
+      "basis": "单张示例正文不能代表企业正式图表规范"
+    }
+  ],
+  "mini_pages": [
+    {
+      "kind": "cover",
+      "title": "企业框架封面",
+      "description": "固定外框内延展标题与主视觉",
+      "status": "extension",
+      "basis": "截图未展示封面，只能作为可确认延展"
+    },
+    {
+      "kind": "content",
+      "title": "企业框架章节页",
+      "description": "固定外框内延展章节结论与卡片",
+      "status": "extension",
+      "basis": "截图未展示章节页，只能作为可确认延展"
+    },
+    {
+      "kind": "data",
+      "title": "企业框架数据页",
+      "description": "固定外框内延展指标与来源区域",
+      "status": "extension",
+      "basis": "截图未证明正式数据页，只能作为可确认延展"
+    }
+  ],
+  "guardrails": [
+    {
+      "mode": "preserve",
+      "title": "固定企业外框",
+      "description": "确认 VI 后不得改动位置、尺寸或像素内容",
+      "status": "observed",
+      "basis": "企业保真模式锁定全部已识别固定元素"
+    },
+    {
+      "mode": "avoid",
+      "title": "禁用整图背景",
+      "description": "不得把包含示例正文的整张截图设为页面背景",
+      "status": "extension",
+      "basis": "避免遗留截图中的示例文字、图表和数字"
+    },
+    {
+      "mode": "avoid",
+      "title": "固定层保持稳定",
+      "description": "固定外框不移动，只允许安全区内容呈现",
+      "status": "extension",
+      "basis": "企业外框必须在全部页面保持稳定"
+    }
+  ],
+  "locked_regions": [
+    {
+      "id": "company-logo",
+      "type": "logo",
+      "bbox": [0.04, 0.04, 0.12, 0.06],
+      "status": "observed",
+      "basis": "左上完整 Logo 区域",
+      "extraction": "crop"
+    },
+    {
+      "id": "page-header",
+      "type": "header",
+      "bbox": [0.18, 0.04, 0.78, 0.06],
+      "status": "observed",
+      "basis": "右上页眉顶线、栏目名与年份",
+      "extraction": "crop"
+    },
+    {
+      "id": "left-brand-bar",
+      "type": "brand_bar",
+      "bbox": [0.04, 0.14, 0.015, 0.72],
+      "status": "observed",
+      "basis": "左侧纵向品牌色条",
+      "extraction": "crop"
+    },
+    {
+      "id": "page-footer",
+      "type": "footer",
+      "bbox": [0.04, 0.91, 0.92, 0.04],
+      "status": "observed",
+      "basis": "底部保密标识、页码和深蓝底条",
+      "extraction": "crop"
+    }
+  ],
+  "editable_regions": [
+    {
+      "id": "safe-content",
+      "bbox": [0.08, 0.16, 0.84, 0.7],
+      "allowed_content": ["cover", "content", "process", "data", "closing"],
+      "basis": "与全部固定元素无重叠，承载报告排版与运行时呈现"
+    }
+  ],
+  "extension_pages": [
+    {"role": "cover", "status": "extension", "basis": "单张截图未观察封面"},
+    {"role": "section", "status": "extension", "basis": "单张截图未观察章节页"},
+    {"role": "data", "status": "extension", "basis": "单张截图未证明正式数据页"}
+  ],
+  "limitations": [
+    {
+      "item": "原始 PPT 母版",
+      "status": "unknown",
+      "basis": "截图不能还原母版结构或占位符"
+    },
+    {
+      "item": "矢量 Logo 与字体源文件",
+      "status": "unknown",
+      "basis": "只承诺截图可见像素，不恢复不可见源资产"
+    },
+    {
+      "item": "静态输入边界",
+      "status": "unknown",
+      "basis": "单张静态截图不检查或推断动效"
+    }
+  ]
+}

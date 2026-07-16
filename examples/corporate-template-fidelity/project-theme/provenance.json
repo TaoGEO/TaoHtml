@@ -1,0 +1,1325 @@
+{
+  "boundary_policy": {
+    "compiled": "true only when concrete usage targets are recorded",
+    "eligible": "observed or extension may compile, but eligibility alone never sets compiled true",
+    "extension": "eligible only as a labeled report adaptation when used",
+    "fallback": "neutral reversible compiler default, never reference evidence",
+    "observed": "eligible for direct deterministic compilation when used",
+    "unknown": "retained with compiled false; a needed default is a separate fallback record"
+  },
+  "boundary_records": [
+    {
+      "basis": "三张截图重复出现",
+      "compiled": true,
+      "eligible": true,
+      "path": "palette[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.css:--pt-ink",
+        "theme.json:tokens.ink"
+      ]
+    },
+    {
+      "basis": "封面与章节页的固定装饰可见",
+      "compiled": true,
+      "eligible": true,
+      "path": "palette[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.css:--pt-canvas",
+        "theme.css:--pt-paper",
+        "theme.json:tokens.canvas",
+        "theme.json:tokens.paper"
+      ]
+    },
+    {
+      "basis": "输入未提供更多稳定色样",
+      "compiled": false,
+      "eligible": false,
+      "path": "palette[2]",
+      "rule": "unknown is retained as an uncompiled boundary",
+      "status": "unknown",
+      "usage": []
+    },
+    {
+      "basis": "封面与章节页标题可直接观察",
+      "compiled": false,
+      "eligible": true,
+      "path": "typography[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "用于 content 与 data 安全区的可确认延展",
+      "compiled": false,
+      "eligible": true,
+      "path": "typography[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "三张代表图分别绑定三个角色",
+      "compiled": false,
+      "eligible": true,
+      "path": "layout[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "根据每张来源图的空白正文区识别",
+      "compiled": false,
+      "eligible": true,
+      "path": "layout[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "输入未观察这两种页型",
+      "compiled": false,
+      "eligible": true,
+      "path": "layout[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "封面与章节页可直接裁切",
+      "compiled": false,
+      "eligible": true,
+      "path": "components[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "页眉页脚边界清晰",
+      "compiled": false,
+      "eligible": true,
+      "path": "components[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "普通内容与数据页未观察",
+      "compiled": false,
+      "eligible": true,
+      "path": "components[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "所有共享资产均绑定来源页与 source_bbox",
+      "compiled": false,
+      "eligible": true,
+      "path": "imagery[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "多图仍只表达静态模板语言",
+      "compiled": false,
+      "eligible": false,
+      "path": "imagery[1]",
+      "rule": "unknown is retained as an uncompiled boundary",
+      "status": "unknown",
+      "usage": []
+    },
+    {
+      "basis": "不伪称来自三张 observed 截图",
+      "compiled": true,
+      "eligible": true,
+      "path": "evidence_language[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": [
+        "templates.html:data evidence markup",
+        "theme.css:evidence visualization rules",
+        "theme.json:identity.chart_evidence"
+      ]
+    },
+    {
+      "basis": "三张图均未展示数据页",
+      "compiled": false,
+      "eligible": false,
+      "path": "evidence_language[1]",
+      "rule": "unknown is retained as an uncompiled boundary",
+      "status": "unknown",
+      "usage": []
+    },
+    {
+      "basis": "封面来源图可直接观察",
+      "compiled": false,
+      "eligible": true,
+      "path": "mini_pages[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "三张图未展示普通内容页",
+      "compiled": false,
+      "eligible": true,
+      "path": "mini_pages[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "三张图未展示数据页",
+      "compiled": false,
+      "eligible": true,
+      "path": "mini_pages[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "企业保真的固定元素边界",
+      "compiled": true,
+      "eligible": true,
+      "path": "guardrails[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.json:preserve guardrail"
+      ]
+    },
+    {
+      "basis": "防止遗留截图正文",
+      "compiled": true,
+      "eligible": true,
+      "path": "guardrails[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": [
+        "theme.json:forbidden guardrail"
+      ]
+    },
+    {
+      "basis": "本合同不检查时序或连续帧",
+      "compiled": true,
+      "eligible": true,
+      "path": "guardrails[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.json:forbidden guardrail"
+      ]
+    },
+    {
+      "basis": "安全区中流程内容可横向组织",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.page_axis",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:process DOM axis",
+        "theme.css:.pt-process",
+        "theme.json:executable_layout.page_axis",
+        "theme.json:identity.composition"
+      ],
+      "value": "row"
+    },
+    {
+      "basis": "三张截图主要文字坐标均左对齐",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.alignment",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "observed",
+      "usage": [
+        "templates.html:heading wrappers",
+        "theme.css:--pt-text-align",
+        "theme.json:executable_layout.alignment",
+        "theme.json:identity.composition"
+      ],
+      "value": "start"
+    },
+    {
+      "basis": "封面固定左侧视觉与右侧内容分栏",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.cover_structure",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "observed",
+      "usage": [
+        "templates.html:cover DOM wrapper",
+        "theme.css:.pt-cover-layout",
+        "theme.json:executable_layout.cover_structure",
+        "theme.json:layout_variants[0]"
+      ],
+      "value": "split"
+    },
+    {
+      "basis": "封面观察到近似五比七的分割",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.cover_split",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "observed",
+      "usage": [
+        "templates.html:.pt-cover-layout data-cover-split",
+        "theme.css:.pt-cover-layout grid-template-columns",
+        "theme.json:executable_layout.cover_split",
+        "theme.json:layout_variants[0]"
+      ],
+      "value": "5:7"
+    },
+    {
+      "basis": "普通内容页未观察，采用可逆卡片网格",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.content_structure",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:content and closing DOM branches",
+        "theme.json:executable_layout.content_structure",
+        "theme.json:layout_variants[1,4]"
+      ],
+      "value": "card-grid"
+    },
+    {
+      "basis": "安全区支持三列报告内容",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.content_columns",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "theme.css:content/closing grid-template-columns",
+        "theme.json:executable_layout.content_columns",
+        "theme.json:layout_variants[1]"
+      ],
+      "value": "3"
+    },
+    {
+      "basis": "图像只进入安全区右侧",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.image_placement",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:cover DOM order/background layer",
+        "theme.css:.pt-cover-layout placement geometry",
+        "theme.json:executable_layout.image_placement",
+        "theme.json:layout_variants[0]"
+      ],
+      "value": "right"
+    },
+    {
+      "basis": "可编辑图像的中性报告比例",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.image_aspect_ratio",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-art data-image-aspect-ratio",
+        "theme.css:.pt-cover-art aspect-ratio",
+        "theme.json:components.image",
+        "theme.json:executable_layout.image_aspect_ratio"
+      ],
+      "value": "4:3"
+    },
+    {
+      "basis": "不让正文图像侵入固定区",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.image_fit",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-art data-image-fit",
+        "theme.css:.pt-cover-art width/background fill",
+        "theme.json:components.image",
+        "theme.json:executable_layout.image_fit"
+      ],
+      "value": "contain"
+    },
+    {
+      "basis": "静态模板图不足以建立摄影处理规则",
+      "compiled": false,
+      "eligible": false,
+      "path": "executable_layout.image_treatment",
+      "rule": "unknown is replaced only by a labeled neutral fallback",
+      "status": "unknown",
+      "usage": [],
+      "value": "unknown"
+    },
+    {
+      "basis": "数据页为明确 proposed extension",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.data_structure",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:data DOM branch",
+        "theme.css:data branch geometry",
+        "theme.json:executable_layout.data_structure",
+        "theme.json:layout_variants[3]"
+      ],
+      "value": "metrics-grid"
+    },
+    {
+      "basis": "数据安全区中使用三列指标",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.data_columns",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "theme.css:structure-specific data grid-template-columns",
+        "theme.json:executable_layout.data_columns",
+        "theme.json:layout_variants[3]"
+      ],
+      "value": "3"
+    },
+    {
+      "basis": "为未观察正文提供可逆的轻量组织",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.module_organization",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "theme.css:--pt-border/--pt-radius/--pt-shadow",
+        "theme.json:executable_layout.module_organization",
+        "theme.json:identity.module_language"
+      ],
+      "value": "soft-stack"
+    },
+    {
+      "basis": "三张代表页空白与标题密度居中",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.density",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "observed",
+      "usage": [
+        "templates.html:data-rhythm-check contracts",
+        "theme.css:--pt-rhythm-card-title-body",
+        "theme.css:--pt-rhythm-evidence-source",
+        "theme.css:--pt-rhythm-heading-content",
+        "theme.css:--pt-rhythm-label-title",
+        "theme.css:--pt-rhythm-title-lede",
+        "theme.css:semantic rhythm custom properties",
+        "theme.json:executable_layout.density",
+        "theme.json:layout_variants[2,4]",
+        "theme.json:tokens.rhythm_card_title_body",
+        "theme.json:tokens.rhythm_evidence_source",
+        "theme.json:tokens.rhythm_heading_content",
+        "theme.json:tokens.rhythm_label_title",
+        "theme.json:tokens.rhythm_title_lede"
+      ],
+      "value": "medium"
+    },
+    {
+      "basis": "报告封面内容使用标题与图像双焦点",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.visual_focus",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "theme.css:.pt-title/.pt-cover-art width and height",
+        "theme.json:executable_layout.visual_focus",
+        "theme.json:identity.composition"
+      ],
+      "value": "headline-and-image"
+    }
+  ],
+  "confirmed_inputs": {
+    "confirmation_phrase": "确认 VI",
+    "confirmation_status": "confirmed",
+    "customer_corrections": [
+      "确认 cover、toc、section 为 observed；content 与 data 为 proposed extension。"
+    ],
+    "reference_images": [
+      "corporate-family-cover.png",
+      "corporate-family-toc.png",
+      "corporate-family-section.png"
+    ],
+    "reference_images_sha256": [
+      "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
+      "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+      "1d52579d707d03d2d1c1de707625ede956f29b2ec115c58288159114591c4d53"
+    ],
+    "reference_mode": "corporate_fidelity",
+    "target_mode": "presentation",
+    "vi_contract": "corporate-family-vi-contract.json",
+    "vi_contract_sha256": "e4d6b9ae2ab9cae973c0829fe6a516a3975d84029f8e532ac26687223fb037a9"
+  },
+  "corporate_fidelity": {
+    "extension_pages": [
+      {
+        "basis": "三张截图未展示普通内容页",
+        "role": "content",
+        "status": "extension"
+      },
+      {
+        "basis": "三张截图未展示数据页",
+        "role": "data",
+        "status": "extension"
+      }
+    ],
+    "limitations": [
+      {
+        "basis": "不恢复 PPT 母版、矢量资产、字体源文件，也不从多图推断动效",
+        "item": "静态、像素级保真边界",
+        "status": "unknown"
+      }
+    ],
+    "reference_pages": [
+      {
+        "basis": "供给截图的构图与标题位置符合封面角色",
+        "canvas_bbox": [
+          0.0037220843672456576,
+          0.006578947368421052,
+          0.9925558312655087,
+          0.9868421052631579
+        ],
+        "canvas_pixel_bbox": [
+          6,
+          6,
+          1606,
+          906
+        ],
+        "canvas_size": [
+          1600,
+          900
+        ],
+        "id": "source-cover",
+        "role": "cover",
+        "source_image": {
+          "height": 912,
+          "sha256": "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
+          "width": 1612
+        },
+        "status": "observed"
+      },
+      {
+        "basis": "供给截图的编号索引构图符合目录角色",
+        "canvas_bbox": [
+          0.0037220843672456576,
+          0.006578947368421052,
+          0.9925558312655087,
+          0.9868421052631579
+        ],
+        "canvas_pixel_bbox": [
+          6,
+          6,
+          1606,
+          906
+        ],
+        "canvas_size": [
+          1600,
+          900
+        ],
+        "id": "source-toc",
+        "role": "toc",
+        "source_image": {
+          "height": 912,
+          "sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+          "width": 1612
+        },
+        "status": "observed"
+      },
+      {
+        "basis": "供给截图的大章节号与分隔构图符合章节页角色",
+        "canvas_bbox": [
+          0.0037220843672456576,
+          0.006578947368421052,
+          0.9925558312655087,
+          0.9868421052631579
+        ],
+        "canvas_pixel_bbox": [
+          6,
+          6,
+          1606,
+          906
+        ],
+        "canvas_size": [
+          1600,
+          900
+        ],
+        "id": "source-section",
+        "role": "section",
+        "source_image": {
+          "height": 912,
+          "sha256": "1d52579d707d03d2d1c1de707625ede956f29b2ec115c58288159114591c4d53",
+          "width": 1612
+        },
+        "status": "observed"
+      }
+    ],
+    "shared_assets": [
+      {
+        "basis": "封面左侧品牌视觉组应整体保留",
+        "crop_sha256": "db834b39cf71fcfa5c8be29f80e02777bc2face29f314a6171b4d3e183a246f8",
+        "crop_size": [
+          576,
+          900
+        ],
+        "extraction": "crop",
+        "id": "cover-left-composition",
+        "source_bbox": [
+          0.0,
+          0.0,
+          0.36,
+          1.0
+        ],
+        "source_image_sha256": "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
+        "source_page_id": "source-cover",
+        "source_pixel_bbox": [
+          6,
+          6,
+          582,
+          906
+        ],
+        "status": "observed",
+        "type": "composition"
+      },
+      {
+        "basis": "封面右侧顶部固定品牌线",
+        "crop_sha256": "c4f016bd8f673f63229e35c5743a052bf73dec25bf475ff1e79357dca961a745",
+        "crop_size": [
+          1024,
+          27
+        ],
+        "extraction": "crop",
+        "id": "cover-top-rule",
+        "source_bbox": [
+          0.36,
+          0.0,
+          0.64,
+          0.03
+        ],
+        "source_image_sha256": "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
+        "source_page_id": "source-cover",
+        "source_pixel_bbox": [
+          582,
+          6,
+          1606,
+          33
+        ],
+        "status": "observed",
+        "type": "brand_bar"
+      },
+      {
+        "basis": "目录页页眉完整可裁切",
+        "crop_sha256": "2297df7eb769cd36bdebe23b08bde3303902d628ae491a4f0fd00f2bbfe7d3a4",
+        "crop_size": [
+          1600,
+          108
+        ],
+        "extraction": "crop",
+        "id": "shared-header",
+        "source_bbox": [
+          0.0,
+          0.0,
+          1.0,
+          0.12
+        ],
+        "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+        "source_page_id": "source-toc",
+        "source_pixel_bbox": [
+          6,
+          6,
+          1606,
+          114
+        ],
+        "status": "observed",
+        "type": "header"
+      },
+      {
+        "basis": "目录页页脚完整可裁切",
+        "crop_sha256": "bf270a489a5ad2adfd1553376336511f4096901caf85dde51b8345eb9c64a387",
+        "crop_size": [
+          1600,
+          63
+        ],
+        "extraction": "crop",
+        "id": "shared-footer",
+        "source_bbox": [
+          0.0,
+          0.93,
+          1.0,
+          0.07
+        ],
+        "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+        "source_page_id": "source-toc",
+        "source_pixel_bbox": [
+          6,
+          843,
+          1606,
+          906
+        ],
+        "status": "observed",
+        "type": "footer"
+      },
+      {
+        "basis": "章节页左侧固定视觉组",
+        "crop_sha256": "6f367ebce21767d132889e1e7a949d4cd68dd14d65e93c49bcc8819014f99829",
+        "crop_size": [
+          608,
+          837
+        ],
+        "extraction": "crop",
+        "id": "section-left-composition",
+        "source_bbox": [
+          0.0,
+          0.0,
+          0.38,
+          0.93
+        ],
+        "source_image_sha256": "1d52579d707d03d2d1c1de707625ede956f29b2ec115c58288159114591c4d53",
+        "source_page_id": "source-section",
+        "source_pixel_bbox": [
+          6,
+          6,
+          614,
+          843
+        ],
+        "status": "observed",
+        "type": "composition"
+      },
+      {
+        "basis": "章节页右上页眉",
+        "crop_sha256": "f2d59a993c15780b47c57c2675fbeb267951a86e4f2f2d1b6f1a0fadfac51631",
+        "crop_size": [
+          992,
+          108
+        ],
+        "extraction": "crop",
+        "id": "section-header",
+        "source_bbox": [
+          0.38,
+          0.0,
+          0.62,
+          0.12
+        ],
+        "source_image_sha256": "1d52579d707d03d2d1c1de707625ede956f29b2ec115c58288159114591c4d53",
+        "source_page_id": "source-section",
+        "source_pixel_bbox": [
+          614,
+          6,
+          1606,
+          114
+        ],
+        "status": "observed",
+        "type": "header"
+      }
+    ],
+    "shared_brand_grammar": {
+      "asset_strategy": "source_crops_only",
+      "basis": "只从裁后静态画布复用固定像素，报告内容只进入可编辑区",
+      "canvas_aspect_ratio": "16:9",
+      "content_motion_scope": "editable_regions_only",
+      "fixed_motion": "none",
+      "full_screenshot_background": false,
+      "logo_redraw": false
+    },
+    "shell_variants": [
+      {
+        "basis": "封面 shell 直接观察",
+        "editable_region": {
+          "allowed_content": [
+            "cover"
+          ],
+          "basis": "避开左侧组合裁片与顶部品牌线",
+          "bbox": [
+            0.4,
+            0.12,
+            0.54,
+            0.74
+          ],
+          "id": "cover-safe"
+        },
+        "fixed_regions": [
+          {
+            "asset_id": "cover-left-composition",
+            "basis": "与封面来源画布一致",
+            "bbox": [
+              0.0,
+              0.0,
+              0.36,
+              1.0
+            ],
+            "crop_sha256": "db834b39cf71fcfa5c8be29f80e02777bc2face29f314a6171b4d3e183a246f8",
+            "crop_size": [
+              576,
+              900
+            ],
+            "id": "cover-left",
+            "source_bbox": [
+              0.0,
+              0.0,
+              0.36,
+              1.0
+            ],
+            "source_image_sha256": "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
+            "source_page_id": "source-cover",
+            "source_pixel_bbox": [
+              6,
+              6,
+              582,
+              906
+            ],
+            "status": "observed",
+            "type": "composition"
+          },
+          {
+            "asset_id": "cover-top-rule",
+            "basis": "与封面来源画布一致",
+            "bbox": [
+              0.36,
+              0.0,
+              0.64,
+              0.03
+            ],
+            "crop_sha256": "c4f016bd8f673f63229e35c5743a052bf73dec25bf475ff1e79357dca961a745",
+            "crop_size": [
+              1024,
+              27
+            ],
+            "id": "cover-rule",
+            "source_bbox": [
+              0.36,
+              0.0,
+              0.64,
+              0.03
+            ],
+            "source_image_sha256": "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
+            "source_page_id": "source-cover",
+            "source_pixel_bbox": [
+              582,
+              6,
+              1606,
+              33
+            ],
+            "status": "observed",
+            "type": "brand_bar"
+          }
+        ],
+        "reference_page_id": "source-cover",
+        "role": "cover",
+        "status": "observed"
+      },
+      {
+        "basis": "目录 shell 直接观察",
+        "editable_region": {
+          "allowed_content": [
+            "toc"
+          ],
+          "basis": "位于页眉页脚之间",
+          "bbox": [
+            0.08,
+            0.18,
+            0.84,
+            0.68
+          ],
+          "id": "toc-safe"
+        },
+        "fixed_regions": [
+          {
+            "asset_id": "shared-header",
+            "basis": "与目录来源画布一致",
+            "bbox": [
+              0.0,
+              0.0,
+              1.0,
+              0.12
+            ],
+            "crop_sha256": "2297df7eb769cd36bdebe23b08bde3303902d628ae491a4f0fd00f2bbfe7d3a4",
+            "crop_size": [
+              1600,
+              108
+            ],
+            "id": "toc-header",
+            "source_bbox": [
+              0.0,
+              0.0,
+              1.0,
+              0.12
+            ],
+            "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+            "source_page_id": "source-toc",
+            "source_pixel_bbox": [
+              6,
+              6,
+              1606,
+              114
+            ],
+            "status": "observed",
+            "type": "header"
+          },
+          {
+            "asset_id": "shared-footer",
+            "basis": "与目录来源画布一致",
+            "bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "crop_sha256": "bf270a489a5ad2adfd1553376336511f4096901caf85dde51b8345eb9c64a387",
+            "crop_size": [
+              1600,
+              63
+            ],
+            "id": "toc-footer",
+            "source_bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+            "source_page_id": "source-toc",
+            "source_pixel_bbox": [
+              6,
+              843,
+              1606,
+              906
+            ],
+            "status": "observed",
+            "type": "footer"
+          }
+        ],
+        "reference_page_id": "source-toc",
+        "role": "toc",
+        "status": "observed"
+      },
+      {
+        "basis": "章节 shell 直接观察",
+        "editable_region": {
+          "allowed_content": [
+            "section"
+          ],
+          "basis": "避开左侧视觉组、页眉与页脚",
+          "bbox": [
+            0.43,
+            0.18,
+            0.51,
+            0.64
+          ],
+          "id": "section-safe"
+        },
+        "fixed_regions": [
+          {
+            "asset_id": "section-left-composition",
+            "basis": "与章节来源画布一致",
+            "bbox": [
+              0.0,
+              0.0,
+              0.38,
+              0.93
+            ],
+            "crop_sha256": "6f367ebce21767d132889e1e7a949d4cd68dd14d65e93c49bcc8819014f99829",
+            "crop_size": [
+              608,
+              837
+            ],
+            "id": "section-left",
+            "source_bbox": [
+              0.0,
+              0.0,
+              0.38,
+              0.93
+            ],
+            "source_image_sha256": "1d52579d707d03d2d1c1de707625ede956f29b2ec115c58288159114591c4d53",
+            "source_page_id": "source-section",
+            "source_pixel_bbox": [
+              6,
+              6,
+              614,
+              843
+            ],
+            "status": "observed",
+            "type": "composition"
+          },
+          {
+            "asset_id": "section-header",
+            "basis": "与章节来源画布一致",
+            "bbox": [
+              0.38,
+              0.0,
+              0.62,
+              0.12
+            ],
+            "crop_sha256": "f2d59a993c15780b47c57c2675fbeb267951a86e4f2f2d1b6f1a0fadfac51631",
+            "crop_size": [
+              992,
+              108
+            ],
+            "id": "section-top",
+            "source_bbox": [
+              0.38,
+              0.0,
+              0.62,
+              0.12
+            ],
+            "source_image_sha256": "1d52579d707d03d2d1c1de707625ede956f29b2ec115c58288159114591c4d53",
+            "source_page_id": "source-section",
+            "source_pixel_bbox": [
+              614,
+              6,
+              1606,
+              114
+            ],
+            "status": "observed",
+            "type": "header"
+          },
+          {
+            "asset_id": "shared-footer",
+            "basis": "跨页共享页脚",
+            "bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "crop_sha256": "bf270a489a5ad2adfd1553376336511f4096901caf85dde51b8345eb9c64a387",
+            "crop_size": [
+              1600,
+              63
+            ],
+            "id": "section-footer",
+            "source_bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+            "source_page_id": "source-toc",
+            "source_pixel_bbox": [
+              6,
+              843,
+              1606,
+              906
+            ],
+            "status": "observed",
+            "type": "footer"
+          }
+        ],
+        "reference_page_id": "source-section",
+        "role": "section",
+        "status": "observed"
+      },
+      {
+        "basis": "普通内容页为 proposed extension",
+        "editable_region": {
+          "allowed_content": [
+            "content"
+          ],
+          "basis": "在共享页眉页脚内提议的内容区",
+          "bbox": [
+            0.08,
+            0.18,
+            0.84,
+            0.68
+          ],
+          "id": "content-safe"
+        },
+        "fixed_regions": [
+          {
+            "asset_id": "shared-header",
+            "basis": "复用已观察的共享页眉",
+            "bbox": [
+              0.0,
+              0.0,
+              1.0,
+              0.12
+            ],
+            "crop_sha256": "2297df7eb769cd36bdebe23b08bde3303902d628ae491a4f0fd00f2bbfe7d3a4",
+            "crop_size": [
+              1600,
+              108
+            ],
+            "id": "content-header",
+            "source_bbox": [
+              0.0,
+              0.0,
+              1.0,
+              0.12
+            ],
+            "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+            "source_page_id": "source-toc",
+            "source_pixel_bbox": [
+              6,
+              6,
+              1606,
+              114
+            ],
+            "status": "extension",
+            "type": "header"
+          },
+          {
+            "asset_id": "shared-footer",
+            "basis": "复用已观察的共享页脚",
+            "bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "crop_sha256": "bf270a489a5ad2adfd1553376336511f4096901caf85dde51b8345eb9c64a387",
+            "crop_size": [
+              1600,
+              63
+            ],
+            "id": "content-footer",
+            "source_bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+            "source_page_id": "source-toc",
+            "source_pixel_bbox": [
+              6,
+              843,
+              1606,
+              906
+            ],
+            "status": "extension",
+            "type": "footer"
+          }
+        ],
+        "reference_page_id": null,
+        "role": "content",
+        "status": "extension"
+      },
+      {
+        "basis": "数据页为 proposed extension",
+        "editable_region": {
+          "allowed_content": [
+            "data"
+          ],
+          "basis": "在共享页眉页脚内提议的数据区",
+          "bbox": [
+            0.08,
+            0.18,
+            0.84,
+            0.68
+          ],
+          "id": "data-safe"
+        },
+        "fixed_regions": [
+          {
+            "asset_id": "shared-header",
+            "basis": "复用已观察的共享页眉",
+            "bbox": [
+              0.0,
+              0.0,
+              1.0,
+              0.12
+            ],
+            "crop_sha256": "2297df7eb769cd36bdebe23b08bde3303902d628ae491a4f0fd00f2bbfe7d3a4",
+            "crop_size": [
+              1600,
+              108
+            ],
+            "id": "data-header",
+            "source_bbox": [
+              0.0,
+              0.0,
+              1.0,
+              0.12
+            ],
+            "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+            "source_page_id": "source-toc",
+            "source_pixel_bbox": [
+              6,
+              6,
+              1606,
+              114
+            ],
+            "status": "extension",
+            "type": "header"
+          },
+          {
+            "asset_id": "shared-footer",
+            "basis": "复用已观察的共享页脚",
+            "bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "crop_sha256": "bf270a489a5ad2adfd1553376336511f4096901caf85dde51b8345eb9c64a387",
+            "crop_size": [
+              1600,
+              63
+            ],
+            "id": "data-footer",
+            "source_bbox": [
+              0.0,
+              0.93,
+              1.0,
+              0.07
+            ],
+            "source_image_sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
+            "source_page_id": "source-toc",
+            "source_pixel_bbox": [
+              6,
+              843,
+              1606,
+              906
+            ],
+            "status": "extension",
+            "type": "footer"
+          }
+        ],
+        "reference_page_id": null,
+        "role": "data",
+        "status": "extension"
+      }
+    ]
+  },
+  "fallback_records": [
+    {
+      "basis": "VI did not provide a usable signal color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "colors.signal",
+      "usage": [
+        "theme.json:tokens.signal",
+        "theme.css:--pt-signal"
+      ]
+    },
+    {
+      "basis": "VI did not provide a usable accent color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "colors.accent",
+      "usage": [
+        "theme.json:tokens.accent",
+        "theme.css:--pt-accent"
+      ]
+    },
+    {
+      "basis": "VI did not provide a usable panel color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "colors.panel",
+      "usage": [
+        "theme.json:tokens.panel",
+        "theme.css:--pt-panel"
+      ]
+    },
+    {
+      "basis": "VI did not provide a parseable display size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "type.display_size",
+      "usage": [
+        "theme.json:tokens.display_size",
+        "theme.css:--pt-display"
+      ]
+    },
+    {
+      "basis": "VI did not provide a parseable heading size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "type.heading_size",
+      "usage": [
+        "theme.json:tokens.heading_size",
+        "theme.css:--pt-heading"
+      ]
+    },
+    {
+      "basis": "VI did not provide a parseable body size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "type.body_size",
+      "usage": [
+        "theme.json:tokens.body_size",
+        "theme.css:--pt-body"
+      ]
+    },
+    {
+      "basis": "VI hierarchy does not require an exact caption size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "type.caption_size",
+      "usage": [
+        "theme.json:tokens.caption_size",
+        "theme.css:--pt-caption"
+      ]
+    },
+    {
+      "basis": "VI did not provide parseable horizontal canvas spacing; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "spacing.canvas_x",
+      "usage": [
+        "theme.json:tokens.canvas_x",
+        "theme.css:--pt-canvas-x"
+      ]
+    },
+    {
+      "basis": "Vertical safe area is a reversible runtime-fit fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "spacing.canvas_y",
+      "usage": [
+        "theme.json:tokens.canvas_y",
+        "theme.css:--pt-canvas-y"
+      ]
+    },
+    {
+      "basis": "VI did not provide parseable module gap; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "spacing.gap",
+      "usage": [
+        "theme.json:tokens.gap",
+        "theme.css:--pt-gap"
+      ]
+    },
+    {
+      "basis": "Unknown VI layout value uses the neutral reversible compiler default.",
+      "field": "executable_layout.image_treatment",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:executable_layout.image_treatment",
+        "templates.html:.pt-cover-art data-image-treatment",
+        "theme.css:.pt-cover-art shape filter",
+        "theme.json:identity.image_treatment"
+      ],
+      "value": "natural"
+    }
+  ],
+  "motion_boundary": {
+    "disabled": [
+      "reference-inferred timing",
+      "reference-inferred transitions",
+      "cross-page morph"
+    ],
+    "enter": "generic opacity plus 14px upward reveal over 420ms",
+    "fixed_elements": "none",
+    "observed_from_reference": false,
+    "scope": "editable_regions_only",
+    "source": "TaoHtml shared Runtime and report-task reveal decisions",
+    "stagger": "existing fragment and data-step syntax"
+  },
+  "schema_version": "1.0",
+  "theme_id": "project-orbital-corporate-family"
+}

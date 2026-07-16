@@ -11,7 +11,7 @@ Move through these states in order:
 | S0 Startup | Idea, Word/PDF, or PPT/HTML plus reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
 | S2 Design completion | Only outcome-changing decisions and hard-boundary gaps are resolved, and the visual route is selected | The project passes the design-ready gate, or intake stops on a minimum hard boundary |
-| S3 Reference VI | On the single-static-reference route, one VI design standards board is shown; other visual routes bypass this state | The user explicitly replies “确认 VI” for the current board, or the state is not applicable |
+| S3 Reference VI | On the supported static-reference route, one unified VI design standards board is shown; other visual routes bypass this state | The user explicitly replies “确认 VI” for the current board, or the state is not applicable |
 | S4 Design brief | One customer-readable brief is shown | The user explicitly confirms the current brief |
 | S5 Production | HTML, visual system, presentation behavior, and objective QA are completed | Objective failures are fixed |
 | S6 Delivery | Files, checks, and a structured verification handoff are reported | Deliverables are usable and creative supplements are easy for the customer to review |
@@ -23,7 +23,7 @@ Apply the source gate as follows:
 - **PPT/HTML**: inspect the available artifact and preserve its confirmed core viewpoints; resolve faithful migration versus reorganization only if both remain reasonable.
 
 Never write a Report Design Brief while a minimum hard-boundary gap remains. Never write HTML before the current brief is explicitly confirmed. Ordinary absent facts are not a reason to stop: plan reasonable creative supplements, finish the report, and disclose the generated details at delivery.
-On the single-static-reference route, never write the brief before the current VI board is confirmed.
+On the static-reference route, never write the brief before the current VI board is confirmed.
 
 ## Decision Ledger
 
@@ -92,12 +92,13 @@ Treat this as a judgment layer, not a four-question form. Visual style, motion d
 
 Resolve the visual source only after content and chapter structure are clear enough to judge fit.
 
-- If the user chooses “use my reference” and supplies exactly one static image, read `static-reference-vi.md`. Use the current session for only the minimal image-readability check defined there. When readable, analyze static visual facts, render the VI design standards board, and wait for “确认 VI”. Do not require an internal-theme choice, do not infer dynamic behavior, and do not begin project-theme generation or report production before confirmation.
-- If the user has a clear reference but it is a PPT, webpage, video, multiple images, or a state sequence, stop at the unsupported v1 boundary and ask for one representative static screenshot. This is not the no-reference route: do not infer movement and do not recommend the four built-in systems unless the user explicitly abandons the reference route.
+- If the user chooses “use my reference”, resolve `reference_mode` once. `reconstruct` accepts exactly one static PNG/JPEG/WebP; `corporate_fidelity` accepts one to three representative static PNG/JPEG/WebP screenshots from the same template family. When the user already asks for “企业模板保真”, “公司模板原样采用”, or equivalent screenshot-visible fidelity, record `corporate_fidelity` without asking again. When intent is still unclear, ask one binary question: **参考风格重构**—提取设计语言，允许重新构图和创新；or **企业模板保真**—锁定截图中可见的企业固定元素，只设计各页面壳的安全内容区. Record `reconstruct` or `corporate_fidelity`, count this as one ordinary clarification question, and never repeat it after the answer is known.
+- For either mode, read `static-reference-vi.md`. Use the current session for only the minimal readability check defined there. When readable, analyze static visual facts, render one VI board through the shared contract, and wait for “确认 VI”. In corporate fidelity, automatically identify each source role unless truly ambiguous; the board must expose all source thumbnails and role bindings, screenshot-visible fidelity boundary, shell-specific locked/editable regions, exact observed/extension/unknown labels, proposed unseen roles, and limitations. Customer corrections before confirmation replace the current contract. Do not require an internal-theme choice, infer dynamic behavior, or begin project-theme generation/report production before confirmation.
+- If the user has a clear reference but it is a PPT, webpage, video, state sequence, more than three corporate screenshots, or multiple screenshots for reconstruct, stop at the unsupported boundary and ask for a supported representative raster input. This is not the no-reference route: do not infer movement and do not recommend the four built-in systems unless the user explicitly abandons the reference route.
 - Treat model choice as a platform/session-entry decision. WorkBuddy first use gets one recommendation to use Auto; Codex and Claude Code continue with the current session model. Never ask the user to select or repeatedly switch models inside the intake. If the current session cannot locate reliable static facts, say “当前会话无法可靠读取参考图” and offer only a manual model change followed by a restarted task, or a downgrade to the four built-in systems.
 - If no clear reference exists, read `visual-systems.md` and recommend 2-3 genuinely suitable built-in systems. Show each system's exact customer-facing name, one-line description, and bundled preview. Ask the user to choose once, or invite explicit delegation to TaoHtml.
 - Do not ask open-ended aesthetic questions such as “What style do you like?”. Do not repeat a theme-selection question after the user chooses or delegates.
-- Theme selection uses the same clarification counter and never expands the six-question hard maximum. If the project reaches the maximum or the three-no-gain stop before a theme is selected, choose the lowest-risk fit, move it to `inferred`, and disclose the basis in the Report Design Brief.
+- Reference-mode resolution and theme selection use the same clarification counter; visual route selection never expands the six-question hard maximum. Do not ask the reference-mode question after explicit intent. If the project reaches the maximum or the three-no-gain stop before a low-risk visual choice is selected, apply only a safely delegated choice: choose the lowest-risk fit and disclose the basis in the Report Design Brief. Never infer corporate fidelity from an ambiguous request because it creates a fixed-asset lock.
 - A selected theme fixes a reusable visual grammar, not a palette. Preserve its composition, hierarchy, image treatment, module language, chart/evidence treatment, and motion grammar unless the brief records a necessary deviation.
 
 ## Select The Next Question
@@ -116,7 +117,7 @@ For a missing conversion action path, delegation authorizes TaoHtml to locate an
 
 ## Question Budget And Stop Rules
 
-Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
+Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt and the one-time ambiguous reference-mode choice as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
 
 - Allow **0 clarification questions** when the input already passes the source and design-ready gates.
 - Treat **3-5 clarification questions** as the ordinary target, not a quota.
@@ -179,8 +180,8 @@ Treat a project as design-ready when:
 - No unresolved conflict can reverse the main conclusion.
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
 - Visual direction is known or safely delegated to TaoHtml.
-- The visual source is recorded as a user reference or one selected built-in visual system; any necessary deviation is explicit.
-- On the single-static-reference route, the current VI board is explicitly confirmed and its contract/output paths are recorded; VI approval is not inferred from earlier agreement to use the reference.
+- The visual source is recorded as one selected built-in visual system or a user reference with known `reference_mode`; corporate fidelity also records the screenshot-visible fidelity boundary, locked elements, and editable region. Any necessary deviation is explicit.
+- On the static-reference route, the current VI board is explicitly confirmed and its contract/output paths are recorded; VI approval is not inferred from earlier agreement to use the reference.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No minimum hard-boundary item remains in `missing`; ordinary creative supplements may remain pending customer verification.
@@ -193,7 +194,7 @@ Stop asking as soon as these conditions are met. A clear idea can therefore proc
 
 For Word/PDF only, ask the user to confirm or correct the displayed Material Understanding Summary. If they correct it, issue an updated summary before continuing. Do not impose this gate on an idea-only input.
 
-### Single-static-reference VI gate
+### Static-reference VI gate
 
 After the content and structure are clear enough to interpret visual fit, follow `static-reference-vi.md`, show the rendered VI PNG, and ask the user to confirm or correct the current board. Use the exact authorization phrase “确认 VI”. If the user corrects any visual item or boundary status, rerender the complete board and request confirmation again.
 

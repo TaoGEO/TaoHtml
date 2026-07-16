@@ -20,6 +20,7 @@ from project_theme_layout import resolve_layout_items
 
 
 SCHEMA_VERSION = "1.0"
+FAMILY_HANDOFF_SCHEMA_VERSION = "1.1"
 TOP_LEVEL_KEYS = {
     "schema_version",
     "project",
@@ -34,6 +35,10 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 NUMBER_PX = re.compile(r"(?P<value>\d{1,3})(?:\s*[–—-]\s*\d{1,3})?\s*px", re.IGNORECASE)
 PERCENT = re.compile(r"(?P<value>\d{1,2})\s*%")
+REMOTE_ASSET = re.compile(
+    r"(?:src|href)\s*=\s*['\"]\s*(?:https?:)?//|@import\b|url\(\s*['\"]?\s*(?:https?:)?//",
+    re.IGNORECASE,
+)
 
 
 def _exact_object(raw: object, keys: set[str], label: str) -> dict[str, Any]:
@@ -81,7 +86,9 @@ def _safe_input(root: Path, value: object, label: str) -> Path:
     return resolved
 
 
-def load_handoff(path: Path) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
+def load_handoff(
+    path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], Path, Path | list[Path]]:
     try:
         handoff_path = path.expanduser().resolve(strict=True)
     except FileNotFoundError as exc:
@@ -93,8 +100,11 @@ def load_handoff(path: Path) -> tuple[dict[str, Any], dict[str, Any], Path, Path
     except json.JSONDecodeError as exc:
         raise ValueError(f"Handoff request is not valid JSON: {exc}") from exc
     request = _exact_object(raw, TOP_LEVEL_KEYS, "handoff")
-    if request["schema_version"] != SCHEMA_VERSION:
-        raise ValueError(f"handoff.schema_version must be {SCHEMA_VERSION}.")
+    handoff_schema = request["schema_version"]
+    if handoff_schema not in {SCHEMA_VERSION, FAMILY_HANDOFF_SCHEMA_VERSION}:
+        raise ValueError(
+            f"handoff.schema_version must be {SCHEMA_VERSION} or {FAMILY_HANDOFF_SCHEMA_VERSION}."
+        )
 
     project = _exact_object(request["project"], {"id", "display_name"}, "handoff.project")
     project_id = _text(project["id"], "handoff.project.id", 48)
@@ -102,27 +112,69 @@ def load_handoff(path: Path) -> tuple[dict[str, Any], dict[str, Any], Path, Path
         raise ValueError("handoff.project.id must be a lowercase hyphenated slug.")
     display_name = _text(project["display_name"], "handoff.project.display_name", 80)
 
+    confirmation_fields = (
+        {"status", "phrase", "vi_contract_sha256", "reference_image_sha256"}
+        if handoff_schema == SCHEMA_VERSION
+        else {"status", "phrase", "vi_contract_sha256", "reference_images_sha256"}
+    )
     confirmation = _exact_object(
-        request["confirmation"],
-        {"status", "phrase", "vi_contract_sha256", "reference_image_sha256"},
-        "handoff.confirmation",
+        request["confirmation"], confirmation_fields, "handoff.confirmation"
     )
     if confirmation["status"] != "confirmed" or confirmation["phrase"] != "确认 VI":
         raise ValueError('VI is not confirmed; status must be "confirmed" and phrase must be "确认 VI".')
-    for field in ("vi_contract_sha256", "reference_image_sha256"):
-        if not isinstance(confirmation[field], str) or not SHA256.fullmatch(confirmation[field]):
-            raise ValueError(f"handoff.confirmation.{field} must be a lowercase SHA-256 digest.")
-
-    inputs = _exact_object(
-        request["inputs"], {"vi_contract", "reference_image"}, "handoff.inputs"
-    )
+    if not isinstance(confirmation["vi_contract_sha256"], str) or not SHA256.fullmatch(
+        confirmation["vi_contract_sha256"]
+    ):
+        raise ValueError("handoff.confirmation.vi_contract_sha256 must be a lowercase SHA-256 digest.")
+    if handoff_schema == SCHEMA_VERSION:
+        reference_hashes = [confirmation["reference_image_sha256"]]
+        if not isinstance(reference_hashes[0], str) or not SHA256.fullmatch(reference_hashes[0]):
+            raise ValueError(
+                "handoff.confirmation.reference_image_sha256 must be a lowercase SHA-256 digest."
+            )
+        inputs = _exact_object(
+            request["inputs"], {"vi_contract", "reference_image"}, "handoff.inputs"
+        )
+        reference_values = [inputs["reference_image"]]
+    else:
+        reference_hashes = confirmation["reference_images_sha256"]
+        if (
+            not isinstance(reference_hashes, list)
+            or not 1 <= len(reference_hashes) <= 3
+            or any(not isinstance(value, str) or not SHA256.fullmatch(value) for value in reference_hashes)
+        ):
+            raise ValueError(
+                "handoff.confirmation.reference_images_sha256 must contain one to three lowercase SHA-256 digests."
+            )
+        inputs = _exact_object(
+            request["inputs"], {"vi_contract", "reference_images"}, "handoff.inputs"
+        )
+        reference_values = inputs["reference_images"]
+        if (
+            not isinstance(reference_values, list)
+            or len(reference_values) != len(reference_hashes)
+        ):
+            raise ValueError(
+                "handoff.inputs.reference_images must align with reference_images_sha256."
+            )
     root = handoff_path.parent.resolve()
     vi_path = _safe_input(root, inputs["vi_contract"], "handoff.inputs.vi_contract")
-    reference_path = _safe_input(root, inputs["reference_image"], "handoff.inputs.reference_image")
+    reference_paths = [
+        _safe_input(
+            root,
+            value,
+            (
+                "handoff.inputs.reference_image"
+                if handoff_schema == SCHEMA_VERSION
+                else f"handoff.inputs.reference_images[{index}]"
+            ),
+        )
+        for index, value in enumerate(reference_values)
+    ]
     if _sha256(vi_path) != confirmation["vi_contract_sha256"]:
         raise ValueError("Confirmed VI contract hash does not match the current file.")
-    if _sha256(reference_path) != confirmation["reference_image_sha256"]:
-        raise ValueError("Confirmed reference image hash does not match the current file.")
+    if [_sha256(reference_path) for reference_path in reference_paths] != reference_hashes:
+        raise ValueError("Confirmed reference image hashes do not match the current files.")
 
     target_mode = request["target_mode"]
     if target_mode not in {"reading", "presentation"}:
@@ -136,19 +188,33 @@ def load_handoff(path: Path) -> tuple[dict[str, Any], dict[str, Any], Path, Path
     ]
 
     contract = render_reference_vi.load_contract(vi_path)
-    render_reference_vi.source_data_uri(reference_path)
+    if contract.get("schema_version") == render_reference_vi.SCHEMA_VERSION:
+        if handoff_schema != FAMILY_HANDOFF_SCHEMA_VERSION:
+            raise ValueError("VI schema 1.3 requires handoff schema 1.1 with reference_images.")
+    elif handoff_schema != SCHEMA_VERSION:
+        raise ValueError("Legacy v1.1/v1.2 VI contracts require handoff schema 1.0.")
+    render_reference_vi.validate_source_bindings(contract, reference_paths)
     normalized = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": handoff_schema,
         "project": {"id": project_id, "display_name": display_name},
         "confirmation": dict(confirmation),
-        "inputs": {
-            "vi_contract": vi_path.name,
-            "reference_image": reference_path.name,
-        },
+        "inputs": (
+            {"vi_contract": vi_path.name, "reference_image": reference_paths[0].name}
+            if handoff_schema == SCHEMA_VERSION
+            else {
+                "vi_contract": vi_path.name,
+                "reference_images": [path.name for path in reference_paths],
+            }
+        ),
         "target_mode": target_mode,
         "customer_corrections": normalized_corrections,
     }
-    return normalized, contract, vi_path, reference_path
+    return (
+        normalized,
+        contract,
+        vi_path,
+        reference_paths[0] if handoff_schema == SCHEMA_VERSION else reference_paths,
+    )
 
 
 def _luminance(color: str) -> float:
@@ -499,7 +565,12 @@ def _evidence_markup(sample: str) -> str:
     return '<div class="pt-metrics-focus fragment" data-step="2"><article><strong>{{S4_M1_VALUE}}</strong><span>{{S4_M1_LABEL}}</span></article><article><strong>{{S4_M2_VALUE}}</strong><span>{{S4_M2_LABEL}}</span></article><article><strong>{{S4_M3_VALUE}}</strong><span>{{S4_M3_LABEL}}</span></article></div>'
 
 
-def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
+def _css(
+    theme_id: str,
+    tokens: dict[str, str],
+    plan: dict[str, str],
+    corporate_shell: dict[str, Any] | None = None,
+) -> str:
     organization = plan["module_organization"]
     if organization == "hard-grid":
         border, radius, shadow = "3px solid var(--pt-ink)", "0", "none"
@@ -568,6 +639,20 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
         else "grid-template-columns:minmax(0,860px);justify-content:center"
     )
     selector = f'.deck[data-theme="{theme_id}"]'
+    corporate_css = ""
+    if corporate_shell is not None:
+        corporate_css = f"""
+{selector} .slide.pt-corporate-page {{ position:absolute; overflow:hidden; padding:0; background:var(--pt-canvas); }}
+{selector} .pt-corporate-fixed-shell {{ position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none; animation:none !important; transition:none !important; transform:none !important; }}
+{selector} .pt-corporate-fixed-region {{ position:absolute; z-index:1; display:block; object-fit:fill; pointer-events:none; animation:none !important; transition:none !important; transform:none !important; }}
+{selector} .pt-corporate-editable {{ position:absolute; z-index:2; display:grid; align-content:center; overflow:hidden; padding:18px; }}
+{selector} .pt-corporate-editable > .pt-cover-layout, {selector} .pt-corporate-editable > .pt-page-layout {{ min-height:0; height:100%; }}
+{selector} .pt-corporate-editable .source-btn {{ top:12px; right:12px; }}
+{selector} [data-shell-role="cover"] .pt-cover-layout {{ grid-template-columns:minmax(0,1fr) !important; gap:0; }}
+{selector} [data-shell-role="cover"] .pt-cover-copy h1 {{ font-size:54px; line-height:.98; }}
+{selector} [data-shell-role="cover"] .pt-cover-art {{ display:none !important; }}
+{selector} [data-shell-role="section"] .pt-page-layout {{ height:100%; align-content:center; }}
+"""
     return f"""{selector} {{
   --pt-canvas: {tokens['canvas']};
   --pt-ink: {tokens['ink']};
@@ -659,6 +744,7 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
 .pt-closing-stack {{display:grid;gap:var(--pt-rhythm-heading-content)}}
 .pt-final {{padding:20px 24px;color:var(--pt-canvas);background:var(--pt-ink);border-left:12px solid var(--pt-signal);font-size:24px;font-weight:900}}
 {selector} .source-btn {{ top: 48px; right: var(--pt-canvas-x); background: var(--pt-ink); color: var(--pt-canvas); border-radius: var(--pt-radius); }}
+{corporate_css}
 """
 
 
@@ -682,9 +768,146 @@ def _page_layout(heading: str, body: str) -> str:
     )
 
 
-def _templates(
-    plan: dict[str, str], variants: list[dict[str, str]], evidence_sample: str
+def _bbox_style(bbox: list[float]) -> str:
+    x, y, width, height = bbox
+    return (
+        f"left:{x * 100:.6f}%;top:{y * 100:.6f}%;"
+        f"width:{width * 100:.6f}%;height:{height * 100:.6f}%"
+    )
+
+
+def _corporate_shell_contract(
+    contract: dict[str, Any], extracted_regions: list[dict[str, object]]
+) -> dict[str, Any] | None:
+    if (
+        contract.get("reference_mode") != "corporate_fidelity"
+        or contract.get("schema_version") == render_reference_vi.SCHEMA_VERSION
+    ):
+        return None
+    editable = contract["editable_regions"][0]
+    fixed_html = "".join(
+        f'<img class="pt-corporate-fixed-region" data-locked-region="{region["id"]}" '
+        f'data-fixed-element-type="{region["type"]}" data-crop-sha256="{region["sha256"]}" '
+        f'src="{region["data_uri"]}" alt="" style="{_bbox_style(region["bbox"])}">'
+        for region in extracted_regions
+    )
+    return {
+        "editable_region": editable,
+        "fixed_regions": extracted_regions,
+        "shell_html": (
+            '<div class="pt-corporate-fixed-shell" aria-hidden="true" '
+            'data-fixed-motion="none">'
+            + fixed_html
+            + "</div>"
+        ),
+    }
+
+
+def _corporate_family_contract(
+    contract: dict[str, Any], extracted_assets: list[dict[str, object]]
+) -> dict[str, Any] | None:
+    if contract.get("schema_version") != render_reference_vi.SCHEMA_VERSION:
+        return None
+    assets = {str(asset["id"]): asset for asset in extracted_assets}
+    shells: dict[str, dict[str, Any]] = {}
+    for variant in contract["shell_variants"]:
+        fixed_regions: list[dict[str, object]] = []
+        fixed_html: list[str] = []
+        for placement in variant["locked_regions"]:
+            asset = assets[str(placement["asset_id"])]
+            fixed_region = {
+                **placement,
+                "source_page_id": asset["source_page_id"],
+                "source_image_sha256": asset["source_image_sha256"],
+                "source_bbox": asset["source_bbox"],
+                "source_pixel_bbox": asset["source_pixel_bbox"],
+                "crop_sha256": asset["sha256"],
+                "crop_size": [asset["width"], asset["height"]],
+            }
+            fixed_regions.append(fixed_region)
+            fixed_html.append(
+                f'<img class="pt-corporate-fixed-region" '
+                f'data-locked-region="{placement["id"]}" '
+                f'data-fixed-element-type="{placement["type"]}" '
+                f'data-asset-id="{placement["asset_id"]}" '
+                f'data-source-page-id="{asset["source_page_id"]}" '
+                f'data-crop-sha256="{asset["sha256"]}" '
+                f'src="{asset["data_uri"]}" alt="" '
+                f'style="{_bbox_style(placement["bbox"])}">'
+            )
+        shells[str(variant["role"])] = {
+            "role": variant["role"],
+            "status": variant["status"],
+            "reference_page_id": variant["reference_page_id"],
+            "fixed_regions": fixed_regions,
+            "editable_region": variant["editable_region"],
+            "basis": variant["basis"],
+            "shell_html": (
+                '<div class="pt-corporate-fixed-shell" aria-hidden="true" '
+                'data-fixed-motion="none">'
+                + "".join(fixed_html)
+                + "</div>"
+            ),
+        }
+    return {
+        "reference_pages": contract["reference_pages"],
+        "shared_assets": extracted_assets,
+        "shared_brand_grammar": contract["shared_brand_grammar"],
+        "shells": shells,
+        "extension_pages": contract["extension_pages"],
+        "limitations": contract["limitations"],
+    }
+
+
+def _wrap_page_content(
+    role: str, body: str, corporate_shell: dict[str, Any] | None
 ) -> str:
+    if corporate_shell is None:
+        return body + '<div class="pt-footer">{{FOOTER}}</div>'
+    editable = corporate_shell["editable_region"]
+    if role not in editable["allowed_content"]:
+        raise ValueError(
+            f"Corporate editable region does not allow the generated {role} page role."
+        )
+    return (
+        corporate_shell["shell_html"]
+        + f'<div class="pt-corporate-editable" data-editable-region="{editable["id"]}" '
+        f'data-content-role="{role}" style="{_bbox_style(editable["bbox"])}">'
+        + body
+        + "</div>"
+    )
+
+
+def _wrap_family_page(
+    role: str, body: str, corporate_family: dict[str, Any]
+) -> tuple[str, str]:
+    shell = corporate_family["shells"][role]
+    editable = shell["editable_region"]
+    if editable["allowed_content"] != [role]:
+        raise ValueError(f"Corporate {role} shell does not allow its generated page role.")
+    source_page_id = shell["reference_page_id"] or ""
+    section_attributes = (
+        f'data-shell-role="{role}" '
+        f'data-shell-status="{shell["status"]}" '
+        f'data-source-page-id="{source_page_id}"'
+    )
+    content = (
+        shell["shell_html"]
+        + f'<div class="pt-corporate-editable" data-editable-region="{editable["id"]}" '
+        f'data-content-role="{role}" style="{_bbox_style(editable["bbox"])}">'
+        + body
+        + "</div>"
+    )
+    return section_attributes, content
+
+
+def _templates(
+    plan: dict[str, str],
+    variants: list[dict[str, str]],
+    evidence_sample: str,
+    corporate_shell: dict[str, Any] | None = None,
+) -> str:
+    page_class = " pt-corporate-page" if corporate_shell is not None else ""
     background_claim = ""
     if plan["image_placement"] == "background":
         background_claim = (
@@ -718,7 +941,8 @@ def _templates(
         f'{art_claim}</div>'
     )
     cover_children = cover_art + cover_copy if plan["image_placement"] in {"left", "top"} else cover_copy + cover_art
-    cover = f'<section class="slide active pt-cover" data-title="核心命题" data-layout="{variants[0]["id"]}"><div class="pt-cover-layout pt-cover-{plan["cover_structure"]} pt-cover-image-{plan["image_placement"]}" data-cover-split="{plan["cover_split"]}">{cover_children}</div><div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    cover_body = f'<div class="pt-cover-layout pt-cover-{plan["cover_structure"]} pt-cover-image-{plan["image_placement"]}" data-cover-split="{plan["cover_split"]}">{cover_children}</div>'
+    cover = f'<section class="slide active pt-cover{page_class}" data-title="核心命题" data-layout="{variants[0]["id"]}">{_wrap_page_content("cover", cover_body, corporate_shell)}</section>'
 
     content_items = [
         f'<article class="pt-card fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title"><span class="pt-label" data-rhythm-from>{{{{S2_{index}_LABEL}}}}</span><div class="pt-card-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S2_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S2_{index}_BODY}}}}</p></div></article>'
@@ -740,7 +964,7 @@ def _templates(
     content_layout = _page_layout(
         _heading("S2_KICKER", "S2_TITLE", "S2_LEDE"), content_body
     )
-    content = f'<section class="slide" data-title="内容诊断" data-layout="{variants[1]["id"]}">{content_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    content = f'<section class="slide{page_class}" data-title="内容诊断" data-layout="{variants[1]["id"]}">{_wrap_page_content("content", content_layout, corporate_shell)}</section>'
 
     step_tag = "li" if plan["page_axis"] == "column" else "article"
     step_axis = ' data-rhythm-axis="inline"' if plan["page_axis"] == "column" else ""
@@ -753,7 +977,7 @@ def _templates(
     process_layout = _page_layout(
         _heading("S3_KICKER", "S3_TITLE", "S3_LEDE"), process_content
     )
-    process = f'<section class="slide" data-title="内容机制" data-layout="{variants[2]["id"]}">{process_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    process = f'<section class="slide{page_class}" data-title="内容机制" data-layout="{variants[2]["id"]}">{_wrap_page_content("process", process_layout, corporate_shell)}</section>'
 
     chart = _evidence_markup(evidence_sample)
     source_frame = '<figure class="pt-source-frame fragment" data-step="1"><img src="{{SOURCE_URI}}" alt="{{SOURCE_LABEL}}"></figure>'
@@ -774,7 +998,8 @@ def _templates(
     data_layout = _page_layout(
         _heading("S4_KICKER", "S4_TITLE", "S4_LEDE"), data_body
     )
-    data = f'<section class="slide" data-title="证据与数据" data-layout="{variants[3]["id"]}"><button class="source-btn" data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{data_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    data_body_with_source = f'<button class="source-btn" data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{data_layout}'
+    data = f'<section class="slide{page_class}" data-title="证据与数据" data-layout="{variants[3]["id"]}">{_wrap_page_content("data", data_body_with_source, corporate_shell)}</section>'
 
     if plan["content_structure"] == "card-grid":
         closing_body = '<div class="pt-actions-grid">' + "".join(
@@ -790,8 +1015,64 @@ def _templates(
     closing_layout = _page_layout(
         _heading("S5_KICKER", "S5_TITLE", "S5_LEDE"), closing_content
     )
-    closing = f'<section class="slide" data-title="行动收束" data-layout="{variants[4]["id"]}">{closing_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    closing = f'<section class="slide{page_class}" data-title="行动收束" data-layout="{variants[4]["id"]}">{_wrap_page_content("closing", closing_layout, corporate_shell)}</section>'
     return "\n\n".join((cover, content, process, data, closing))
+
+
+def _family_templates(
+    plan: dict[str, str],
+    variants: list[dict[str, str]],
+    evidence_sample: str,
+    corporate_family: dict[str, Any],
+) -> str:
+    """Reuse the shared theme grammar while routing five report roles to five shells."""
+    base = _templates(plan, variants, evidence_sample, None)
+    sections = re.findall(r"<section\b.*?</section>", base, flags=re.DOTALL)
+    if len(sections) != 5:
+        raise ValueError("Shared template compiler did not produce exactly five pages.")
+    # Shared templates are cover, content, process, data, closing.  For a family,
+    # the content and process grammars become toc and section; content uses the
+    # action grammar, while data retains the evidence grammar.
+    source_indices = {"cover": 0, "toc": 1, "section": 2, "content": 4, "data": 3}
+    titles = {
+        "cover": "封面",
+        "toc": "目录",
+        "section": "章节",
+        "content": "普通内容",
+        "data": "数据",
+    }
+    output: list[str] = []
+    for page_index, role in enumerate(render_reference_vi.FAMILY_ROLES):
+        source = sections[source_indices[role]]
+        body_start = source.index(">") + 1
+        body = source[body_start : -len("</section>")].replace(
+            '<div class="pt-footer">{{FOOTER}}</div>', ""
+        )
+        if role == "cover":
+            body, removed = re.subn(
+                r'<div class="pt-cover-art"[^>]*>.*?</div>',
+                "",
+                body,
+                count=1,
+                flags=re.DOTALL,
+            )
+            if removed != 1:
+                raise ValueError(
+                    "Corporate family cover must remove the generated art layer; "
+                    "the observed fixed composition is the only cover visual."
+                )
+        elif role == "section":
+            body = _page_layout(
+                _heading("S3_KICKER", "S3_TITLE", "S3_LEDE"), ""
+            )
+        attributes, wrapped = _wrap_family_page(role, body, corporate_family)
+        active = " active" if page_index == 0 else ""
+        output.append(
+            f'<section class="slide{active} pt-corporate-page" '
+            f'data-title="{titles[role]}" data-layout="corporate-{role}" '
+            f'{attributes}>{wrapped}</section>'
+        )
+    return "\n\n".join(output)
 
 
 def _json_text(value: object) -> str:
@@ -865,11 +1146,32 @@ def _token_targets(source_key: str) -> list[str]:
 
 
 def compile_theme(request_path: Path, output_theme: Path) -> Path:
-    request, contract, vi_path, reference_path = load_handoff(request_path)
+    request, contract, vi_path, reference_input = load_handoff(request_path)
+    reference_paths = (
+        [reference_input] if isinstance(reference_input, Path) else reference_input
+    )
     theme_id = f"project-{request['project']['id']}"
+    reference_mode = contract.get("reference_mode", "reconstruct")
+    is_family = contract.get("schema_version") == render_reference_vi.SCHEMA_VERSION
+    extracted_regions = (
+        []
+        if is_family
+        else render_reference_vi.extract_locked_regions(contract, reference_paths[0])
+    )
+    extracted_assets = (
+        render_reference_vi.extract_corporate_assets(contract, reference_paths)
+        if is_family
+        else []
+    )
+    corporate_shell = _corporate_shell_contract(contract, extracted_regions)
+    corporate_family = _corporate_family_contract(contract, extracted_assets)
     plan, structure_sources, structure_fallbacks = _layout_plan(contract)
     tokens, token_sources = _compile_tokens(contract, plan, structure_sources)
-    variants = _layout_variants(plan)
+    variants = (
+        [{"id": f"corporate-{role}", "role": role} for role in render_reference_vi.FAMILY_ROLES]
+        if corporate_family is not None
+        else _layout_variants(plan)
+    )
     evidence_sample, evidence_path, evidence_rule = _evidence_choice(contract)
     usage_map: dict[str, list[str]] = {}
     fallback_records: list[dict[str, Any]] = []
@@ -953,11 +1255,12 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         "kind": "project",
         "id": theme_id,
         "display_name": request["project"]["display_name"],
-        "description": "由已确认单张静态参考 VI 合同编译的当前项目专用主题",
+        "description": "由已确认静态参考 VI 合同编译的当前项目专用主题",
         "project": {
             "id": request["project"]["id"],
             "target_mode": request["target_mode"],
             "global_built_in": False,
+            "reference_mode": reference_mode,
         },
         "files": {
             "tokens": "theme.css",
@@ -1003,7 +1306,19 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "confirmation": "确认 VI",
             "vi_schema_version": contract["schema_version"],
             "vi_contract_sha256": request["confirmation"]["vi_contract_sha256"],
-            "reference_image_sha256": request["confirmation"]["reference_image_sha256"],
+            **(
+                {
+                    "reference_images_sha256": request["confirmation"][
+                        "reference_images_sha256"
+                    ]
+                }
+                if is_family
+                else {
+                    "reference_image_sha256": request["confirmation"][
+                        "reference_image_sha256"
+                    ]
+                }
+            ),
             "boundary_summary": counts,
             "customer_corrections": request["customer_corrections"],
         },
@@ -1013,18 +1328,107 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "required_markers": ["data-layout", "fragment", "data-step"],
         },
     }
+    if corporate_shell is not None:
+        manifest["corporate_shell"] = {
+            "source_image_sha256": request["confirmation"]["reference_image_sha256"],
+            "source_image_size": [
+                contract["source_image"]["width"],
+                contract["source_image"]["height"],
+            ],
+            "editable_region": contract["editable_regions"][0],
+            "fixed_elements": [
+                {
+                    "id": region["id"],
+                    "type": region["type"],
+                    "bbox": region["bbox"],
+                    "pixel_bbox": region["pixel_bbox"],
+                    "status": region["status"],
+                    "basis": region["basis"],
+                    "extraction": region["extraction"],
+                    "crop_sha256": region["sha256"],
+                    "crop_size": [region["width"], region["height"]],
+                }
+                for region in extracted_regions
+            ],
+            "extension_pages": contract["extension_pages"],
+            "limitations": contract["limitations"],
+            "fixed_motion": "none",
+            "content_motion_scope": "editable_region_only",
+            "full_screenshot_background": False,
+            "logo_redraw": False,
+        }
+        manifest["motion"]["fixed_elements"] = "none"
+        manifest["motion"]["scope"] = "editable_region_only"
+    if corporate_family is not None:
+        bindings = render_reference_vi.validate_source_bindings(contract, reference_paths)
+        manifest["corporate_template_family"] = {
+            "reference_pages": [
+                {
+                    **page,
+                    "canvas_pixel_bbox": binding["canvas_pixel_bbox"],
+                    "canvas_size": binding["canvas_size"],
+                }
+                for page, binding in zip(
+                    contract["reference_pages"], bindings, strict=True
+                )
+            ],
+            "shared_assets": [
+                {
+                    "id": asset["id"],
+                    "type": asset["type"],
+                    "source_page_id": asset["source_page_id"],
+                    "source_image_sha256": asset["source_image_sha256"],
+                    "source_bbox": asset["source_bbox"],
+                    "source_pixel_bbox": asset["source_pixel_bbox"],
+                    "status": asset["status"],
+                    "basis": asset["basis"],
+                    "extraction": asset["extraction"],
+                    "crop_sha256": asset["sha256"],
+                    "crop_size": [asset["width"], asset["height"]],
+                }
+                for asset in extracted_assets
+            ],
+            "shell_variants": [
+                {
+                    "role": shell["role"],
+                    "status": shell["status"],
+                    "reference_page_id": shell["reference_page_id"],
+                    "fixed_regions": shell["fixed_regions"],
+                    "editable_region": shell["editable_region"],
+                    "basis": shell["basis"],
+                }
+                for shell in corporate_family["shells"].values()
+            ],
+            "shared_brand_grammar": corporate_family["shared_brand_grammar"],
+            "extension_pages": corporate_family["extension_pages"],
+            "limitations": corporate_family["limitations"],
+        }
+        manifest["motion"]["fixed_elements"] = "none"
+        manifest["motion"]["scope"] = "editable_regions_only"
     provenance = {
         "schema_version": SCHEMA_VERSION,
         "theme_id": theme_id,
         "confirmed_inputs": {
             "vi_contract": vi_path.name,
             "vi_contract_sha256": _sha256(vi_path),
-            "reference_image": reference_path.name,
-            "reference_image_sha256": _sha256(reference_path),
+            **(
+                {
+                    "reference_images": [path.name for path in reference_paths],
+                    "reference_images_sha256": [
+                        _sha256(path) for path in reference_paths
+                    ],
+                }
+                if is_family
+                else {
+                    "reference_image": reference_paths[0].name,
+                    "reference_image_sha256": _sha256(reference_paths[0]),
+                }
+            ),
             "confirmation_status": request["confirmation"]["status"],
             "confirmation_phrase": request["confirmation"]["phrase"],
             "target_mode": request["target_mode"],
             "customer_corrections": request["customer_corrections"],
+            "reference_mode": reference_mode,
         },
         "boundary_policy": {
             "eligible": "observed or extension may compile, but eligibility alone never sets compiled true",
@@ -1038,10 +1442,19 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         "fallback_records": fallback_records,
         "motion_boundary": manifest["motion"],
     }
-    css = _css(theme_id, tokens, plan).strip() + "\n"
-    templates = _templates(plan, variants, evidence_sample).strip() + "\n"
+    if corporate_shell is not None:
+        provenance["corporate_fidelity"] = manifest["corporate_shell"]
+    if corporate_family is not None:
+        provenance["corporate_fidelity"] = manifest["corporate_template_family"]
+    corporate_css_contract = corporate_family or corporate_shell
+    css = _css(theme_id, tokens, plan, corporate_css_contract).strip() + "\n"
+    templates = (
+        _family_templates(plan, variants, evidence_sample, corporate_family)
+        if corporate_family is not None
+        else _templates(plan, variants, evidence_sample, corporate_shell)
+    ).strip() + "\n"
     for text, label in ((css, "theme.css"), (templates, "templates.html")):
-        if re.search(r"(?:https?:)?//|@import\b", text, re.IGNORECASE):
+        if REMOTE_ASSET.search(text):
             raise ValueError(f"Compiled {label} contains a remote asset reference.")
 
     supplied_output = output_theme.expanduser()

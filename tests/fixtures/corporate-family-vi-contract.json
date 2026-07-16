@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.3",
+  "reference_mode": "corporate_fidelity",
+  "reference_pages": [
+    {"id": "source-cover", "role": "cover", "source_image": {"sha256": "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae", "width": 1612, "height": 912}, "canvas_bbox": [0.0037220843672456576, 0.006578947368421052, 0.9925558312655087, 0.9868421052631579], "status": "observed", "basis": "供给截图的构图与标题位置符合封面角色"},
+    {"id": "source-toc", "role": "toc", "source_image": {"sha256": "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d", "width": 1612, "height": 912}, "canvas_bbox": [0.0037220843672456576, 0.006578947368421052, 0.9925558312655087, 0.9868421052631579], "status": "observed", "basis": "供给截图的编号索引构图符合目录角色"},
+    {"id": "source-section", "role": "section", "source_image": {"sha256": "1d52579d707d03d2d1c1de707625ede956f29b2ec115c58288159114591c4d53", "width": 1612, "height": 912}, "canvas_bbox": [0.0037220843672456576, 0.006578947368421052, 0.9925558312655087, 0.9868421052631579], "status": "observed", "basis": "供给截图的大章节号与分隔构图符合章节页角色"}
+  ],
+  "board": {"title": "Orbital 合成企业模板族｜VI 设计标准图", "subtitle": "三个 observed shell 与两个 proposed extension 的统一确认稿", "reference_label": "无真实品牌的三图合成测试 fixture"},
+  "palette": [
+    {"name": "合成深蓝", "value": "#17324D", "role": "封面固定块、页眉与页脚", "status": "observed", "basis": "三张截图重复出现"},
+    {"name": "合成亮蓝", "value": "#2D7FB8", "role": "品牌条与几何切面", "status": "observed", "basis": "封面与章节页的固定装饰可见"},
+    {"name": "未观察强调色", "value": "unknown", "role": "不从三张图外推断", "status": "unknown", "basis": "输入未提供更多稳定色样"}
+  ],
+  "typography": [
+    {"level": "H1", "sample": "Annual Brief", "spec": "大号粗体无衬线 / 深蓝", "status": "observed", "basis": "封面与章节页标题可直接观察"},
+    {"level": "BODY", "sample": "Editable report content", "spec": "中等字号无衬线 / 蓝灰", "status": "extension", "basis": "用于 content 与 data 安全区的可确认延展"}
+  ],
+  "layout": [
+    {"label": "模板族角色", "value": "cover / toc / section observed", "status": "observed", "basis": "三张代表图分别绑定三个角色"},
+    {"label": "安全内容区", "value": "每个 shell 各自定义且与固定区不重叠", "status": "observed", "basis": "根据每张来源图的空白正文区识别"},
+    {"label": "普通内容与数据页", "value": "复用共享页眉页脚的 proposed extension", "status": "extension", "basis": "输入未观察这两种页型"}
+  ],
+  "executable_layout": {
+    "page_axis": {"value": "row", "status": "extension", "basis": "安全区中流程内容可横向组织"},
+    "alignment": {"value": "start", "status": "observed", "basis": "三张截图主要文字坐标均左对齐"},
+    "cover_structure": {"value": "split", "status": "observed", "basis": "封面固定左侧视觉与右侧内容分栏"},
+    "cover_split": {"value": "5:7", "status": "observed", "basis": "封面观察到近似五比七的分割"},
+    "content_structure": {"value": "card-grid", "status": "extension", "basis": "普通内容页未观察，采用可逆卡片网格"},
+    "content_columns": {"value": "3", "status": "extension", "basis": "安全区支持三列报告内容"},
+    "image_placement": {"value": "right", "status": "extension", "basis": "图像只进入安全区右侧"},
+    "image_aspect_ratio": {"value": "4:3", "status": "extension", "basis": "可编辑图像的中性报告比例"},
+    "image_fit": {"value": "contain", "status": "extension", "basis": "不让正文图像侵入固定区"},
+    "image_treatment": {"value": "unknown", "status": "unknown", "basis": "静态模板图不足以建立摄影处理规则"},
+    "data_structure": {"value": "metrics-grid", "status": "extension", "basis": "数据页为明确 proposed extension"},
+    "data_columns": {"value": "3", "status": "extension", "basis": "数据安全区中使用三列指标"},
+    "module_organization": {"value": "soft-stack", "status": "extension", "basis": "为未观察正文提供可逆的轻量组织"},
+    "density": {"value": "medium", "status": "observed", "basis": "三张代表页空白与标题密度居中"},
+    "visual_focus": {"value": "headline-and-image", "status": "extension", "basis": "报告封面内容使用标题与图像双焦点"}
+  },
+  "components": [
+    {"name": "固定视觉组", "description": "复杂几何切面作为组合裁片复用", "status": "observed", "basis": "封面与章节页可直接裁切"},
+    {"name": "共享页眉页脚", "description": "从目录来源图裁切并离线嵌入", "status": "observed", "basis": "页眉页脚边界清晰"},
+    {"name": "内容网格", "description": "仅在 editable region 中生成", "status": "extension", "basis": "普通内容与数据页未观察"}
+  ],
+  "imagery": [
+    {"label": "固定裁片", "description": "只从 canvas_bbox 裁后画布提取", "status": "observed", "basis": "所有共享资产均绑定来源页与 source_bbox"},
+    {"label": "报告摄影", "description": "未从模板图推断", "status": "unknown", "basis": "多图仍只表达静态模板语言"}
+  ],
+  "evidence_language": [
+    {"label": "指标网格", "description": "数据 extension 在安全区中显式标注", "sample": "metric", "status": "extension", "basis": "不伪称来自三张 observed 截图"},
+    {"label": "正式图表系统", "description": "输入不足以建立", "sample": "none", "status": "unknown", "basis": "三张图均未展示数据页"}
+  ],
+  "mini_pages": [
+    {"kind": "cover", "title": "Observed 封面 shell", "description": "绑定 source-cover", "status": "observed", "basis": "封面来源图可直接观察"},
+    {"kind": "content", "title": "Proposed 普通内容页", "description": "共享页眉页脚内的安全区延展", "status": "extension", "basis": "三张图未展示普通内容页"},
+    {"kind": "data", "title": "Proposed 数据页", "description": "共享页眉页脚内的指标延展", "status": "extension", "basis": "三张图未展示数据页"}
+  ],
+  "guardrails": [
+    {"mode": "preserve", "title": "固定外框静态", "description": "每个 shell 的裁片像素与定位确认后不改动", "status": "observed", "basis": "企业保真的固定元素边界"},
+    {"mode": "avoid", "title": "禁用整图背景", "description": "不嵌入任何含示例正文的完整来源图", "status": "extension", "basis": "防止遗留截图正文"},
+    {"mode": "avoid", "title": "不推断动效", "description": "多张静态截图只用于提取静态设计语言", "status": "observed", "basis": "本合同不检查时序或连续帧"}
+  ],
+  "shared_assets": [
+    {"id": "cover-left-composition", "type": "composition", "source_page_id": "source-cover", "source_bbox": [0.0, 0.0, 0.36, 1.0], "status": "observed", "basis": "封面左侧品牌视觉组应整体保留", "extraction": "crop"},
+    {"id": "cover-top-rule", "type": "brand_bar", "source_page_id": "source-cover", "source_bbox": [0.36, 0.0, 0.64, 0.03], "status": "observed", "basis": "封面右侧顶部固定品牌线", "extraction": "crop"},
+    {"id": "shared-header", "type": "header", "source_page_id": "source-toc", "source_bbox": [0.0, 0.0, 1.0, 0.12], "status": "observed", "basis": "目录页页眉完整可裁切", "extraction": "crop"},
+    {"id": "shared-footer", "type": "footer", "source_page_id": "source-toc", "source_bbox": [0.0, 0.93, 1.0, 0.07], "status": "observed", "basis": "目录页页脚完整可裁切", "extraction": "crop"},
+    {"id": "section-left-composition", "type": "composition", "source_page_id": "source-section", "source_bbox": [0.0, 0.0, 0.38, 0.93], "status": "observed", "basis": "章节页左侧固定视觉组", "extraction": "crop"},
+    {"id": "section-header", "type": "header", "source_page_id": "source-section", "source_bbox": [0.38, 0.0, 0.62, 0.12], "status": "observed", "basis": "章节页右上页眉", "extraction": "crop"}
+  ],
+  "shell_variants": [
+    {"role": "cover", "status": "observed", "reference_page_id": "source-cover", "locked_regions": [
+      {"id": "cover-left", "type": "composition", "asset_id": "cover-left-composition", "bbox": [0.0, 0.0, 0.36, 1.0], "status": "observed", "basis": "与封面来源画布一致"},
+      {"id": "cover-rule", "type": "brand_bar", "asset_id": "cover-top-rule", "bbox": [0.36, 0.0, 0.64, 0.03], "status": "observed", "basis": "与封面来源画布一致"}
+    ], "editable_region": {"id": "cover-safe", "bbox": [0.4, 0.12, 0.54, 0.74], "allowed_content": ["cover"], "basis": "避开左侧组合裁片与顶部品牌线"}, "basis": "封面 shell 直接观察"},
+    {"role": "toc", "status": "observed", "reference_page_id": "source-toc", "locked_regions": [
+      {"id": "toc-header", "type": "header", "asset_id": "shared-header", "bbox": [0.0, 0.0, 1.0, 0.12], "status": "observed", "basis": "与目录来源画布一致"},
+      {"id": "toc-footer", "type": "footer", "asset_id": "shared-footer", "bbox": [0.0, 0.93, 1.0, 0.07], "status": "observed", "basis": "与目录来源画布一致"}
+    ], "editable_region": {"id": "toc-safe", "bbox": [0.08, 0.18, 0.84, 0.68], "allowed_content": ["toc"], "basis": "位于页眉页脚之间"}, "basis": "目录 shell 直接观察"},
+    {"role": "section", "status": "observed", "reference_page_id": "source-section", "locked_regions": [
+      {"id": "section-left", "type": "composition", "asset_id": "section-left-composition", "bbox": [0.0, 0.0, 0.38, 0.93], "status": "observed", "basis": "与章节来源画布一致"},
+      {"id": "section-top", "type": "header", "asset_id": "section-header", "bbox": [0.38, 0.0, 0.62, 0.12], "status": "observed", "basis": "与章节来源画布一致"},
+      {"id": "section-footer", "type": "footer", "asset_id": "shared-footer", "bbox": [0.0, 0.93, 1.0, 0.07], "status": "observed", "basis": "跨页共享页脚"}
+    ], "editable_region": {"id": "section-safe", "bbox": [0.43, 0.18, 0.51, 0.64], "allowed_content": ["section"], "basis": "避开左侧视觉组、页眉与页脚"}, "basis": "章节 shell 直接观察"},
+    {"role": "content", "status": "extension", "reference_page_id": null, "locked_regions": [
+      {"id": "content-header", "type": "header", "asset_id": "shared-header", "bbox": [0.0, 0.0, 1.0, 0.12], "status": "extension", "basis": "复用已观察的共享页眉"},
+      {"id": "content-footer", "type": "footer", "asset_id": "shared-footer", "bbox": [0.0, 0.93, 1.0, 0.07], "status": "extension", "basis": "复用已观察的共享页脚"}
+    ], "editable_region": {"id": "content-safe", "bbox": [0.08, 0.18, 0.84, 0.68], "allowed_content": ["content"], "basis": "在共享页眉页脚内提议的内容区"}, "basis": "普通内容页为 proposed extension"},
+    {"role": "data", "status": "extension", "reference_page_id": null, "locked_regions": [
+      {"id": "data-header", "type": "header", "asset_id": "shared-header", "bbox": [0.0, 0.0, 1.0, 0.12], "status": "extension", "basis": "复用已观察的共享页眉"},
+      {"id": "data-footer", "type": "footer", "asset_id": "shared-footer", "bbox": [0.0, 0.93, 1.0, 0.07], "status": "extension", "basis": "复用已观察的共享页脚"}
+    ], "editable_region": {"id": "data-safe", "bbox": [0.08, 0.18, 0.84, 0.68], "allowed_content": ["data"], "basis": "在共享页眉页脚内提议的数据区"}, "basis": "数据页为 proposed extension"}
+  ],
+  "shared_brand_grammar": {"canvas_aspect_ratio": "16:9", "fixed_motion": "none", "content_motion_scope": "editable_regions_only", "asset_strategy": "source_crops_only", "full_screenshot_background": false, "logo_redraw": false, "basis": "只从裁后静态画布复用固定像素，报告内容只进入可编辑区"},
+  "extension_pages": [
+    {"role": "content", "status": "extension", "basis": "三张截图未展示普通内容页"},
+    {"role": "data", "status": "extension", "basis": "三张截图未展示数据页"}
+  ],
+  "limitations": [
+    {"item": "静态、像素级保真边界", "status": "unknown", "basis": "不恢复 PPT 母版、矢量资产、字体源文件，也不从多图推断动效"}
+  ]
+}

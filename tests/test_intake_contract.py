@@ -177,6 +177,35 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("must not trigger this block", INTAKE)
         self.assertIn("continue instead of repeatedly interrupting the user", INTAKE)
 
+    def test_reference_dual_mode_is_one_budgeted_non_repeating_choice(self) -> None:
+        for marker in (
+            "参考风格重构",
+            "企业模板保真",
+            "reference_mode",
+            "count this as one ordinary clarification question",
+            "never repeat it after the answer is known",
+        ):
+            self.assertIn(marker, INTAKE)
+        self.assertIn("If the user already says", SKILL)
+        self.assertIn("do not ask again", SKILL)
+        self.assertIn(
+            "The one-time reference-mode choice is a clarification question",
+            SKILL,
+        )
+
+    def test_design_brief_records_corporate_fidelity_boundaries(self) -> None:
+        for marker in (
+            "参考图模式",
+            "保真边界",
+            "锁定企业元素",
+            "可编辑安全区",
+            "参考事实边界",
+            "延展页面与限制",
+            "原始 PPT 母版",
+            "矢量 Logo",
+        ):
+            self.assertIn(marker, BRIEF)
+
 
 if __name__ == "__main__":
     unittest.main()

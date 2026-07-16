@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import base64
 import hashlib
 import importlib.util
 import json
@@ -24,6 +25,15 @@ REFERENCE_FIXTURE = FIXTURES / "reference-vi-source.svg"
 CENTERED_HANDOFF_FIXTURE = FIXTURES / "reference-theme-centered-handoff.json"
 CENTERED_VI_FIXTURE = FIXTURES / "reference-vi-centered-contract.json"
 CENTERED_REFERENCE_FIXTURE = FIXTURES / "reference-vi-centered-source.svg"
+CORPORATE_HANDOFF_FIXTURE = FIXTURES / "corporate-template-handoff.json"
+CORPORATE_VI_FIXTURE = FIXTURES / "corporate-template-vi-contract.json"
+CORPORATE_REFERENCE_FIXTURE = FIXTURES / "corporate-template-reference.png"
+FAMILY_HANDOFF_FIXTURE = FIXTURES / "corporate-family-handoff.json"
+FAMILY_VI_FIXTURE = FIXTURES / "corporate-family-vi-contract.json"
+FAMILY_REFERENCE_FIXTURES = [
+    FIXTURES / f"corporate-family-{role}.png"
+    for role in ("cover", "toc", "section")
+]
 CONTENT_FIXTURE = (
     ROOT / "evals" / "taohtml-quality-v1" / "fixtures" / "visual-systems-content.json"
 )
@@ -787,6 +797,361 @@ class ProjectThemeRendererTests(unittest.TestCase):
             self.assertTrue(output.is_file())
 
 
+class CorporateFidelityThemeTests(unittest.TestCase):
+    def test_compiler_embeds_only_exact_fixed_crops_and_records_source_and_crop_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            theme = COMPILER.compile_theme(
+                CORPORATE_HANDOFF_FIXTURE, root / "theme"
+            )
+            repeated = COMPILER.compile_theme(
+                CORPORATE_HANDOFF_FIXTURE, root / "theme-repeated"
+            )
+            for name in ("theme.json", "theme.css", "templates.html", "provenance.json"):
+                self.assertEqual(sha256(theme / name), sha256(repeated / name), name)
+            manifest = json.loads((theme / "theme.json").read_text(encoding="utf-8"))
+            provenance = json.loads(
+                (theme / "provenance.json").read_text(encoding="utf-8")
+            )
+            templates = (theme / "templates.html").read_text(encoding="utf-8")
+            shell = manifest["corporate_shell"]
+            self.assertEqual(manifest["project"]["reference_mode"], "corporate_fidelity")
+            self.assertEqual(
+                shell["source_image_sha256"], sha256(CORPORATE_REFERENCE_FIXTURE)
+            )
+            self.assertEqual(shell["source_image_size"], [1600, 900])
+            self.assertFalse(shell["full_screenshot_background"])
+            self.assertFalse(shell["logo_redraw"])
+            self.assertEqual(shell["fixed_motion"], "none")
+            self.assertEqual(shell["content_motion_scope"], "editable_region_only")
+            self.assertEqual(provenance["corporate_fidelity"], shell)
+            self.assertEqual(len(shell["fixed_elements"]), 4)
+            self.assertEqual(templates.count('data-fixed-motion="none"'), 5)
+            self.assertEqual(templates.count('data-editable-region="safe-content"'), 5)
+            self.assertEqual(templates.count('data-content-role="'), 5)
+            self.assertEqual(templates.count("data:image/png;base64,"), 20)
+            full_source_uri = base64.b64encode(
+                CORPORATE_REFERENCE_FIXTURE.read_bytes()
+            ).decode("ascii")
+            self.assertNotIn(full_source_uri, templates)
+            self.assertNotIn("示例正文 · 不得作为背景复用", templates)
+            for item in shell["fixed_elements"]:
+                self.assertEqual(
+                    templates.count(f'data-locked-region="{item["id"]}"'), 5
+                )
+                self.assertEqual(
+                    templates.count(f'data-crop-sha256="{item["crop_sha256"]}"'), 5
+                )
+            self.assertNotRegex(
+                templates,
+                r'class="[^"]*fragment[^"]*"[^>]*data-locked-region',
+            )
+            THEME_RUNTIME.load_project_theme(theme)
+
+    def test_corporate_content_renders_five_pages_inside_safe_region_with_shared_runtime(self) -> None:
+        content = RENDERER.load_content(CONTENT_FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            theme = COMPILER.compile_theme(CORPORATE_HANDOFF_FIXTURE, root / "theme")
+            output = RENDERER.render_project_theme(
+                content, theme, root / "report.html", source_kind="illustrative"
+            )
+            document = output.read_text(encoding="utf-8")
+            self.assertEqual(document.count('<section class="slide'), 5)
+            self.assertEqual(document.count('data-editable-region="safe-content"'), 5)
+            self.assertIn("window.TaoHtmlRuntime", document)
+            self.assertIn('data-theme-kind="project"', document)
+            check = subprocess.run(
+                [sys.executable, str(CHECK_ASSETS), str(output), "--strict-offline"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(check.returncode, 0, msg=check.stdout + check.stderr)
+
+    def test_loader_rejects_fixed_element_motion_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                CORPORATE_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            css_path = theme / "theme.css"
+            css = css_path.read_text(encoding="utf-8")
+            css_path.write_text(
+                css.replace("animation:none !important", "animation:spin 1s infinite", 1),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "disable fixed-element animation"):
+                THEME_RUNTIME.load_project_theme(theme)
+
+
+class CorporateTemplateFamilyThemeTests(unittest.TestCase):
+    def test_family_compiler_routes_five_roles_and_embeds_only_exact_crops(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            theme = COMPILER.compile_theme(FAMILY_HANDOFF_FIXTURE, root / "theme")
+            repeated = COMPILER.compile_theme(
+                FAMILY_HANDOFF_FIXTURE, root / "theme-repeated"
+            )
+            for name in COMPILER.OUTPUT_FILES:
+                self.assertEqual(sha256(theme / name), sha256(repeated / name), name)
+            manifest = json.loads((theme / "theme.json").read_text(encoding="utf-8"))
+            css = (theme / "theme.css").read_text(encoding="utf-8")
+            templates = (theme / "templates.html").read_text(encoding="utf-8")
+            family = manifest["corporate_template_family"]
+            self.assertEqual(
+                [item["role"] for item in family["reference_pages"]],
+                ["cover", "toc", "section"],
+            )
+            self.assertEqual(
+                [item["role"] for item in family["shell_variants"]],
+                ["cover", "toc", "section", "content", "data"],
+            )
+            self.assertEqual(
+                re.findall(r'data-shell-role="([^"]+)"', templates),
+                ["cover", "toc", "section", "content", "data"],
+            )
+            self.assertEqual(templates.count('data-fixed-motion="none"'), 5)
+            self.assertEqual(templates.count('data-editable-region="'), 5)
+            self.assertIn(
+                '[data-shell-role="cover"] .pt-cover-art { display:none !important; }',
+                css,
+            )
+            self.assertNotIn('class="pt-cover-art"', templates)
+            self.assertNotIn("corporate_shell", manifest)
+            for source in FAMILY_REFERENCE_FIXTURES:
+                self.assertNotIn(base64.b64encode(source.read_bytes()).decode("ascii"), templates)
+            for shell in family["shell_variants"]:
+                role = shell["role"]
+                section = re.search(
+                    rf'<section[^>]+data-shell-role="{role}".*?</section>',
+                    templates,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(section)
+                assert section is not None
+                self.assertEqual(
+                    section.group(0).count('data-locked-region="'),
+                    len(shell["fixed_regions"]),
+                )
+            THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_fails_closed_on_crop_position_role_and_source_mapping_tamper(self) -> None:
+        cases = {
+            "crop bytes": (
+                lambda text: re.sub(
+                    r'(src="data:image/png;base64,)([A-Za-z0-9+/])',
+                    lambda match: match.group(1) + ("B" if match.group(2) != "B" else "C"),
+                    text,
+                    count=1,
+                ),
+                "embedded crop bytes",
+            ),
+            "position": (
+                lambda text: text.replace("left:0.000000%;", "left:0.100000%;", 1),
+                "fixed placement drifted",
+            ),
+            "role": (
+                lambda text: text.replace('data-shell-role="cover"', 'data-shell-role="toc"', 1),
+                "source mapping drifted|unknown shell role|role or source mapping drifted",
+            ),
+            "source mapping": (
+                lambda text: text.replace(
+                    'data-shell-role="section" data-shell-status="observed" data-source-page-id="source-section"',
+                    'data-shell-role="section" data-shell-status="observed" data-source-page-id="source-cover"',
+                    1,
+                ),
+                "role or source mapping drifted",
+            ),
+        }
+        for label, (tamper, message) in cases.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                theme = COMPILER.compile_theme(
+                    FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+                )
+                templates_path = theme / "templates.html"
+                original = templates_path.read_text(encoding="utf-8")
+                changed = tamper(original)
+                self.assertNotEqual(changed, original)
+                templates_path.write_text(changed, encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, message):
+                    THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_rejects_late_cascade_overrides_for_fixed_and_editable_regions(self) -> None:
+        attacks = {
+            "fixed animation": (
+                '.deck[data-theme="project-orbital-corporate-family"] '
+                ".pt-corporate-fixed-region { "
+                "animation: spin 1s infinite !important; }",
+                "protected CSS|disable fixed-element animation",
+            ),
+            "editable geometry": (
+                '.deck[data-theme="project-orbital-corporate-family"] '
+                ".pt-corporate-editable { left:0 !important; top:0 !important; "
+                "width:100% !important; height:100% !important; "
+                "overflow:visible !important; }",
+                "protected CSS|preserve protected geometry",
+            ),
+            "generic image motion": (
+                "img { transform:translateX(20px) !important; }",
+                "fixed-layer CSS|protected CSS",
+            ),
+            "fixed filter": (
+                ".pt-corporate-fixed-region { filter:blur(20px) !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed clip path": (
+                ".pt-corporate-fixed-region { clip-path:inset(50%) !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed mask": (
+                ".pt-corporate-fixed-region { "
+                "mask-image:linear-gradient(transparent,transparent) !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed object position": (
+                ".pt-corporate-fixed-region { "
+                "object-position:100px 100px !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed under unknown host": (
+                ".future-host .pt-corporate-fixed-region { filter:blur(1px); }",
+                "fixed-layer CSS",
+            ),
+            "editable under unknown host": (
+                ".future-host .pt-corporate-editable { left:0 !important; }",
+                "protected CSS",
+            ),
+            "fixed shell before overlay": (
+                '.pt-corporate-fixed-shell::before { content:""; '
+                "position:absolute; inset:0; background:black !important; "
+                "z-index:999; }",
+                "fixed-layer CSS",
+            ),
+            "fixed shell after under unknown host": (
+                '.future-host .pt-corporate-fixed-shell:after { content:""; '
+                "position:absolute; inset:0; filter:blur(10px); }",
+                "fixed-layer CSS",
+            ),
+            "editable before geometry escape": (
+                '.pt-corporate-editable::before { content:""; position:fixed; '
+                "inset:0; background:black; z-index:999; }",
+                "protected CSS",
+            ),
+        }
+        for label, (attack, message) in attacks.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                theme = COMPILER.compile_theme(
+                    FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+                )
+                css_path = theme / "theme.css"
+                css_path.write_text(
+                    css_path.read_text(encoding="utf-8") + "\n" + attack + "\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, message):
+                    THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_allows_editable_descendant_geometry_without_weakening_container(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            css_path = theme / "theme.css"
+            css_path.write_text(
+                css_path.read_text(encoding="utf-8")
+                + "\n"
+                + '.deck[data-theme="project-orbital-corporate-family"] '
+                + ".pt-corporate-editable .source-btn { top:9px; right:9px; }\n"
+                + ".pt-corporate-editable .pt-card { filter:blur(0); "
+                + "clip-path:inset(0); mask-image:none; object-position:center; }\n",
+                encoding="utf-8",
+            )
+            THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_rejects_active_content_anywhere_in_corporate_templates(self) -> None:
+        attacks = {
+            "script": (
+                '<script>document.querySelectorAll(".pt-corporate-fixed-region")'
+                '.forEach(e=>e.animate([{transform:"none"},'
+                '{transform:"translateX(100px)"}],1000))</script>',
+                "active script",
+            ),
+            "event attribute": (
+                '<div onclick="document.body.dataset.pwned=1"></div>',
+                "event attribute onclick",
+            ),
+            "javascript url": (
+                '<a href="java&#x73;cript:document.body.dataset.pwned=1">x</a>',
+                "javascript:",
+            ),
+        }
+        for label, (payload, message) in attacks.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                theme = COMPILER.compile_theme(
+                    FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+                )
+                templates_path = theme / "templates.html"
+                original = templates_path.read_text(encoding="utf-8")
+                changed = original.replace(
+                    "</section>", payload + "</section>", 1
+                )
+                self.assertNotEqual(changed, original)
+                templates_path.write_text(changed, encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, message):
+                    THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_rejects_fixed_element_id_class_specificity_bypass(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            templates_path = theme / "templates.html"
+            original = templates_path.read_text(encoding="utf-8")
+            changed = original.replace(
+                'class="pt-corporate-fixed-region"',
+                'id="fixed-bypass" class="pt-corporate-fixed-region bypass"',
+                1,
+            )
+            self.assertNotEqual(changed, original)
+            templates_path.write_text(changed, encoding="utf-8")
+            css_path = theme / "theme.css"
+            css_path.write_text(
+                css_path.read_text(encoding="utf-8")
+                + "\n#fixed-bypass.bypass { transform:translateX(20px) !important; }\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "allowlist"):
+                THEME_RUNTIME.load_project_theme(theme)
+
+    def test_family_renders_five_page_offline_report_with_shared_runtime(self) -> None:
+        content = RENDERER.load_content(CONTENT_FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            theme = COMPILER.compile_theme(FAMILY_HANDOFF_FIXTURE, root / "theme")
+            output = RENDERER.render_project_theme(
+                content, theme, root / "report.html", source_kind="illustrative"
+            )
+            document = output.read_text(encoding="utf-8")
+            self.assertEqual(document.count('<section class="slide'), 5)
+            self.assertEqual(
+                re.findall(
+                    r'<section\b[^>]+data-shell-role="([^"]+)"',
+                    document,
+                ),
+                ["cover", "toc", "section", "content", "data"],
+            )
+            self.assertIn("window.TaoHtmlRuntime", document)
+            check = subprocess.run(
+                [sys.executable, str(CHECK_ASSETS), str(output), "--strict-offline"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(check.returncode, 0, msg=check.stdout + check.stderr)
+
+
 class ProjectThemeWorkflowTests(unittest.TestCase):
     def test_skill_routes_confirmed_vi_to_project_compiler_before_brief(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -815,10 +1180,26 @@ class ProjectThemeWorkflowTests(unittest.TestCase):
         router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
             encoding="utf-8"
         )
+        reference = (SKILL_ROOT / "references" / "project-theme-compiler.md").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("不是第五套内置主题", readme)
         self.assertIn("项目主题不是第五套内置风格", workflow)
         self.assertIn("This router remains exactly four built-in systems", router)
-        self.assertIn("动效由 Runtime 和报告任务决定，不从单图推断", readme)
+        self.assertIn(
+            "动效由 Runtime 和报告任务决定，不从一张或多张静态图推断",
+            readme,
+        )
+        for marker in (
+            "参考风格重构",
+            "企业模板保真",
+            "截图中可见效果",
+            "不重绘 Logo",
+            "可编辑安全区",
+        ):
+            self.assertIn(marker, readme)
+        self.assertIn("Corporate Template-Family Shell Boundary", reference)
+        self.assertIn("Never embed the complete screenshot", reference)
 
 
 if __name__ == "__main__":
