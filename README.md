@@ -1,370 +1,106 @@
 # TaoHtml
 
-TaoHtml 是一个面向内容创作者的 HTML 视觉排版与交付 skill。
+把初步想法、Word / PDF、已有 PPT 或 HTML，制作成可直接汇报或阅读的 16:9 HTML 演示文稿，作为传统 PPT / PPTX 的高设计替代方案。
 
-它帮助 AI Agent 理解想法和源材料、确认报告设计简报，再生成结构清晰、视觉专业、可以离线交付的 HTML。长期目标覆盖多种 HTML 内容排版；当前首先把 Word / PDF 到分页式阅读报告与单屏演讲稿这条闭环做扎实。
+TaoHtml 会先梳理目标、受众、结构和证据，再生成支持阅读与演讲模式、分步动效、键盘 / 鼠标翻页、全屏展示和离线交付的 HTML；可选择四套内置视觉系统，也可根据客户提供的参考图建立项目专用视觉风格。
 
-当前产品合同是“报告产出优先”：普通信息不足时允许 Agent 做创作性补全，先完成可用报告，再用结构化《待核实内容清单》让客户确认、修改、删除或替换；真实来源与高风险事实仍保持最小硬边界。
+适用于“做 PPT”“做幻灯片”“做演示文稿”“写报告”“制作 slides / deck”，以及“把 Word、PDF、PPT 转成 HTML”等需求；默认优先交付可直接使用的 HTML，而不是等待继续排版的 `.pptx` 初稿。
 
-> English brief: TaoHtml helps AI agents understand source material, confirm a report design brief, and turn it into polished offline HTML for reading or presentation.
+> English brief: TaoHtml turns ideas and source material into polished, offline HTML reports and presentation-ready decks, with confirmed design decisions, reusable visual systems, and delivery QA.
 
-## 真实案例：GEO 沙龙路演 HTML
-
-TaoHtml 的第一个标杆案例，是一套用于线下沙龙的 GEO 路演课件。这个案例不是静态美化，而是从真实演讲场景出发，把海报风格、AI 问答模拟、真实采样截图、视频录屏、复采报告、服务转化页整合成一套可用翻页器推进的 HTML 课件。
-
-![GEO 沙龙案例：AI 搜索机制页](docs/assets/cases/geo-salon/01-ai-search-mechanism.png)
-
-这个案例展示了 TaoHtml 最核心的能力：
-
-- 把普通内容大纲重构成完整演讲主线。
-- 把截图、报告、视频这类真实证据变成可读的演示页面。
-- 用统一视觉系统承接全篇：黑白高反差、荧光黄绿色、橙色风险提示、网格、标尺、圆弧和证据窗口。
-- 把页面交互改成翻页器友好的串行展开，而不是依赖鼠标悬停。
-- 在商业课件末尾加入服务入口、报价页和可执行下一步。
-
-查看更多截图和拆解：
-
-- [Demo Gallery](docs/gallery.md)
-- [案例拆解：GEO 沙龙路演 HTML](docs/cases/geo-salon.md)
-
-如果 TaoHtml 对你有帮助，欢迎给这个项目点一个 Star，方便后续更新。
-
-## TaoHtml 解决什么问题
-
-很多 AI 生成的课件会出现两个极端：
-
-1. 只是把原 PDF 包成一个浏览器页面，看起来像 PDF 阅读器。
-2. 页面变好看了，但原始信息、图表、证据和业务逻辑被丢掉。
-
-TaoHtml 的核心原则是：
-
-> 先确认理解与设计决策，再让 Agent 负责创造，让 Runtime 负责稳定运行，让 QA 负责交付可靠。
-
-它不是完整网站或后台应用开发工具，也不是只做 PPT 美化。它聚焦内容型 HTML 的理解、结构、视觉、交互和离线交付。
+当前版本：[`0.3.0`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.0) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
 
 ## 核心能力
 
-- 先输出材料理解摘要，让用户纠正 Agent 对 Word / PDF 的理解。
-- 通过一次一个关键问题，补齐真正影响报告设计的信息。
-- 静态参考图先生成可查看的高清《VI 设计标准图》：参考风格重构接受 1 张，企业模板保真接受同一模板族 1–3 张；规范图明确区分直接观察、报告适配建议和参考中无法判断，再等待客户确认。
-- “确认 VI”后，用哈希绑定的机器 handoff 确定性编译当前项目专用主题；封面分栏/单栏、内容组织、图片、数据结构与组件秩序会生成不同 DOM 和 CSS，不是固定模板换肤，也不是第五套内置主题。
-- 在制作前生成客户可读的《报告设计简报》，并设置明确确认门。
-- 提供四套可执行的内置视觉系统，让构图、层级、证据、图片、图表和动效不再只依赖模型临场发挥。
-- 允许重组结构和优化表达，同时保留全部确认过的核心观点。
-- 将内容设计成阅读模式或现场演讲模式。
-- 提供模块化 HTML Runtime：阅读/演讲切换、动效步进、整页翻页、页状态保存、全屏与页码。
-- 使用本地素材和相对路径，支持离线检查、浏览器 QA、总览图和 zip 打包。
-
-## 三个输入入口
-
-- 只有想法：逐步梳理目标、观点、证据和结构。
-- Word / PDF：先确认材料理解，再重组为 HTML。这是当前完整定义的标准闭环。
-- 已有 PPT / HTML：选择保留原结构，或在核心表达不变的前提下重组和升级。
+- 支持只有想法、Word / PDF、已有 PPT / HTML 三类入口；Word / PDF 先确认材料理解，idea-only 不增加虚假的材料确认门。
+- 一次只补一个真正会改变设计结果的决策，并保持明确的提问上限；转换型报告还会核对真实、可执行的行动入口。
+- 在正式制作前确认《报告设计简报》，记录受众、目标、结构、证据、视觉来源和必要边界。
+- 内置四套可执行视觉系统，不只更换配色，还会改变构图、层级、组件、图片、图表、证据和动效语法。
+- 支持“参考风格重构”和“企业模板保真”：先生成可查看的 VI 设计标准图，确认后再编译项目专用主题。
+- 共享 HTML Runtime 支持阅读 / 演讲模式、分步呈现、整页导航、页状态保存、全屏和页码。
+- 采用“报告产出优先”合同：普通信息缺口可以形成创作性补全，先交付可用报告，再附结构化《待核实内容清单》；真实来源和高风险事实继续失败关闭。
+- 使用本地资产和相对路径，并执行离线资源检查、浏览器 QA、截图总览和 zip 打包。
 
 ## 四套内置视觉系统
 
-内置主题不是换色皮肤，而是可复用的版式资产。每套都包含 tokens、画布与构图规则、页面和组件变体、图表/表格/证据卡/图片处理、动效语法、禁用模式以及可直接复制的 HTML 模板片段。
+总览图使用完全相同的合成内容展示四套系统各 5 页、共 20 页，便于直接比较完整的版式语言，而不是被选题差异干扰。
 
-| 视觉系统 | 具体画面描述 |
+| 视觉系统 | 适合的画面语言 |
 |---|---|
-| 黑白荧光卡片 | 高反差、模块卡片、大标题，适合路演和强表达 |
-| 严谨咨询报告 | 白底、结论式标题、高信息密度、严谨图表 |
-| 稳重企业年报 | 稳重配色、图文平衡、品牌化版面、适度留白 |
-| 杂志图文拼贴 | 图片切片、错位排版、大字标题和编辑杂志感 |
+| **黑白荧光卡片** | 高反差、模块卡片和大标题，适合路演与强表达 |
+| **严谨咨询报告** | 白底、结论式标题、高信息密度和严谨图表 |
+| **稳重企业年报** | 稳重配色、图文平衡、品牌化版面和适度留白 |
+| **杂志图文拼贴** | 图片切片、错位排版、大字标题和编辑杂志感 |
 
-选择流程遵循参考优先：
+<a href="docs/assets/readme/v0.3.0/built-in-visual-systems.png"><img src="docs/assets/readme/v0.3.0/built-in-visual-systems.png" alt="TaoHtml 四套内置视觉系统各五页总览" width="100%"></a>
 
-- 用户选择“使用我的参考”时，先检查当前会话能否可靠定位可见事实，再以确定性 HTML/CSS 模板生成 3200×2400 的统一 VI 规范图；确认前不进入项目专用主题或正式报告制作，也不强迫选择内置主题。
-- 静态参考只分析可见设计语言，不从一张或多张静态图推断动态规则。VI 图必须把观察、延展建议和无法判断三类边界直接标在画面上。
-- 企业模板保真会自动识别来源页的封面、目录、章节、普通内容、数据角色，并在 VI 图中展示供纠正；单图仍可用，多图只增强模板角色覆盖。
-- 用户回复“确认 VI”后，编译器校验确认状态、VI/参考图哈希、目标模式和客户修正，生成只属于当前项目的完整主题目录；企业页会按报告角色路由到对应页面壳，固定层静止，正文只进入可编辑区。
-- PPT、网页、视频、状态序列、超过 3 张企业截图或多张重构参考不进入此流程；不会被当成无参考，也不会据此推断动效。
-- 没有明确参考时，等内容与结构清楚后，TaoHtml 从四套中推荐 2–3 套，展示“名称 + 简述 + 预览”，由用户选择或授权 TaoHtml 决定。
-- 不做开放式审美盘问，不重复提问，也不突破现有澄清问题上限。达到上限或用户授权决定时，TaoHtml 选择最匹配的一套，并在设计简报中披露所选主题和必要偏离。
+## 使用客户参考图
 
-轻量预览和可执行资产位于 `skill/taohtml/assets/visual-systems/`；选择后只加载命中的一套。主题只负责页面表现，翻页、分步动效状态、全屏和离线约束继续由同一个 runtime shell 负责。
+这两条路线共享“静态参考 → VI 设计标准图 → 确认 VI → 项目专用主题”的确认链，但保真目标不同。下方全部使用仓库自制、无真实品牌的合成样例。
 
-## 项目结构
+项目专用主题不是第五套内置主题，只服务于当前项目。两种路线都只承诺截图中可见效果：不重绘 Logo，内容进入可编辑安全区；动效由 Runtime 和报告任务决定，不从一张或多张静态图推断。
 
-```text
-TaoHtml/
-├─ README.md
-├─ LICENSE
-├─ docs/
-│  ├─ gallery.md
-│  ├─ cases/
-│  │  └─ geo-salon.md
-│  ├─ assets/
-│  ├─ product-introduction.md
-│  └─ workflow.md
-├─ examples/
-│  └─ prompts.md
-└─ skill/
-   └─ taohtml/
-      ├─ SKILL.md
-      ├─ agents/
-      ├─ assets/
-      │  ├─ html-deck-template/
-      │  └─ visual-systems/
-      ├─ references/
-      └─ scripts/
-```
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>参考风格重构</strong><br>
+      接受 1 张静态参考图，提取可观察的颜色、字体层级、构图、组件和证据语言；允许为了报告内容重新组织页面，不把静态图推断成动效规则。<br><br>
+      <a href="docs/assets/readme/v0.3.0/reference-style-reconstruction.png"><img src="docs/assets/readme/v0.3.0/reference-style-reconstruction.png" alt="参考风格重构 VI 设计标准图" width="100%"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>企业模板保真</strong><br>
+      接受同一模板族 1–3 张静态截图，锁定截图中可见的 Logo、页眉、页脚、品牌条和固定装饰，并把新内容限制在各页面角色的安全区。<br><br>
+      <a href="docs/assets/readme/v0.3.0/corporate-template-fidelity.png"><img src="docs/assets/readme/v0.3.0/corporate-template-fidelity.png" alt="企业模板保真五页合成样例" width="100%"></a>
+    </td>
+  </tr>
+</table>
 
-真正可安装的 Codex skill 位于：
+企业模板保真只承诺截图中可见的像素与页面角色，不宣称恢复原始 PPT 母版、矢量 Logo、字体源文件、截图外资产或动效。可查看仓库中的[完整五页 HTML 样例](examples/corporate-template-fidelity/corporate-fidelity-sample.html)和[高清 VI 标准图](examples/corporate-template-fidelity/reference-vi-board.png)。
 
-```text
-skill/taohtml
-```
+## 安装入口
 
-## 安装与更新
+`skill/taohtml` 是唯一的 Skill 源码真源；README 截图只属于仓库文档，不进入 Skill 运行上下文。Codex、Claude Code 和离线安装包都从同一真源分发。
 
-`skill/taohtml` 是唯一的 Skill 源码真源。仓库不维护第二份 `SKILL.md`；GitHub marketplace 和正式 Release 的离线附件都引用或从该目录生成。
-
-| 方式 | 是否自动更新 | 更新方法 |
-|---|---|---|
-| Claude GitHub marketplace | 第三方源默认关闭 | 手动执行 marketplace update + plugin update；也可在 Claude Code 的 Marketplaces 界面为 TaoHtml 开启自动更新 |
-| Codex 原始 Skill | 否 | 使用官方 `$HOME/.agents/skills` 路径，备份后整目录替换 |
-| 其他 Agent 原始 Skill | 否 | 按各客户端自己的目录安装；下载新源码后整目录替换 |
-| Release ZIP | 否 | 离线 / 手动备选；替换解压目录并重新安装，不是远程更新渠道 |
-
-### Claude Code：GitHub 远程安装与更新
-
-合并到 GitHub 默认分支后，直接添加仓库 marketplace 并安装插件：
+### Claude Code：GitHub marketplace
 
 ```bash
 claude plugin marketplace add TaoGEO/TaoHtml
 claude plugin install taohtml@taohtml
 ```
 
-手动更新：
+更新时执行：
 
 ```bash
 claude plugin marketplace update taohtml
 claude plugin update taohtml@taohtml
 ```
 
-TaoHtml 的 Claude 插件不固定 `version` 字段，Git 托管 marketplace 会用提交 SHA 判断是否有新版本。第三方 marketplace 的自动更新默认关闭；如需自动检查，在 `/plugin` 的 **Marketplaces** 页选择 TaoHtml 并启用 auto-update。更新写入磁盘后执行 `/reload-plugins`，或在下次启动时加载。
+### Codex / 其他 Agent：原始 Skill
 
-### Codex：当前远程更新边界
-
-Codex 官方支持 Git marketplace 的 `marketplace upgrade`，刷新后仍需重新执行 `plugin add` 才能更新已安装插件，并不提供自动更新承诺。但 TaoHtml 当前不发布 Codex GitHub marketplace：Codex 的当前插件 validator 要求插件使用实际的 `skills/` 组件目录，而本仓库的唯一真源固定在 `skill/taohtml`。在不复制 Skill、不使用 symlink、也不进行重大目录迁移的前提下，无法同时满足这一布局。
-
-因此 Codex 请使用下方的官方原始 Skill 路径；Release ZIP 只保留为本地 marketplace 的离线 / 手动备选。不要把 Claude 的 `TaoGEO/TaoHtml` marketplace 命令用于 Codex。
-
-### 原始 Skill：首次安装
-
-下载并解压源码后，将 `skill/taohtml` 安装到对应客户端。Codex 官方用户级 Skill 目录是 `$HOME/.agents/skills`；下面的命令会在目标已存在时停止，避免生成 `taohtml/taohtml`。
-
-Windows PowerShell:
-
-```powershell
-$source = (Resolve-Path ".\skill\taohtml").Path
-$target = Join-Path $HOME ".agents\skills\taohtml"
-New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
-if (Test-Path -LiteralPath $target) { throw "Target already exists: $target. Use the update command instead." }
-Copy-Item -Recurse -LiteralPath $source -Destination $target
-```
-
-macOS / Linux:
+下载或 clone 本仓库后，将整个 [`skill/taohtml`](skill/taohtml) 目录安装为 `taohtml`。Codex 当前用户级 Skill 目录是 `$HOME/.agents/skills`；首次安装示例：
 
 ```bash
 source="$PWD/skill/taohtml"
 target="$HOME/.agents/skills/taohtml"
 mkdir -p "$(dirname "$target")"
-test ! -e "$target" || { echo "Target already exists: $target. Use the update command instead." >&2; exit 1; }
+test ! -e "$target" || { echo "Target already exists: $target" >&2; exit 1; }
 cp -R "$source" "$target"
 ```
 
-`~/.codex/skills` 只作为旧版 / 兼容路径说明：如果你的既有 Codex 安装仍从这里读取 Skill，可以把上述 `$target` 改为 `$HOME/.codex/skills/taohtml`，但它不是当前官方默认路径。其他 Agent 的安装目录和调用语法可能不同，不要假设它们共用 Codex 的目录。
+更新时先备份本地修改，再完整替换旧目录，避免遗留已删除文件或生成 `taohtml/taohtml` 嵌套目录。不同 Agent 的安装目录和调用语法可能不同；Codex 中请显式使用 `$taohtml`。
 
-### 原始 Skill：更新
+### Release ZIP：离线 / 手动安装
 
-先备份需要保留的本地修改。下面的命令把整个旧目录移动成带时间戳的备份，再复制新目录；新版已删除的旧文件不会残留，也不会产生嵌套目录。
+[`taohtml-marketplace-v0.3.0.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.3.0/taohtml-marketplace-v0.3.0.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.3.0`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。
 
-Windows PowerShell:
+## 版本更新
 
-```powershell
-$source = (Resolve-Path ".\skill\taohtml").Path
-$target = Join-Path $HOME ".agents\skills\taohtml"
-$backup = "$target.backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
-if (Test-Path -LiteralPath $target) { Move-Item -LiteralPath $target -Destination $backup }
-Copy-Item -Recurse -LiteralPath $source -Destination $target
-```
+README 只保留每版最重要的用户变化；完整逐条历史见 [CHANGELOG](CHANGELOG.md)。
 
-macOS / Linux:
+| 版本 | 最重要的变化 | 版本页与完整记录 |
+|---|---|---|
+| **v0.3.0** | 四套可执行视觉系统与同内容样张；参考风格重构 / 企业模板保真及项目主题编译；报告产出优先 + 《待核实内容清单》与质量基准 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.0) · [CHANGELOG](CHANGELOG.md#030---2026-07-16) |
+| **v0.2.0** | Word / PDF 材料理解到离线 HTML 的首个完整闭环；阅读 / 演讲 Runtime 与三档浏览器 QA；单一 Skill 真源与跨客户端离线包 | [GitHub Release](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.2.0) · [CHANGELOG](CHANGELOG.md#020---2026-07-15) |
+| **v0.1.0** | 建立明确版本、仓库质量工作流与可移植资产检查；补齐 hash 路由、分步内容和来源弹窗的基础浏览器 QA | [Git tag](https://github.com/TaoGEO/TaoHtml/tree/v0.1.0) · [CHANGELOG](CHANGELOG.md#010---2026-07-13) |
 
-```bash
-source="$PWD/skill/taohtml"
-target="$HOME/.agents/skills/taohtml"
-backup="${target}.backup-$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$(dirname "$target")"
-if [ -e "$target" ]; then mv "$target" "$backup"; fi
-cp -R "$source" "$target"
-```
-
-完成后重启客户端或新开任务，让 Skill 列表刷新。
-
-### Release ZIP：离线 / 手动备选
-
-正式 Release 提供 `taohtml-marketplace-v0.2.0.zip`，用于无法直接访问 GitHub marketplace 的环境。ZIP 内的 Codex 与 Claude 插件 manifest 均固定为 `0.2.0`；把它解压到固定本地目录后安装：
-
-Codex：
-
-```bash
-codex plugin marketplace add /absolute/path/to/taohtml-marketplace
-codex plugin add taohtml@taohtml
-```
-
-Claude Code：
-
-```bash
-claude plugin marketplace add /absolute/path/to/taohtml-marketplace
-claude plugin install taohtml@taohtml
-```
-
-ZIP 不会接收 GitHub 推送，也不是自动更新渠道。更新时先备份本地修改，完整替换旧的解压目录，再重新执行安装命令。详见 [Codex 插件文档](https://developers.openai.com/codex/plugins/) 与 [Claude Code marketplace 文档](https://code.claude.com/docs/en/discover-plugins)。
-
-## 快速使用
-
-不同 Agent 的安装目录和调用语法可能不同。Codex 中请显式使用 `$taohtml`：
-
-```text
-使用 $taohtml 处理这份 PDF。
-我已经有内容，但不想自己排版，希望最后得到可以离线使用的 HTML。
-请按 TaoHtml 的标准流程开始。
-```
-
-TaoHtml 不会立刻写 HTML。标准流程是：
-
-1. 确认阅读或现场演讲模式，以及精简、标准或详细长度。
-2. 按入口完成来源理解；Word / PDF 输出材料理解摘要并等待确认或修正，只有想法则直接从对话建立决策账本。
-3. 只追问仍会改变设计结果的信息。
-4. 支持的静态参考先生成一张统一《VI 设计标准图》并等待“确认 VI”：重构 1 张，企业保真 1–3 张同族截图；只有没有明确参考时，才从四套内置视觉系统推荐 2–3 套并完成选择或代理决策。
-5. 参考路线在“确认 VI”后用机器 handoff 编译项目专用主题；无参考路线保留所选内置主题。
-6. 输出准确记录视觉来源、已确认 VI 与项目主题或所选内置主题、必要偏离和计划创作性补全范围的《报告设计简报》。
-7. 用户针对当前简报回复“确认”后，才开始制作 HTML。
-8. 完成 Runtime、资产与浏览器 QA 后先交付可用报告，再附结构化《待核实内容清单》。普通创作性补全不会仅因用户未提供而阻塞制作。
-
-参考图能力提示：WorkBuddy 首次使用推荐 Auto；Codex 与 Claude Code 沿用当前会话。若当前会话无法可靠读取参考图，TaoHtml 会停止并让用户选择手动调整会话后重开，或改用四套内置视觉系统。
-
-## TaoHtml 的工作流
-
-```text
-想法或输入材料
-  ↓
-按入口完成来源理解
-  ↓ Word / PDF 用户确认摘要
-补齐设计决策
-  ↓
-视觉参考优先 / 内置主题选择
-  ↓ 静态参考按重构或企业保真确认统一 VI 规范图
-项目专用主题编译（仅参考路线）
-  ↓
-报告设计简报
-  ↓ 用户确认
-HTML 制作 + 模块化 Runtime
-  ↓
-资产检查 + 浏览器 QA + 离线报告 + 待核实内容清单
-```
-
-详细状态门和提问规则见 [工作流说明](docs/workflow.md)。
-
-使用 PNG/JPEG/WebP 静态参考图时，TaoHtml 支持“参考风格重构”和“企业模板保真”两种模式。意图不清楚时只问一次二选一；已经明确要求企业模板原样采用时不重复提问。重构只接受 1 张；企业保真接受同一模板族 1–3 张，并按页面角色使用不同壳。企业保真只承诺截图中可见效果：锁定可见 Logo、页眉、页脚、品牌条和固定装饰，只在安全内容区设计；不承诺恢复原始 PPT 母版、矢量 Logo、字体源文件或截图外资产，也不宣称支持独立 Logo 上传。
-
-## 内置资源
-
-### 参考文档
-
-- `process-playbook.md`：完整课件 / 报告生产流程。
-- `design-quality-rubric.md`：100 分高设计评分标准和硬性失败门槛。
-- `layout-pattern-library.md`：12 类高设计版式母型。
-- `static-reference-vi.md`：参考图双模式路由、静态输入门、三类事实边界、v1.3 企业模板族合同、可执行布局语法、确认门和下一步交接；旧 v1.1/v1.2 路径继续兼容。
-- `project-theme-compiler.md`：“确认 VI”后的哈希 handoff、确定性结构编译、企业固定裁切与多 shell 角色路由、eligible/compiled usage 与 fallback 规则、显式渲染和验证。
-- `visual-systems.md`：四套内置视觉系统的选择、按需加载和 runtime 解耦规则。
-
-### HTML 模板
-
-- `assets/html-deck-template/index.html`：本地 16:9 HTML 壳，包含阅读/演讲模式、分步动效、整页翻页、页状态保存、全屏、页码和原始页弹窗。
-- `assets/reference-vi-board/template.html`：固定 3200×2400 规范板画布，用状态标签呈现参考缩略图、视觉 tokens、组件、证据语言、页面微缩和保留/禁用项。
-- `assets/visual-systems/<theme>/`：每套视觉系统的机器可读规则、CSS tokens、可复制页面模板和轻量 SVG 预览。
-
-### 脚本
-
-- `extract_pdf_pages.py`：将 PDF 页面渲染成 PNG 证据素材。
-- `check_assets.py`：检查普通资源、`data-source`、`srcset`、远程资源和不可迁移的本地绝对路径。
-- `check_html_deck.py`：用 Playwright 检查 Runtime 契约、阅读/演讲模式、步级与页级导航、状态恢复、hash 路由、证据弹窗、控制台错误、可见区域边界，以及项目主题声明的语义排版节奏与浏览器实际距离是否一致。
-- `build_contact_sheet.py`：把 QA 截图合成总览图。
-- `package_deck.py`：将 HTML 课件文件夹打包成 zip。
-- `render_visual_system.py`：把内容注入既有内置 theme id 或显式 `--project-theme` 目录，同时保留共享 runtime shell。真实来源图必须显式使用 `--source-kind verified --source-image ...`，文件缺失或无效时失败；本地路径本身不代表来源已核实，CLI 或 Python API 未传 `source_kind` 时即使有本地图也安全默认为 `illustrative`。没有真实证据图时可使用自动示意占位或 `--source-kind illustrative` 的本地图，渲染器会在相邻位置标“示意 / 待核实”，不会把它冒充来源证据。
-- `render_reference_vi.py`：校验内部 VI JSON；企业模式还会核对 1–3 张源图、裁边画布、静态帧、16:9 容差和归一化 bbox，精确裁切固定元素，再生成可查看的 3200×2400 规范板。
-- `compile_project_theme.py`：校验已确认 VI handoff 与共享布局兼容矩阵，确定性生成项目主题；企业模式只离线嵌入固定区域裁切，按页面角色选择壳，不把含示例正文的整张截图作为背景，并把内容限制在对应安全区。
-
-### 企业模板保真人工验收样例
-
-- 三图合成 fixture：[`cover`](tests/fixtures/corporate-family-cover.png) / [`toc`](tests/fixtures/corporate-family-toc.png) / [`section`](tests/fixtures/corporate-family-section.png)（均为自行制作、无真实品牌）
-- VI 标准图：[`examples/corporate-template-fidelity/reference-vi-board.html`](examples/corporate-template-fidelity/reference-vi-board.html) / [`PNG`](examples/corporate-template-fidelity/reference-vi-board.png)
-- 5 页企业保真 HTML：[`examples/corporate-template-fidelity/corporate-fidelity-sample.html`](examples/corporate-template-fidelity/corporate-fidelity-sample.html)
-
-## 开发、验证与版本管理
-
-项目版本记录在根目录 `VERSION`，遵循 Semantic Versioning；正式发布使用 `vMAJOR.MINOR.PATCH` tag。功能和修复在独立分支完成，通过自动化质量检查并合并到 `main` 后再创建 tag 和 GitHub Release。
-
-当前版本：[`0.2.0`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.2.0)
-
-### v0.2.0 发布重点
-
-- 打通 Word / PDF 材料理解、设计简报确认、HTML 制作与离线交付的首个完整纵向切片。
-- 补齐阅读 / 演讲双模式、逐步呈现、整页导航、状态恢复、全屏和页码等 Runtime 契约。
-- 将严格离线资产检查、三档目标视口浏览器 QA、单一 Skill 真源打包和 Claude GitHub marketplace 更新纳入正式发布链路。
-
-本地验证：
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m playwright install chromium
-
-python -m unittest discover -s tests -v
-python -m py_compile skill/taohtml/scripts/*.py
-python skill/taohtml/scripts/check_assets.py skill/taohtml/assets/html-deck-template/index.html --strict-offline
-python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa
-python evals/taohtml-quality-v1/scripts/build_visual_system_samples.py .artifacts/visual-systems-v1
-python scripts/package_plugin_marketplace.py .artifacts/taohtml-marketplace.zip
-```
-
-每个版本的可见变化记录在 `CHANGELOG.md`。不要直接在 `main` 上开发，也不要在质量检查通过前创建版本 tag。
-
-## 设计标准
-
-TaoHtml 是有明确审美立场的：
-
-- 不从页面开始，从受众决策和证据链开始。
-- 不装饰坏结构，先修故事。
-- 不只复制静态参考的颜色，而要落实可观察的构图、层级、组件与证据处理；动效由 Runtime 和报告任务决定，不从一张或多张静态图推断。
-- 企业模板保真时不重绘 Logo、不移动固定外框；固定元素来自最清晰的源截图裁切，排版和动效只发生在对应页面壳已确认的可编辑安全区。
-- 不把截图当装饰，关键证据必须可读、可追溯。
-- 不依赖鼠标悬停和小点击区域，现场演讲必须能用翻页器推进。
-- 不在资产路径、视频、截图没有检查的情况下交付。
-
-## Runtime 范围
-
-当前模板只承诺已经实现并测试的阅读模式与单屏演讲核心。双屏演讲者视图、HTML 内编辑导出、复杂交互图表和跨页连续变形仍属于后续模块，不作为当前能力宣传。详细边界见 [Runtime 路线](docs/runtime-roadmap.md)。
-
-## 作者与合作
-
-TaoHtml 由 Tao 发起，用于探索 AI Agent 如何参与高质量 HTML 课件、路演报告和证据型汇报的生产。
-
-如果你对以下方向感兴趣，可以联系我：
-
-- 企业汇报 / 路演课件 HTML 化
-- AI Agent skill 定制
-- 高设计感商业报告与演示系统
-- GEO / 内容工程 / 知识库相关报告系统
-
-微信：`taomir`
-
-## License
-
-MIT License. See `LICENSE`.
+> v0.1.0 当时只创建了 Git tag，没有独立 GitHub Release；这里不生成一个并不存在的 Release 链接。

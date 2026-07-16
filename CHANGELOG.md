@@ -4,27 +4,35 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-16
+
 ### Added
 
-- Add a hash-bound confirmed-VI handoff and deterministic compiler for project-local theme manifests, CSS, page templates, and provenance.
-- Add fail-closed coverage for confirmation, schema, paths, input hashes, observed/extension/unknown boundaries, neutral fallbacks, offline output, and deterministic reproduction.
-- Add a strict v1.1 executable layout grammar and an opposite centered/single-column VI fixture for structural compilation regression.
-- Add density-derived semantic rhythm tokens and browser geometry checks for label/title, title/lede, page/content, card copy, and evidence/source relationships.
-- Add a shared executable-layout compatibility matrix with parameterized coverage for every legal cover, content, and data combination.
+- Add a three-scenario quality benchmark for idea-only conversion talks, evidence-faithful PDF reports, and content-locked HTML upgrades, with isolated executor inputs, machine-readable results, human review dimensions, and cross-run aggregation ([#5](https://github.com/TaoGEO/TaoHtml/pull/5)).
+- Add four executable built-in visual systems—黑白荧光卡片、严谨咨询报告、稳重企业年报、杂志图文拼贴—with machine-readable tokens, layout/component grammar, five-page templates, previews, and deterministic same-content samples ([#6](https://github.com/TaoGEO/TaoHtml/pull/6)).
+- Add verified and illustrative source modes to the visual renderer. Verified mode requires a real local source image; illustrative mode uses an adjacent `示意 / 待核实` label instead of presenting generated material as source evidence ([#6](https://github.com/TaoGEO/TaoHtml/pull/6), [#7](https://github.com/TaoGEO/TaoHtml/pull/7)).
+- Add a structured delivery-time `《待核实内容清单》` and benchmark-level `PASS / CONDITIONAL / FAIL` semantics that separate artifact usability from verification-handoff completeness ([#7](https://github.com/TaoGEO/TaoHtml/pull/7)).
+- Add the single-static-reference VI workflow: a deterministic 3200×2400 standards board that distinguishes directly observed facts, report adaptations, and unknowns before the user confirms the VI ([#8](https://github.com/TaoGEO/TaoHtml/pull/8)).
+- Add a hash-bound confirmed-VI handoff and deterministic project-theme compiler for manifests, CSS, page templates, semantic rhythm, provenance, and structurally distinct cover/content/process/evidence/closing layouts ([#9](https://github.com/TaoGEO/TaoHtml/pull/9)).
+- Add corporate template fidelity for one to three same-family screenshots, including `cover / toc / section / content / data` role recognition, screenshot-cropped fixed assets, safe editable regions, multi-shell routing, and backward-compatible v1.1/v1.2 inputs ([#10](https://github.com/TaoGEO/TaoHtml/pull/10)).
+- Add public, self-made, unbranded corporate-family fixtures plus a five-page acceptance sample and VI board; no real client screenshots or derivative assets are included ([#10](https://github.com/TaoGEO/TaoHtml/pull/10)).
 
 ### Changed
 
-- Allow the production renderer to load an explicit project theme while preserving all four built-in theme ids and the shared Runtime shell.
-- Compile cover, content, process, evidence/data, and closing DOM/CSS variants from the confirmed layout grammar and record concrete provenance usage targets.
-- Make semantic containers own typography spacing through `gap`, with block- and inline-axis QA markers in generated templates.
-- Restrict the v1 grammar to values with defined programs, execute background and directional image placement as real geometry/DOM order, and apply metric column counts to the inner metric grid.
+- Require conversion-oriented reports to record a sourced or verified real action path, not only persuasive CTA wording; explanatory, educational, and internal reports do not gain an unnecessary CTA questionnaire item ([#3](https://github.com/TaoGEO/TaoHtml/pull/3)).
+- Ask only one outcome-changing idea-intake question per round, distinguish content length from optional presentation duration, skip already known decisions, preserve the six-question cap, and stop immediately when the project is design-ready ([#4](https://github.com/TaoGEO/TaoHtml/pull/4)).
+- Record platform token and billing usage only when exact values and provenance are available; unavailable WorkBuddy points remain unavailable instead of being reported as zero or estimated ([#5](https://github.com/TaoGEO/TaoHtml/pull/5)).
+- Shift ordinary evidence gaps to an output-first workflow: complete reversible creative supplements during production, deliver the usable report first, then disclose those supplements for verification while preserving hard boundaries around real identities, quotations, sources, achieved results, high-risk facts, and confirmed channels ([#7](https://github.com/TaoGEO/TaoHtml/pull/7)).
+- Route supported static references through `reference -> VI board -> 确认 VI -> project theme`, without forcing one of the four built-in systems or inferring motion from static frames ([#8](https://github.com/TaoGEO/TaoHtml/pull/8), [#9](https://github.com/TaoGEO/TaoHtml/pull/9)).
+- Compile exact executable-layout enums into materially different DOM/CSS programs and make semantic containers own typography spacing through density-derived `gap` tokens measured in Chromium ([#9](https://github.com/TaoGEO/TaoHtml/pull/9)).
+- Preserve screenshot-visible corporate pixels only: fixed crops stay immobile, report content stays inside the matching shell's editable region, and fidelity does not claim recovery of PPT masters, vector logos, source fonts, unseen assets, or motion ([#10](https://github.com/TaoGEO/TaoHtml/pull/10)).
 
 ### Fixed
 
-- Wait for reveal transitions to settle before browser QA captures final-state screenshots.
-- Keep eligible-but-unused VI records uncompiled and make the project-theme loader reject structure/provenance or layout-variant drift.
-- Prevent scoped heading resets from collapsing the confirmed label-to-title rhythm.
-- Reject incompatible cover/image, content/column, data/column, background-fit, and source-placement contracts before compilation instead of silently normalizing them.
+- Prevent benchmark false positives by keeping unavailable usage out of medians/ranges and by judging artifact usability separately from workflow disclosure ([#5](https://github.com/TaoGEO/TaoHtml/pull/5), [#7](https://github.com/TaoGEO/TaoHtml/pull/7)).
+- Require verified source evidence in generated visual-system samples and harden adjacent evidence labels and delivery handoffs so illustrative content cannot be mistaken for confirmed source material ([#6](https://github.com/TaoGEO/TaoHtml/pull/6), [#7](https://github.com/TaoGEO/TaoHtml/pull/7)).
+- Wait for reveal transitions before browser screenshots, keep eligible-but-unused VI records uncompiled, prevent scoped heading resets from collapsing confirmed rhythm, and reject incompatible layout combinations instead of silently normalizing them ([#9](https://github.com/TaoGEO/TaoHtml/pull/9)).
+- Reject corporate-theme drift in decoded crop bytes, hashes, dimensions, source/role mappings, placement, editable regions, active content, event handlers, `javascript:` URLs, and any noncanonical CSS rule that can directly target fixed layers or their pseudo-elements ([#10](https://github.com/TaoGEO/TaoHtml/pull/10)).
 
 ## [0.2.0] - 2026-07-15
 

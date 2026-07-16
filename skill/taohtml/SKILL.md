@@ -1,6 +1,6 @@
 ---
 name: taohtml
-description: TaoHtml turns ideas, Word/PDF source material, existing slides, and HTML into polished, offline HTML layouts, paged reports, and presentation-ready decks. Use when the user explicitly invokes TaoHtml or asks an agent to understand source material, preserve core viewpoints and evidence, confirm a report design brief, create or redesign visual HTML, add reading or single-screen presentation behavior, or run portable delivery QA.
+description: TaoHtml turns initial ideas, Word/PDF source material, existing slides, and HTML into polished 16:9 offline HTML reports and presentation-ready decks as a high-design alternative to PPT/PPTX. Use when the user explicitly invokes TaoHtml or asks an agent to structure goals, audiences, evidence, and report design; use four built-in visual systems or a confirmed reference-based project theme; implement reading or single-screen presentation behavior; and deliver portable HTML with QA and a verification handoff.
 ---
 
 # TaoHtml
