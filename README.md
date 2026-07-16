@@ -104,3 +104,16 @@ README 只保留每版最重要的用户变化；完整逐条历史见 [CHANGELO
 | **v0.1.0** | 建立明确版本、仓库质量工作流与可移植资产检查；补齐 hash 路由、分步内容和来源弹窗的基础浏览器 QA | [Git tag](https://github.com/TaoGEO/TaoHtml/tree/v0.1.0) · [CHANGELOG](CHANGELOG.md#010---2026-07-13) |
 
 > v0.1.0 当时只创建了 Git tag，没有独立 GitHub Release；这里不生成一个并不存在的 Release 链接。
+
+## 作者与合作
+
+TaoHtml 由 Tao 发起，用于探索 AI Agent 如何参与高质量 HTML 课件、路演报告和证据型汇报的生产。
+
+如果你对以下方向感兴趣，可以联系我：
+
+- 企业汇报 / 路演课件 HTML 化
+- AI Agent skill 定制
+- 高设计感商业报告与演示系统
+- GEO / 内容工程 / 知识库相关报告系统
+
+微信：`taomir`
