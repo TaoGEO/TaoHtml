@@ -311,6 +311,9 @@ def main() -> int:
                 if modal_open:
                     page.locator("#modalClose").click()
 
+            # Capture the stable page state rather than a fragment mid-transition.
+            page.wait_for_timeout(520)
+
             image_failures = page.evaluate(
                 """() => [...document.images]
                 .filter(img => !img.complete || img.naturalWidth === 0)

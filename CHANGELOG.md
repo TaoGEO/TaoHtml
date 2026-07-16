@@ -4,6 +4,19 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 
 ## [Unreleased]
 
+### Added
+
+- Add a hash-bound confirmed-VI handoff and deterministic compiler for project-local theme manifests, CSS, page templates, and provenance.
+- Add fail-closed coverage for confirmation, schema, paths, input hashes, observed/extension/unknown boundaries, neutral fallbacks, offline output, and deterministic reproduction.
+
+### Changed
+
+- Allow the production renderer to load an explicit project theme while preserving all four built-in theme ids and the shared Runtime shell.
+
+### Fixed
+
+- Wait for reveal transitions to settle before browser QA captures final-state screenshots.
+
 ## [0.2.0] - 2026-07-15
 
 ### Added

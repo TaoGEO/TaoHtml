@@ -35,6 +35,8 @@ Use `preview.svg` only when presenting the choice. Do not load all four manifest
 
 Treat `assets/html-deck-template/index.html` as the runtime shell and the selected system as the presentation layer. Replace content sections and inject theme CSS, but keep runtime controls, navigation, hash routing, reveal state, fullscreen behavior, and offline constraints unchanged. A theme switch must never add a new state machine or require a remote asset.
 
+This router remains exactly four built-in systems. A theme compiled after “确认 VI” is project-local and must be loaded explicitly with `--project-theme` under `project-theme-compiler.md`; never add it to this table or built-in asset directory.
+
 Use the production renderer with an explicit source kind. For a real local source image:
 
 ```bash

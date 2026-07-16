@@ -127,14 +127,14 @@ Show the PNG as the primary deliverable, optionally provide the HTML, and end wi
 
 Treat only a clear confirmation of the current board as VI authorization. If the customer corrects a color, boundary label, crop rule, component, or guardrail, update the JSON, rerender the whole board, and request confirmation again. Earlier approval to use the reference is not VI confirmation, and VI confirmation is not Report Design Brief confirmation.
 
-## Next-Task Handoff Boundary
+## Confirmed-VI Handoff Boundary
 
-After confirmation, retain these inputs for the separate project-theme task:
+After confirmation, retain these inputs and read `project-theme-compiler.md`:
 
 - confirmed VI JSON contract;
 - exact source-image path or packaged local copy;
-- rendered board HTML and PNG;
+- rendered board HTML and PNG for comparison and human review;
 - customer corrections incorporated into the current contract;
 - target reading/presentation mode and any confirmed accessibility or brand constraints.
 
-The future compiler may produce a project-specific theme manifest, CSS, and page templates. This v1 route does not compile those assets, does not substitute one of the four built-in themes, and does not authorize report production without the remaining gates and compatible theme output.
+Create the machine-checkable handoff in `project-theme-compiler.md`, bind the confirmation to the exact VI JSON and reference-image hashes, and compile the project-specific manifest, CSS, templates, and provenance. The compiler is a separate deterministic step: this reference renderer still does not compile theme assets. The result does not substitute or extend the four built-in themes and does not authorize report production without the remaining Report Design Brief gate.

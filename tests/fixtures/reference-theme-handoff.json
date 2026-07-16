@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "project": {
+    "id": "urban-renewal-observation",
+    "display_name": "城市更新观察｜项目专用主题"
+  },
+  "confirmation": {
+    "status": "confirmed",
+    "phrase": "确认 VI",
+    "vi_contract_sha256": "a2c7ca1d60df721c516c278dec42bb473960838b0d23d1f546d3de44989e038b",
+    "reference_image_sha256": "2d6a209c101f22ed701aa65485507f27dbcb61a02f5e6e971b9cbb162662293b"
+  },
+  "inputs": {
+    "vi_contract": "reference-vi-contract.json",
+    "reference_image": "reference-vi-source.svg"
+  },
+  "target_mode": "presentation",
+  "customer_corrections": [
+    "确认沿用硬边分区；人物摄影继续保持 unknown，不编译为参考事实。"
+  ]
+}
