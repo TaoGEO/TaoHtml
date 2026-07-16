@@ -11,6 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RepositoryMetadataTests(unittest.TestCase):
+    def test_hash_bound_text_fixtures_keep_lf_bytes_cross_platform(self) -> None:
+        attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+        self.assertIn("tests/fixtures/*.json text eol=lf", attributes)
+        self.assertIn("tests/fixtures/*.svg text eol=lf", attributes)
+
     def test_version_uses_semver(self) -> None:
         version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
         self.assertRegex(version, r"^\d+\.\d+\.\d+$")
