@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.1",
+  "board": {
+    "title": "静谧场域笔记｜VI 设计标准图",
+    "subtitle": "居中单栏、大留白与单焦点的静态参考确认稿",
+    "reference_label": "静谧场域单焦点静态参考"
+  },
+  "palette": [
+    {"name": "柔纸白", "value": "#F7F4EF", "role": "大面积画布与留白", "status": "observed", "basis": "参考主体使用低对比柔白背景"},
+    {"name": "柔墨蓝", "value": "#26313A", "role": "居中标题与正文", "status": "observed", "basis": "标题使用克制的深蓝灰而非纯黑"},
+    {"name": "鼠尾草绿", "value": "#91B5AA", "role": "单焦点图形与数据强调", "status": "observed", "basis": "中央圆形是画面主要色彩焦点"},
+    {"name": "雾蓝灰", "value": "#6F8F9D", "role": "次级图形与图表线", "status": "observed", "basis": "主图曲线使用低饱和蓝灰"},
+    {"name": "暖沙色", "value": "#C9A88A", "role": "克制标签与细线强调", "status": "extension", "basis": "从页底暖色短线延展为报告辅助色"}
+  ],
+  "typography": [
+    {"level": "H1", "sample": "一处空间，一个焦点", "spec": "约 70px / 中粗黑体 / 1.08 行距", "status": "observed", "basis": "居中单行主标题形成首要层级"},
+    {"level": "H2", "sample": "让证据留在中心", "spec": "约 34px / 中粗黑体 / 宽松行距", "status": "extension", "basis": "由主标题层级缩放为内容页标题"},
+    {"level": "BODY", "sample": "用大留白承接一张主图与一条结论", "spec": "约 25px / 常规黑体 / 1.55 行距", "status": "observed", "basis": "标题下方导语采用宽松行距"}
+  ],
+  "layout": [
+    {"label": "外边距", "value": "约画布宽度 9%", "status": "observed", "basis": "主体四周保留显著安全区"},
+    {"label": "参考辅助线", "value": "中央单轴，无显式列线", "status": "observed", "basis": "所有主要元素围绕画布中心排列"},
+    {"label": "模块间距", "value": "约 46px，组间使用大留白", "status": "extension", "basis": "把参考上下间隔适配为报告模块节奏"}
+  ],
+  "executable_layout": {
+    "page_axis": {"value": "column", "status": "observed", "basis": "标签、标题、说明与主图沿纵向依次排列"},
+    "alignment": {"value": "center", "status": "observed", "basis": "参考主要文字与图形均以画布中心对齐"},
+    "cover_structure": {"value": "single-column", "status": "observed", "basis": "封面没有左右分栏，全部内容属于单一纵向结构"},
+    "cover_split": {"value": "none", "status": "observed", "basis": "单栏结构不设置分栏比例"},
+    "content_structure": {"value": "single-focus", "status": "extension", "basis": "把单一主图焦点适配为每页一个核心模块"},
+    "content_columns": {"value": "1", "status": "observed", "basis": "参考未形成并列内容列"},
+    "image_placement": {"value": "bottom", "status": "observed", "basis": "主图位于标题和导语下方"},
+    "image_aspect_ratio": {"value": "16:9", "status": "extension", "basis": "将宽幅主图适配为报告可复用的宽屏比例"},
+    "image_fit": {"value": "contain", "status": "observed", "basis": "主图完整显示在柔和面板内并保留内部留白"},
+    "image_treatment": {"value": "natural", "status": "observed", "basis": "参考保留原始柔和色彩，不增加强对比处理"},
+    "data_structure": {"value": "chart-focus", "status": "extension", "basis": "数据页保持一张图表作为单一视觉焦点"},
+    "data_columns": {"value": "1", "status": "extension", "basis": "图表、说明与来源按单列依次组织"},
+    "module_organization": {"value": "soft-stack", "status": "observed", "basis": "圆角主图与大间距构成柔和纵向堆叠"},
+    "density": {"value": "low", "status": "observed", "basis": "画面大部分区域保持为空白"},
+    "visual_focus": {"value": "image-first", "status": "observed", "basis": "中央宽幅主图是面积最大的单一视觉焦点"}
+  },
+  "components": [
+    {"name": "柔和面板", "description": "浅色底、细边框与大圆角，内部保持充足留白", "status": "observed", "basis": "中央主图使用柔和圆角矩形承载"},
+    {"name": "单焦点模块", "description": "每页只突出一个图像、图表或结论", "status": "extension", "basis": "将参考单一主图焦点延展到报告页面"},
+    {"name": "紧凑标签", "description": "小号字距标签置于标题上方并保持居中", "status": "observed", "basis": "页首标签采用小号宽字距文字"}
+  ],
+  "imagery": [
+    {"label": "主图承载", "description": "宽幅圆角面板完整容纳图形并保留内边距", "status": "observed", "basis": "中央图形未贴边裁切"},
+    {"label": "人物规则", "description": "参考没有人物，肖像位置与肤色处理未知", "status": "unknown", "basis": "画面仅出现抽象图形"}
+  ],
+  "evidence_language": [
+    {"label": "单线图", "description": "一条圆头折线作为主要数据焦点，直接附加数值", "sample": "line", "status": "extension", "basis": "将参考主图曲线适配为单焦点数据表达"},
+    {"label": "来源脚注", "description": "页底真实来源的具体排布规则未知", "sample": "none", "status": "unknown", "basis": "参考没有展示真实来源标注"}
+  ],
+  "mini_pages": [
+    {"kind": "cover", "title": "单栏封面", "description": "居中标题、宽幅主图与显著上下留白", "status": "extension", "basis": "把参考纵向结构适配为封面"},
+    {"kind": "content", "title": "单焦点内容页", "description": "一个核心模块配三条纵向摘要", "status": "extension", "basis": "把参考单焦点语法适配为正文"},
+    {"kind": "data", "title": "图表焦点页", "description": "单张宽幅图表、结论和页底来源", "status": "extension", "basis": "把参考曲线适配为数据页"}
+  ],
+  "guardrails": [
+    {"mode": "preserve", "title": "保持单焦点", "description": "每页只建立一个主要视觉焦点", "status": "observed", "basis": "参考只有一个大面积主图"},
+    {"mode": "preserve", "title": "保持大留白", "description": "模块之间保留显著的纵向呼吸区", "status": "observed", "basis": "参考四周与模块之间均有大面积留白"},
+    {"mode": "avoid", "title": "禁用硬网格", "description": "不使用粗黑边与密集并列卡片", "status": "extension", "basis": "避免破坏参考的柔和单栏秩序"},
+    {"mode": "avoid", "title": "禁用多焦点", "description": "不在同页放置多个同权重视觉模块", "status": "extension", "basis": "避免削弱中央主图的焦点地位"}
+  ]
+}

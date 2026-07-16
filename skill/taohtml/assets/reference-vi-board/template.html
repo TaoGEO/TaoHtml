@@ -170,7 +170,18 @@
     .guardrail-group .info-item { padding: 9px 10px; }
     .guardrail-group .item-basis { margin-top: 4px; font-size: 13px; line-height: 1.18; }
 
-    .mini-pages-panel { grid-column: span 12; padding: 26px 30px; }
+    .grammar-panel { grid-column: span 4; padding: 24px 25px; }
+    .grammar-panel .panel-title { margin-bottom: 12px; padding-bottom: 11px; }
+    .grammar-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    .grammar-item { min-width: 0; padding: 5px 7px; border: 1px solid var(--board-line); background: #fff; }
+    .grammar-head { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+    .grammar-head strong { overflow: hidden; font-size: 14px; line-height: 1.05; white-space: nowrap; text-overflow: ellipsis; }
+    .grammar-item .status { min-width: 0; padding: 3px 5px; border-width: 1px; font-size: 10px; }
+    .grammar-item code { display: block; margin-top: 4px; color: var(--extension); font-size: 13px; font-weight: 800; }
+    .grammar-item .item-basis { display: -webkit-box; overflow: hidden; margin-top: 2px; font-size: 9px; line-height: 1.05; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+    .grammar-item .item-basis::before { content: ""; }
+
+    .mini-pages-panel { grid-column: span 8; padding: 26px 30px; }
     .mini-page-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; height: 344px; }
     .mini-page-card { min-width: 0; display: grid; grid-template-columns: 1.06fr .94fr; gap: 18px; padding: 18px; border: 2px solid var(--board-line); background: #fff; }
     .mini-canvas { position: relative; overflow: hidden; min-height: 0; border: 3px solid var(--sample-1); background: var(--sample-4); }
@@ -194,7 +205,7 @@
   </style>
 </head>
 <body>
-  <article class="vi-board" id="vi-board" data-schema-version="1.0" style="{{BOARD_STYLE}}">
+  <article class="vi-board" id="vi-board" data-schema-version="{{SCHEMA_VERSION}}" style="{{BOARD_STYLE}}">
     <header class="board-header">
       <div>
         <p class="eyebrow">TAOHTML · STATIC REFERENCE VI BOARD</p>
@@ -250,13 +261,18 @@
         <div class="guardrail-columns">{{GUARDRAIL_GROUPS}}</div>
       </section>
 
+      <section class="panel grammar-panel">
+        <div class="panel-title"><h2>可执行布局语法</h2><span class="panel-index">09 / GRAMMAR</span></div>
+        <div class="grammar-grid">{{EXECUTABLE_LAYOUT_ITEMS}}</div>
+      </section>
+
       <section class="panel mini-pages-panel">
-        <div class="panel-title"><h2>代表性页面微缩示例</h2><span class="panel-index">09 / PAGE SYSTEM</span></div>
+        <div class="panel-title"><h2>代表性页面微缩示例</h2><span class="panel-index">10 / PAGE SYSTEM</span></div>
         <div class="mini-page-list">{{MINI_PAGE_ITEMS}}</div>
       </section>
     </main>
 
-    <footer class="board-footer"><span>三类边界已显式标注｜缺失类别保持未知</span><span>TaoHtml · VI Board v1 · 3200 × 2400</span></footer>
+    <footer class="board-footer"><span>三类边界已显式标注｜结构字段可机器校验｜缺失类别保持未知</span><span>TaoHtml · VI Board v{{SCHEMA_VERSION_LABEL}} · 3200 × 2400</span></footer>
   </article>
 </body>
 </html>

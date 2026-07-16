@@ -15,9 +15,19 @@ from pathlib import Path
 from typing import Any
 
 
+SCRIPT_ROOT = Path(__file__).resolve().parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from project_theme_layout import (
+    EXECUTABLE_LAYOUT_OPTIONS_WITH_UNKNOWN,
+    resolve_layout_items,
+)
+
+
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = SKILL_ROOT / "assets" / "reference-vi-board" / "template.html"
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 BOARD_SIZE = (3200, 2400)
 EXPORT_VIEWPORT = (1600, 1200)
 STATUSES = {"observed", "extension", "unknown"}
@@ -37,6 +47,7 @@ TOP_LEVEL_KEYS = {
     "evidence_language",
     "mini_pages",
     "guardrails",
+    "executable_layout",
 }
 SECTION_LIMITS = {
     "palette": (1, 6),
@@ -57,6 +68,25 @@ ITEM_FIELDS = {
     "evidence_language": {"label", "description", "sample", "status", "basis"},
     "mini_pages": {"kind", "title", "description", "status", "basis"},
     "guardrails": {"mode", "title", "description", "status", "basis"},
+}
+EXECUTABLE_LAYOUT_ITEM_FIELDS = {"value", "status", "basis"}
+EXECUTABLE_LAYOUT_OPTIONS = EXECUTABLE_LAYOUT_OPTIONS_WITH_UNKNOWN
+EXECUTABLE_LAYOUT_LABELS = {
+    "page_axis": "页面主轴",
+    "alignment": "主要对齐",
+    "cover_structure": "封面结构",
+    "cover_split": "封面分栏",
+    "content_structure": "内容组织",
+    "content_columns": "内容列数",
+    "image_placement": "图片位置",
+    "image_aspect_ratio": "图片比例",
+    "image_fit": "图片适配",
+    "image_treatment": "图片处理",
+    "data_structure": "数据页结构",
+    "data_columns": "数据列数",
+    "module_organization": "模块组织",
+    "density": "信息密度",
+    "visual_focus": "视觉焦点",
 }
 FIELD_LENGTHS = {
     "title": 48,
@@ -223,6 +253,28 @@ def _validate_item(section: str, raw: object, index: int) -> dict[str, str]:
     return normalized
 
 
+def _validate_executable_layout(raw: object) -> dict[str, dict[str, str]]:
+    layout = _require_exact_keys(raw, set(EXECUTABLE_LAYOUT_OPTIONS), "executable_layout")
+    normalized: dict[str, dict[str, str]] = {}
+    for field, options in EXECUTABLE_LAYOUT_OPTIONS.items():
+        path = f"executable_layout.{field}"
+        item = _require_exact_keys(layout[field], EXECUTABLE_LAYOUT_ITEM_FIELDS, path)
+        value = _require_text(item["value"], "value", path)
+        status = _require_text(item["status"], "status", path)
+        basis = _require_text(item["basis"], "basis", path)
+        if status not in STATUSES:
+            raise ValueError(f"{path}.status must be one of: {', '.join(sorted(STATUSES))}.")
+        if value not in options:
+            raise ValueError(f"{path}.value must be one of: {', '.join(sorted(options))}.")
+        if status == "unknown" and value != "unknown":
+            raise ValueError(f"{path}.value must be 'unknown' when status is unknown.")
+        if status != "unknown" and value == "unknown":
+            raise ValueError(f"{path}.value cannot be 'unknown' when status is {status}.")
+        normalized[field] = {"value": value, "status": status, "basis": basis}
+    resolve_layout_items(normalized)
+    return normalized
+
+
 def validate_contract(raw: object) -> dict[str, Any]:
     contract = _require_exact_keys(raw, TOP_LEVEL_KEYS, "contract")
     if contract["schema_version"] != SCHEMA_VERSION:
@@ -239,7 +291,13 @@ def validate_contract(raw: object) -> dict[str, Any]:
         },
     }
 
-    statuses: set[str] = set()
+    normalized["executable_layout"] = _validate_executable_layout(
+        contract["executable_layout"]
+    )
+
+    statuses: set[str] = {
+        item["status"] for item in normalized["executable_layout"].values()
+    }
     for section, (minimum, maximum) in SECTION_LIMITS.items():
         raw_items = contract[section]
         if not isinstance(raw_items, list):
@@ -394,6 +452,15 @@ def _render_components(items: Iterable[dict[str, str]]) -> str:
     )
 
 
+def _render_executable_layout(items: dict[str, dict[str, str]]) -> str:
+    return "".join(
+        '<article class="grammar-item">'
+        f'<div class="grammar-head"><strong>{_e(EXECUTABLE_LAYOUT_LABELS[field])}</strong>'
+        f'{_status(item)}</div><code>{_e(item["value"])}</code>{_basis(item)}</article>'
+        for field, item in items.items()
+    )
+
+
 def _render_guardrails(items: Iterable[dict[str, str]]) -> str:
     groups: list[str] = []
     for mode, label in (("preserve", "保留项"), ("avoid", "禁用项")):
@@ -503,6 +570,11 @@ def render_html(contract: dict[str, Any], source_uri: str) -> str:
         "EVIDENCE_SAMPLE": _render_evidence_sample(contract["evidence_language"]),
         "GUARDRAIL_GROUPS": _render_guardrails(contract["guardrails"]),
         "MINI_PAGE_ITEMS": _render_mini_pages(contract["mini_pages"]),
+        "EXECUTABLE_LAYOUT_ITEMS": _render_executable_layout(
+            contract["executable_layout"]
+        ),
+        "SCHEMA_VERSION": SCHEMA_VERSION,
+        "SCHEMA_VERSION_LABEL": SCHEMA_VERSION,
     }
     rendered = template
     for marker, value in replacements.items():

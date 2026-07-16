@@ -2,13 +2,21 @@
 
 Read this reference only when the customer chooses “use my reference” and supplies exactly one static image. This v1 route turns that image into a customer-viewable VI design standards board before any project theme or report production begins.
 
+## Contents
+
+- Scope and readability gate
+- Boundary labels and extraction dimensions
+- Minimal structured contract and executable layout grammar
+- Deterministic render and confirmation
+- Confirmed-VI handoff
+
 ## Scope Boundary
 
 Analyze only visual properties visible in the supplied still image. Do not inspect, infer, or write rules for movement, animation, transitions, timing, or sequential states. A still image cannot establish those facts.
 
 Route here only for exactly one still image. A clear reference supplied as a PPT, webpage, dynamic HTML, video, multiple images, or a screenshot/state sequence is an unsupported reference input in v1, not “no clear reference.” State the boundary and ask the customer to provide one representative static screenshot. Do not infer movement from the source, silently reduce it to this contract, or route it to the four built-in systems unless the customer explicitly abandons the reference route.
 
-The model performs visual understanding. This reference defines the extraction dimensions, evidence boundary, confirmation gate, and handoff contract. `scripts/render_reference_vi.py` only validates structured data, embeds the verified local reference, renders the fixed HTML/CSS board, and exports PNG.
+The model performs visual understanding and fills both the descriptive observations and the machine-executable layout grammar. This reference defines the extraction dimensions, evidence boundary, confirmation gate, and handoff contract. `scripts/render_reference_vi.py` only validates structured data, embeds the verified local reference, renders the fixed HTML/CSS board, and exports PNG.
 
 ## Current-Session Readability Gate
 
@@ -50,6 +58,7 @@ Create one board that includes all of these dimensions. A dimension not shown by
 7. Only chart or evidence language actually visible in the image; otherwise mark the category `unknown` and keep any report adaptation separate as `extension`.
 8. Cover, content, and data-page miniatures. These are report adaptations unless the corresponding page type is directly visible in the reference.
 9. Preserve and avoid guardrails, each tied to observed evidence or clearly labeled adaptation logic.
+10. Executable layout grammar for page axis/alignment, cover structure, content organization, image position/ratio/treatment, data structure, module organization, density, and visual focus. Assign status and basis field by field; never derive these values later by keyword-matching prose descriptions.
 
 Do not reduce the result to a prose “visual DNA summary.” The PNG board is the primary customer deliverable; the JSON is an internal rendering contract.
 
@@ -59,7 +68,7 @@ Use UTF-8 JSON with these exact top-level keys:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "board": {
     "title": "VI 设计标准图",
     "subtitle": "基于单张静态参考的视觉语言确认稿",
@@ -78,6 +87,23 @@ Use UTF-8 JSON with these exact top-level keys:
     {"label": "外边距", "value": "约画布宽度的 6%", "status": "observed", "basis": "四周稳定留白"},
     {"label": "模块间距", "value": "约 24px", "status": "extension", "basis": "把可见间距适配为报告节奏"}
   ],
+  "executable_layout": {
+    "page_axis": {"value": "row", "status": "observed", "basis": "主要模块沿横向展开"},
+    "alignment": {"value": "start", "status": "observed", "basis": "标题与正文统一左对齐"},
+    "cover_structure": {"value": "split", "status": "extension", "basis": "把标题和主图分区适配为封面"},
+    "cover_split": {"value": "7:5", "status": "observed", "basis": "标题区明显宽于主图区"},
+    "content_structure": {"value": "card-grid", "status": "extension", "basis": "把可见模块适配为内容卡片组"},
+    "content_columns": {"value": "3", "status": "observed", "basis": "参考呈现三列等距模块"},
+    "image_placement": {"value": "right", "status": "observed", "basis": "主图位于标题右侧"},
+    "image_aspect_ratio": {"value": "4:3", "status": "extension", "basis": "以可见主图比例适配报告图片"},
+    "image_fit": {"value": "cover", "status": "observed", "basis": "主图填满矩形面板"},
+    "image_treatment": {"value": "muted", "status": "extension", "basis": "将克制色彩延展为轻度降饱和"},
+    "data_structure": {"value": "source-chart-split", "status": "extension", "basis": "适配为来源与图表并列页"},
+    "data_columns": {"value": "2", "status": "extension", "basis": "数据页按来源与图表形成两列"},
+    "module_organization": {"value": "hard-grid", "status": "observed", "basis": "粗线和直角形成硬网格"},
+    "density": {"value": "medium", "status": "observed", "basis": "标题与模块保持中等密度"},
+    "visual_focus": {"value": "headline-and-image", "status": "observed", "basis": "标题与主图共同形成焦点"}
+  },
   "components": [
     {"name": "结论标签", "description": "实色底、短文本、硬边", "status": "observed", "basis": "标题上方标签"},
     {"name": "证据卡片", "description": "细边框、短结论、来源脚注", "status": "extension", "basis": "把参考模块适配为报告证据卡"}
@@ -102,7 +128,52 @@ Use UTF-8 JSON with these exact top-level keys:
 
 Every list must be non-empty. `palette` accepts one to six items, so one or two supported colors are valid. A palette item with `observed` or `extension` status must carry a six-digit hex value. An `unknown` palette item must use the literal value `unknown`; the renderer shows a neutral hatched placeholder and “未识别色值”, never a real color swatch. Do not add an unknown palette item when the supported colors already express the category clearly.
 
-`mini_pages` must contain exactly one each of `cover`, `content`, and `data`. `guardrails` must contain at least one `preserve` and one `avoid`. Across the whole contract, all three boundary statuses must appear at least once. Use an `unknown` item for a missing category instead of omitting the category. For `evidence_language`, set `sample` to `bar`, `line`, `table`, `metric`, or `citation` only when that language is directly observed; an `unknown` item must use `none`, which renders an explicit “参考中未出现” state instead of a fabricated chart.
+`executable_layout` is an exact object, not a prose summary. Every field uses exactly `value`, `status`, and `basis`. Use these enums:
+
+| Field | Values before `unknown` |
+|---|---|
+| `page_axis` | `row`, `column` |
+| `alignment` | `start`, `center`, `end` |
+| `cover_structure` | `split`, `single-column` |
+| `cover_split` | `7:5`, `5:7`, `1:1`, `none` |
+| `content_structure` | `card-grid`, `stack`, `single-focus` |
+| `content_columns`, `data_columns` | `1`, `2`, `3` |
+| `image_placement` | `left`, `right`, `top`, `bottom`, `background` |
+| `image_aspect_ratio` | `16:9`, `4:3`, `3:2`, `1:1`, `3:4` |
+| `image_fit` | `cover`, `contain` |
+| `image_treatment` | `natural`, `muted`, `monochrome`, `high-contrast` |
+| `data_structure` | `source-chart-split`, `chart-focus`, `table-focus`, `metrics-grid` |
+| `module_organization` | `hard-grid`, `soft-stack`, `open-field` |
+| `density` | `low`, `medium`, `high` |
+| `visual_focus` | `headline-and-image`, `image-first`, `balanced` |
+
+Every enum also accepts `unknown`, but only together with `status: unknown`; an unknown field cannot carry a concrete value. The upstream model must select these values from the confirmed static observation and explicitly labeled report adaptation. Descriptive `layout`, `components`, and `mini_pages` remain useful review material, but they are not the compiler's primary structural input.
+
+The grammar has exact compatibility matrices. A contract outside them is invalid; the compiler never repairs a concrete incompatible value:
+
+| `cover_structure` | Allowed `cover_split` | Allowed `image_placement` | Executed meaning |
+|---|---|---|---|
+| `split` | `7:5`, `5:7`, `1:1` | `left`, `right` | Copy and image are separate horizontal grid children. Ratios mean copy:image, so physical columns reverse when the image is left. |
+| `single-column` | `none` | `top`, `bottom`, `background` | Top/bottom reverse actual DOM order; background creates an absolute visual layer behind a foreground copy panel. |
+
+| `content_structure` | Allowed `content_columns` | Executed meaning |
+|---|---|---|
+| `card-grid` | `1`, `2`, `3` | Card and closing grids use that exact column count. |
+| `stack` | `1` | One vertical sequence of line items. |
+| `single-focus` | `1` | One focal lead followed by one vertical sequence of supporting points. |
+
+| `data_structure` | Allowed `data_columns` | Executed meaning |
+|---|---|---|
+| `source-chart-split` | `2` | Local source and chart/table panel occupy two grid columns; image placement must be `left` or `right` and controls their DOM order. |
+| `chart-focus` | `1` | One chart panel occupies the data grid. |
+| `table-focus` | `1` | One table panel occupies the data grid. |
+| `metrics-grid` | `1`, `2`, `3` | The outer data panel stays single-column while metric cards use the declared inner column count. |
+
+`image_placement: background` additionally requires `image_fit: cover`. `inline`, `headline-only`, and `data-first` are intentionally absent: v1 has no distinct, generally valid program for those labels. Unknown fields use compatibility-aware neutral fallbacks recorded separately in provenance; for example, an unknown split on a confirmed split cover becomes `1:1`, while the original unknown boundary remains uncompiled.
+
+Choose `density` from the visible relationship between labels, titles, explanatory copy, and major modules—not from the number of words in the eventual report. Use `low` for conspicuous whitespace and one dominant focal group, `medium` for a balanced report rhythm, and `high` for deliberately compact information groupings. The compiler turns this enum into semantic relationship spacing; the model must not invent pixel gaps. If the static reference does not establish density, use `unknown` so the compiler can record its neutral medium fallback separately.
+
+`mini_pages` must contain exactly one each of `cover`, `content`, and `data`. `guardrails` must contain at least one `preserve` and one `avoid`. Across the whole contract, all three boundary statuses must appear at least once. Use an `unknown` item for a missing category instead of omitting the category. For `evidence_language`, set `sample` to `bar`, `line`, `table`, `metric`, or `citation` only when that language is directly observed or explicitly proposed as an `extension`; an `unknown` item must use `none`, which renders an explicit “参考中未出现” state instead of a fabricated chart.
 
 ## Deterministic Render
 
@@ -127,14 +198,14 @@ Show the PNG as the primary deliverable, optionally provide the HTML, and end wi
 
 Treat only a clear confirmation of the current board as VI authorization. If the customer corrects a color, boundary label, crop rule, component, or guardrail, update the JSON, rerender the whole board, and request confirmation again. Earlier approval to use the reference is not VI confirmation, and VI confirmation is not Report Design Brief confirmation.
 
-## Next-Task Handoff Boundary
+## Confirmed-VI Handoff Boundary
 
-After confirmation, retain these inputs for the separate project-theme task:
+After confirmation, retain these inputs and read `project-theme-compiler.md`:
 
 - confirmed VI JSON contract;
 - exact source-image path or packaged local copy;
-- rendered board HTML and PNG;
+- rendered board HTML and PNG for comparison and human review;
 - customer corrections incorporated into the current contract;
 - target reading/presentation mode and any confirmed accessibility or brand constraints.
 
-The future compiler may produce a project-specific theme manifest, CSS, and page templates. This v1 route does not compile those assets, does not substitute one of the four built-in themes, and does not authorize report production without the remaining gates and compatible theme output.
+Create the machine-checkable handoff in `project-theme-compiler.md`, bind the confirmation to the exact VI JSON and reference-image hashes, and compile the project-specific manifest, CSS, templates, and provenance. The compiler is a separate deterministic step: this reference renderer still does not compile theme assets. The result does not substitute or extend the four built-in themes and does not authorize report production without the remaining Report Design Brief gate.

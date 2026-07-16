@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "board": {
     "title": "城市更新观察｜VI 设计标准图",
     "subtitle": "基于单张静态参考的视觉语言确认稿",
@@ -85,6 +85,83 @@
       "basis": "底部卡片等距排列并由中部横线分隔"
     }
   ],
+  "executable_layout": {
+    "page_axis": {
+      "value": "row",
+      "status": "observed",
+      "basis": "标题、主视觉与底部证据模块均沿横向主轴展开"
+    },
+    "alignment": {
+      "value": "start",
+      "status": "observed",
+      "basis": "标题、标签、正文与卡片内容统一左对齐"
+    },
+    "cover_structure": {
+      "value": "split",
+      "status": "extension",
+      "basis": "把参考上部标题与主视觉的分区适配为报告封面"
+    },
+    "cover_split": {
+      "value": "7:5",
+      "status": "observed",
+      "basis": "参考上部标题区明显宽于右侧主视觉区"
+    },
+    "content_structure": {
+      "value": "card-grid",
+      "status": "extension",
+      "basis": "把参考底部并列模块适配为报告内容卡片组"
+    },
+    "content_columns": {
+      "value": "3",
+      "status": "observed",
+      "basis": "参考底部明确呈现三列等距模块"
+    },
+    "image_placement": {
+      "value": "right",
+      "status": "observed",
+      "basis": "主视觉位于标题右侧，证据图也与文字横向并列"
+    },
+    "image_aspect_ratio": {
+      "value": "4:3",
+      "status": "extension",
+      "basis": "以参考主视觉近似比例适配报告中的本地来源图片"
+    },
+    "image_fit": {
+      "value": "cover",
+      "status": "observed",
+      "basis": "主视觉填满矩形面板并保持直角裁切"
+    },
+    "image_treatment": {
+      "value": "muted",
+      "status": "extension",
+      "basis": "将参考克制色彩延展为轻度降饱和的报告图片处理"
+    },
+    "data_structure": {
+      "value": "source-chart-split",
+      "status": "extension",
+      "basis": "把参考右下图表与主视觉并列关系适配为来源加图表页"
+    },
+    "data_columns": {
+      "value": "2",
+      "status": "extension",
+      "basis": "证据页按本地来源与数据面板形成两列"
+    },
+    "module_organization": {
+      "value": "hard-grid",
+      "status": "observed",
+      "basis": "粗线、直角边框与相邻模块构成清晰硬网格"
+    },
+    "density": {
+      "value": "medium",
+      "status": "observed",
+      "basis": "大标题与三组信息模块之间保持中等密度"
+    },
+    "visual_focus": {
+      "value": "headline-and-image",
+      "status": "observed",
+      "basis": "双行结论标题与右侧几何主视觉共同形成双焦点"
+    }
+  },
   "components": [
     {
       "name": "章节标签",

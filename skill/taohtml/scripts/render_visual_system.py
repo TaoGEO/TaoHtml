@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render content through one built-in visual system and the shared runtime shell."""
+"""Render content through a built-in or project theme and the shared runtime shell."""
 
 from __future__ import annotations
 
@@ -12,16 +12,21 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+SCRIPT_ROOT = Path(__file__).resolve().parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
+
+from theme_runtime import (
+    BUILT_IN_THEME_IDS,
+    ThemeBundle,
+    load_built_in_theme,
+    load_project_theme,
+)
+
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-SYSTEMS_ROOT = SKILL_ROOT / "assets" / "visual-systems"
 SHELL_PATH = SKILL_ROOT / "assets" / "html-deck-template" / "index.html"
-THEME_IDS = (
-    "black-white-fluorescent-cards",
-    "rigorous-consulting-report",
-    "corporate-annual-report",
-    "editorial-collage",
-)
+THEME_IDS = BUILT_IN_THEME_IDS
 START_MARKER = "    <!-- TAOHTML_SLIDES_START -->"
 END_MARKER = "    <!-- TAOHTML_SLIDES_END -->"
 PLACEHOLDER = re.compile(r"\{\{([A-Z][A-Z0-9_]*)\}\}")
@@ -56,13 +61,8 @@ def load_content(path: Path) -> dict[str, str]:
 
 
 def load_manifest(theme_id: str) -> dict[str, object]:
-    if theme_id not in THEME_IDS:
-        raise ValueError(f"Unknown theme: {theme_id}")
-    manifest_path = SYSTEMS_ROOT / theme_id / "theme.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("id") != theme_id:
-        raise ValueError(f"Theme manifest id mismatch: {manifest_path}")
-    return manifest
+    """Compatibility wrapper for callers that inspect built-in manifests."""
+    return load_built_in_theme(theme_id).manifest
 
 
 def local_image_data_uri(source_image: Path) -> str:
@@ -183,24 +183,19 @@ def render_sections(
     return rendered.strip()
 
 
-def _render_theme(
+def _render_bundle(
     content: dict[str, str],
-    theme_id: str,
+    bundle: ThemeBundle,
     output: Path,
     source_uri: str,
     source_kind: str,
 ) -> Path:
-    manifest = load_manifest(theme_id)
-    theme_dir = SYSTEMS_ROOT / theme_id
-    css = (theme_dir / "theme.css").read_text(encoding="utf-8").strip()
     sections = render_sections(
-        (theme_dir / "templates.html").read_text(encoding="utf-8"),
+        bundle.templates,
         content,
         source_uri,
         source_kind,
     )
-    if "</style>" in css.lower():
-        raise ValueError(f"Theme CSS contains a closing style tag: {theme_id}")
 
     shell = SHELL_PATH.read_text(encoding="utf-8")
     if shell.count(START_MARKER) != 1 or shell.count(END_MARKER) != 1:
@@ -210,8 +205,9 @@ def _render_theme(
     rendered = f"{prefix}{START_MARKER}\n{sections}\n{END_MARKER}{suffix}"
 
     theme_style = (
-        f'  <style id="taohtml-visual-system" data-theme-id="{theme_id}">\n'
-        f"{css}\n"
+        f'  <style id="taohtml-visual-system" data-theme-id="{bundle.theme_id}" '
+        f'data-theme-kind="{bundle.kind}">\n'
+        f"{bundle.css}\n"
         "  </style>\n"
     )
     rendered = rendered.replace("</head>", f"{theme_style}</head>", 1)
@@ -223,10 +219,14 @@ def _render_theme(
         count=1,
         flags=re.DOTALL,
     )
-    display_name = html.escape(str(manifest["display_name"]), quote=True)
+    display_name = html.escape(bundle.display_name, quote=True)
+    mode_attribute = (
+        f' data-mode="{bundle.target_mode}"' if bundle.target_mode is not None else ""
+    )
     rendered = rendered.replace(
         '<main class="deck" id="deck">',
-        f'<main class="deck" id="deck" data-theme="{theme_id}" data-theme-name="{display_name}">',
+        f'<main class="deck" id="deck" data-theme="{bundle.theme_id}" '
+        f'data-theme-name="{display_name}" data-theme-kind="{bundle.kind}"{mode_attribute}>',
         1,
     )
 
@@ -244,7 +244,31 @@ def render_theme(
 ) -> Path:
     """Render one theme; an omitted source kind always means illustrative."""
     source_uri, resolved_kind = resolve_source(source_image, source_kind)
-    return _render_theme(content, theme_id, output, source_uri, resolved_kind)
+    return _render_bundle(
+        content,
+        load_built_in_theme(theme_id),
+        output,
+        source_uri,
+        resolved_kind,
+    )
+
+
+def render_project_theme(
+    content: dict[str, str],
+    project_theme: Path,
+    output: Path,
+    source_image: Path | None = None,
+    source_kind: str | None = None,
+) -> Path:
+    """Render an explicitly supplied project theme through the shared runtime."""
+    source_uri, resolved_kind = resolve_source(source_image, source_kind)
+    return _render_bundle(
+        content,
+        load_project_theme(project_theme),
+        output,
+        source_uri,
+        resolved_kind,
+    )
 
 
 def render_all(
@@ -256,9 +280,9 @@ def render_all(
     """Render every theme; verified provenance must be explicitly declared."""
     source_uri, resolved_kind = resolve_source(source_image, source_kind)
     return [
-        _render_theme(
+        _render_bundle(
             content,
-            theme_id,
+            load_built_in_theme(theme_id),
             output_root / theme_id / "index.html",
             source_uri,
             resolved_kind,
@@ -269,7 +293,7 @@ def render_all(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Render content through TaoHtml's built-in visual systems with verified or illustrative local visuals."
+        description="Render content through a TaoHtml built-in system or explicit project theme with verified or illustrative local visuals."
     )
     parser.add_argument("--content", type=Path, required=True, help="Flat JSON content object.")
     parser.add_argument(
@@ -284,6 +308,11 @@ def main() -> int:
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--theme", choices=THEME_IDS)
+    mode.add_argument(
+        "--project-theme",
+        type=Path,
+        help="Compiled project theme directory containing theme.json, theme.css, templates.html, and provenance.json.",
+    )
     mode.add_argument("--all", action="store_true")
     parser.add_argument("--output", type=Path, help="Output HTML for --theme.")
     parser.add_argument("--output-root", type=Path, help="Output directory for --all.")
@@ -291,18 +320,29 @@ def main() -> int:
 
     try:
         content = load_content(args.content.resolve())
-        if args.theme:
+        if args.theme or args.project_theme:
             if args.output is None:
-                parser.error("--output is required with --theme")
-            outputs = [
-                render_theme(
-                    content,
-                    args.theme,
-                    args.output.resolve(),
-                    args.source_image,
-                    args.source_kind,
-                )
-            ]
+                parser.error("--output is required with --theme or --project-theme")
+            if args.project_theme:
+                outputs = [
+                    render_project_theme(
+                        content,
+                        args.project_theme,
+                        args.output.resolve(),
+                        args.source_image,
+                        args.source_kind,
+                    )
+                ]
+            else:
+                outputs = [
+                    render_theme(
+                        content,
+                        args.theme,
+                        args.output.resolve(),
+                        args.source_image,
+                        args.source_kind,
+                    )
+                ]
         else:
             if args.output_root is None:
                 parser.error("--output-root is required with --all")
