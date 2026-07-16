@@ -1,6 +1,6 @@
 # Confirmed VI To Project Theme
 
-Read this reference only after the customer has explicitly replied “确认 VI” for the current single-static-reference board. This step compiles that confirmed VI into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
+Read this reference only after the customer has explicitly replied “确认 VI” for the current single-static-reference board. This shared step compiles either `reconstruct` or `corporate_fidelity` into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
 
 ## Contents
 
@@ -8,6 +8,7 @@ Read this reference only after the customer has explicitly replied “确认 VI�
 - Fail-closed compilation
 - Executable layout and provenance policy
 - Shared Runtime rendering
+- Corporate fixed shell boundary
 - Verification and remaining model work
 
 ## Responsibility Boundary
@@ -16,6 +17,8 @@ Read this reference only after the customer has explicitly replied “确认 VI�
 - The Skill maintains the observed / extension / unknown boundary and requires the confirmation handoff below.
 - `scripts/compile_project_theme.py` validates the handoff and deterministically writes the project theme.
 - `scripts/render_visual_system.py --project-theme ...` injects that theme into the existing shared Runtime shell.
+
+In `corporate_fidelity`, the model identifies and records visible fixed elements and the safe area, but never recreates their pixels. `render_reference_vi.py` and `compile_project_theme.py` verify the source binding, crop fixed regions, hash the crops, embed the crop bytes offline, and place them at the confirmed normalized coordinates. All report DOM, layout, and reveal behavior stays inside the editable region.
 
 Never infer motion, transitions, timing, interaction, or sequential state from a still image. The project manifest records motion as a TaoHtml Runtime and report-task decision with `observed_from_reference: false`.
 
@@ -61,6 +64,9 @@ Compilation must stop before creating the output directory when any of these is 
 - either SHA-256 digest does not match the current file;
 - the VI JSON fails the validator in `render_reference_vi.py`;
 - the reference image is unreadable, active SVG, or contains a non-offline SVG reference;
+- a corporate source is not PNG/JPEG/WebP, is below 960×540, disagrees with declared dimensions, or yields a locked crop below 24×24;
+- a normalized bbox leaves 0..1, a locked region overlaps the editable region, or the corporate contract lacks exactly one five-role editable region;
+- a locked element requests model redraw or any extraction other than `crop`, or an unseen page role is mislabeled `observed`;
 - target mode, project id, or customer corrections violate the contract.
 
 Never repair, downgrade, or silently regenerate the confirmed inputs inside the compiler.
@@ -85,10 +91,10 @@ project-theme/
 └── provenance.json
 ```
 
-- `theme.json` contains the project identity, executable tokens, normalized `executable_layout`, per-field `structure_sources`, generated page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary.
+- `theme.json` contains the project identity, `reference_mode`, executable tokens, normalized `executable_layout`, per-field `structure_sources`, generated page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary. Corporate mode also records source dimensions, locked-element bbox/pixel bbox/crop hash, the editable region, extension pages, limitations, `full_screenshot_background: false`, and `logo_redraw: false`.
 - `theme.css` applies palette, type hierarchy, spacing/grid, border language, image crop/treatment, cards, panels, labels, data treatment, cover, content, evidence/data, and closing-page structures selected from the executable layout grammar.
-- `templates.html` provides five reusable, grammar-selected DOM variants using the same placeholders and `fragment` / `data-step` syntax as the built-in systems. It is not a fixed template set with VI color substitution.
-- `provenance.json` records every VI item, eligibility, actual compiled state, concrete usage targets, every neutral fallback, and the motion boundary.
+- `templates.html` provides five reusable, grammar-selected DOM variants using the same placeholders and `fragment` / `data-step` syntax as the built-in systems. Corporate mode repeats one exact fixed crop shell on every page and wraps every dynamic content role in the confirmed editable region. It never embeds the whole source screenshot.
+- `provenance.json` records every VI item, eligibility, actual compiled state, concrete usage targets, every neutral fallback, the source/crop hashes, and the motion boundary.
 
 The output is project-local. Do not copy it into `assets/visual-systems/`, rename it to one of the four built-in ids, add it to the built-in router, or treat it as a globally available style.
 
@@ -124,6 +130,18 @@ The confirmed `executable_layout.density` enum deterministically selects five re
 These compile to `theme.json` tokens and `--pt-rhythm-*` CSS properties, with exact provenance usage targets attributed to `executable_layout.density`. An unknown density does not become observed; it uses the neutral `medium` scale and produces separate field and token fallback records.
 
 Generated templates mark the relationship owner and its direct endpoints with `data-rhythm-check`, `data-rhythm-from`, and `data-rhythm-to`. Horizontal relationships additionally use `data-rhythm-axis="inline"`; vertical relationships default to the block axis. `check_html_deck.py` measures the computed browser rectangles and fails when the actual distance differs from the declared token. This check complements overflow QA: a page can fit its viewport and still have a broken visual relationship.
+
+## Corporate Fixed Shell Boundary
+
+For `corporate_fidelity`, compile one reusable shell from the exact confirmed source and regions:
+
+- Crop every locked element with floor(left/top) and ceil(right/bottom) pixel bounds after normalized-coordinate validation. Encode each crop as deterministic offline PNG and record its SHA-256 and pixel bbox.
+- Place crop bytes at their exact normalized bbox on every page. Mark fixed elements with `data-locked-region`, the crop hash, and `data-fixed-motion="none"`.
+- Wrap each of the five page roles in the one `data-editable-region`. Report content, layout changes, and Runtime fragments must remain descendants of that wrapper.
+- Apply `animation:none`, `transition:none`, and `transform:none` to the fixed shell and fixed regions. The loader rejects missing crops, hash/region drift, fixed-element fragment classes, incomplete safe-area wrappers, or weakened fixed-motion CSS.
+- Never embed the complete screenshot in `templates.html` or CSS. Example body text, charts, and numbers in the screenshot are extraction exclusions, not reusable background material.
+
+The fixed shell promises screenshot-visible pixels and positions only. It does not reconstruct a source master, vectors, fonts, hidden page types, or movement. Content-page variants proposed from a single screenshot remain `extension` until the customer confirms the VI board.
 
 ## Render Through The Shared Runtime
 

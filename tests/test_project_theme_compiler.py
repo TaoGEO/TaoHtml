@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import base64
 import hashlib
 import importlib.util
 import json
@@ -24,6 +25,9 @@ REFERENCE_FIXTURE = FIXTURES / "reference-vi-source.svg"
 CENTERED_HANDOFF_FIXTURE = FIXTURES / "reference-theme-centered-handoff.json"
 CENTERED_VI_FIXTURE = FIXTURES / "reference-vi-centered-contract.json"
 CENTERED_REFERENCE_FIXTURE = FIXTURES / "reference-vi-centered-source.svg"
+CORPORATE_HANDOFF_FIXTURE = FIXTURES / "corporate-template-handoff.json"
+CORPORATE_VI_FIXTURE = FIXTURES / "corporate-template-vi-contract.json"
+CORPORATE_REFERENCE_FIXTURE = FIXTURES / "corporate-template-reference.png"
 CONTENT_FIXTURE = (
     ROOT / "evals" / "taohtml-quality-v1" / "fixtures" / "visual-systems-content.json"
 )
@@ -787,6 +791,94 @@ class ProjectThemeRendererTests(unittest.TestCase):
             self.assertTrue(output.is_file())
 
 
+class CorporateFidelityThemeTests(unittest.TestCase):
+    def test_compiler_embeds_only_exact_fixed_crops_and_records_source_and_crop_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            theme = COMPILER.compile_theme(
+                CORPORATE_HANDOFF_FIXTURE, root / "theme"
+            )
+            repeated = COMPILER.compile_theme(
+                CORPORATE_HANDOFF_FIXTURE, root / "theme-repeated"
+            )
+            for name in ("theme.json", "theme.css", "templates.html", "provenance.json"):
+                self.assertEqual(sha256(theme / name), sha256(repeated / name), name)
+            manifest = json.loads((theme / "theme.json").read_text(encoding="utf-8"))
+            provenance = json.loads(
+                (theme / "provenance.json").read_text(encoding="utf-8")
+            )
+            templates = (theme / "templates.html").read_text(encoding="utf-8")
+            shell = manifest["corporate_shell"]
+            self.assertEqual(manifest["project"]["reference_mode"], "corporate_fidelity")
+            self.assertEqual(
+                shell["source_image_sha256"], sha256(CORPORATE_REFERENCE_FIXTURE)
+            )
+            self.assertEqual(shell["source_image_size"], [1600, 900])
+            self.assertFalse(shell["full_screenshot_background"])
+            self.assertFalse(shell["logo_redraw"])
+            self.assertEqual(shell["fixed_motion"], "none")
+            self.assertEqual(shell["content_motion_scope"], "editable_region_only")
+            self.assertEqual(provenance["corporate_fidelity"], shell)
+            self.assertEqual(len(shell["fixed_elements"]), 4)
+            self.assertEqual(templates.count('data-fixed-motion="none"'), 5)
+            self.assertEqual(templates.count('data-editable-region="safe-content"'), 5)
+            self.assertEqual(templates.count('data-content-role="'), 5)
+            self.assertEqual(templates.count("data:image/png;base64,"), 20)
+            full_source_uri = base64.b64encode(
+                CORPORATE_REFERENCE_FIXTURE.read_bytes()
+            ).decode("ascii")
+            self.assertNotIn(full_source_uri, templates)
+            self.assertNotIn("示例正文 · 不得作为背景复用", templates)
+            for item in shell["fixed_elements"]:
+                self.assertEqual(
+                    templates.count(f'data-locked-region="{item["id"]}"'), 5
+                )
+                self.assertEqual(
+                    templates.count(f'data-crop-sha256="{item["crop_sha256"]}"'), 5
+                )
+            self.assertNotRegex(
+                templates,
+                r'class="[^"]*fragment[^"]*"[^>]*data-locked-region',
+            )
+            THEME_RUNTIME.load_project_theme(theme)
+
+    def test_corporate_content_renders_five_pages_inside_safe_region_with_shared_runtime(self) -> None:
+        content = RENDERER.load_content(CONTENT_FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            theme = COMPILER.compile_theme(CORPORATE_HANDOFF_FIXTURE, root / "theme")
+            output = RENDERER.render_project_theme(
+                content, theme, root / "report.html", source_kind="illustrative"
+            )
+            document = output.read_text(encoding="utf-8")
+            self.assertEqual(document.count('<section class="slide'), 5)
+            self.assertEqual(document.count('data-editable-region="safe-content"'), 5)
+            self.assertIn("window.TaoHtmlRuntime", document)
+            self.assertIn('data-theme-kind="project"', document)
+            check = subprocess.run(
+                [sys.executable, str(CHECK_ASSETS), str(output), "--strict-offline"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(check.returncode, 0, msg=check.stdout + check.stderr)
+
+    def test_loader_rejects_fixed_element_motion_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                CORPORATE_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            css_path = theme / "theme.css"
+            css = css_path.read_text(encoding="utf-8")
+            css_path.write_text(
+                css.replace("animation:none !important", "animation:spin 1s infinite", 1),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "disable fixed-element animation"):
+                THEME_RUNTIME.load_project_theme(theme)
+
+
 class ProjectThemeWorkflowTests(unittest.TestCase):
     def test_skill_routes_confirmed_vi_to_project_compiler_before_brief(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -815,10 +907,23 @@ class ProjectThemeWorkflowTests(unittest.TestCase):
         router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
             encoding="utf-8"
         )
+        reference = (SKILL_ROOT / "references" / "project-theme-compiler.md").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("不是第五套内置主题", readme)
         self.assertIn("项目主题不是第五套内置风格", workflow)
         self.assertIn("This router remains exactly four built-in systems", router)
         self.assertIn("动效由 Runtime 和报告任务决定，不从单图推断", readme)
+        for marker in (
+            "参考风格重构",
+            "企业模板保真",
+            "截图中可见效果",
+            "不重绘 Logo",
+            "可编辑安全区",
+        ):
+            self.assertIn(marker, readme)
+        self.assertIn("Corporate Fixed Shell Boundary", reference)
+        self.assertIn("Never embed the complete screenshot", reference)
 
 
 if __name__ == "__main__":

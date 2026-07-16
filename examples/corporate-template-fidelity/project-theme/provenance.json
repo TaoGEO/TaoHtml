@@ -1,0 +1,733 @@
+{
+  "boundary_policy": {
+    "compiled": "true only when concrete usage targets are recorded",
+    "eligible": "observed or extension may compile, but eligibility alone never sets compiled true",
+    "extension": "eligible only as a labeled report adaptation when used",
+    "fallback": "neutral reversible compiler default, never reference evidence",
+    "observed": "eligible for direct deterministic compilation when used",
+    "unknown": "retained with compiled false; a needed default is a separate fallback record"
+  },
+  "boundary_records": [
+    {
+      "basis": "Logo 区、页脚和正文标题重复使用",
+      "compiled": true,
+      "eligible": true,
+      "path": "palette[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.css:--pt-ink",
+        "theme.json:tokens.ink"
+      ]
+    },
+    {
+      "basis": "页眉和固定品牌条直接可见",
+      "compiled": true,
+      "eligible": true,
+      "path": "palette[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.css:--pt-canvas",
+        "theme.css:--pt-paper",
+        "theme.json:tokens.canvas",
+        "theme.json:tokens.paper"
+      ]
+    },
+    {
+      "basis": "单张截图不足以建立完整企业色板",
+      "compiled": false,
+      "eligible": false,
+      "path": "palette[2]",
+      "rule": "unknown is retained as an uncompiled boundary",
+      "status": "unknown",
+      "usage": []
+    },
+    {
+      "basis": "截图正文主标题直接可见",
+      "compiled": true,
+      "eligible": true,
+      "path": "typography[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.css:--pt-display",
+        "theme.json:tokens.display_size"
+      ]
+    },
+    {
+      "basis": "把截图正文层级延展为报告安全区排版",
+      "compiled": true,
+      "eligible": true,
+      "path": "typography[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": [
+        "theme.css:--pt-body",
+        "theme.json:tokens.body_size"
+      ]
+    },
+    {
+      "basis": "四类元素均可从截图精确定位",
+      "compiled": false,
+      "eligible": true,
+      "path": "layout[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "与全部固定元素保持不相交边界",
+      "compiled": false,
+      "eligible": true,
+      "path": "layout[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "企业外框锁定后，正文网格可按内容适配",
+      "compiled": false,
+      "eligible": true,
+      "path": "layout[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "左上 Logo 在截图中清晰可见",
+      "compiled": false,
+      "eligible": true,
+      "path": "components[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "右上页眉区可完整裁切",
+      "compiled": false,
+      "eligible": true,
+      "path": "components[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "只延展正文组件，不触碰企业固定层",
+      "compiled": false,
+      "eligible": true,
+      "path": "components[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "Logo、页眉、品牌条和页脚均有明确边界",
+      "compiled": false,
+      "eligible": true,
+      "path": "imagery[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": []
+    },
+    {
+      "basis": "本次输入只有界面与示例图表",
+      "compiled": false,
+      "eligible": false,
+      "path": "imagery[1]",
+      "rule": "unknown is retained as an uncompiled boundary",
+      "status": "unknown",
+      "usage": []
+    },
+    {
+      "basis": "仅延展可编辑信息语言，不复制示例数字",
+      "compiled": true,
+      "eligible": true,
+      "path": "evidence_language[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": [
+        "templates.html:data evidence markup",
+        "theme.css:evidence visualization rules",
+        "theme.json:identity.chart_evidence"
+      ]
+    },
+    {
+      "basis": "单张示例正文不能代表企业正式图表规范",
+      "compiled": false,
+      "eligible": false,
+      "path": "evidence_language[1]",
+      "rule": "unknown is retained as an uncompiled boundary",
+      "status": "unknown",
+      "usage": []
+    },
+    {
+      "basis": "截图未展示封面，只能作为可确认延展",
+      "compiled": false,
+      "eligible": true,
+      "path": "mini_pages[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "截图未展示章节页，只能作为可确认延展",
+      "compiled": false,
+      "eligible": true,
+      "path": "mini_pages[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "截图未证明正式数据页，只能作为可确认延展",
+      "compiled": false,
+      "eligible": true,
+      "path": "mini_pages[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": []
+    },
+    {
+      "basis": "企业保真模式锁定全部已识别固定元素",
+      "compiled": true,
+      "eligible": true,
+      "path": "guardrails[0]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "observed",
+      "usage": [
+        "theme.json:preserve guardrail"
+      ]
+    },
+    {
+      "basis": "避免遗留截图中的示例文字、图表和数字",
+      "compiled": true,
+      "eligible": true,
+      "path": "guardrails[1]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": [
+        "theme.json:forbidden guardrail"
+      ]
+    },
+    {
+      "basis": "企业外框必须在全部页面保持稳定",
+      "compiled": true,
+      "eligible": true,
+      "path": "guardrails[2]",
+      "rule": "eligible only; compiled is true only when usage targets are recorded",
+      "status": "extension",
+      "usage": [
+        "theme.json:forbidden guardrail"
+      ]
+    },
+    {
+      "basis": "安全区内流程页适配为横向四步",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.page_axis",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:process DOM axis",
+        "theme.css:.pt-process",
+        "theme.json:executable_layout.page_axis",
+        "theme.json:identity.composition"
+      ],
+      "value": "row"
+    },
+    {
+      "basis": "截图标题、卡片和图表统一左对齐",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.alignment",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "observed",
+      "usage": [
+        "templates.html:heading wrappers",
+        "theme.css:--pt-text-align",
+        "theme.json:executable_layout.alignment",
+        "theme.json:identity.composition"
+      ],
+      "value": "start"
+    },
+    {
+      "basis": "在固定外框内延展为文字与主视觉分栏",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.cover_structure",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:cover DOM wrapper",
+        "theme.css:.pt-cover-layout",
+        "theme.json:executable_layout.cover_structure",
+        "theme.json:layout_variants[0]"
+      ],
+      "value": "split"
+    },
+    {
+      "basis": "为企业封面延展稳定的结论与图形比例",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.cover_split",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-layout data-cover-split",
+        "theme.css:.pt-cover-layout grid-template-columns",
+        "theme.json:executable_layout.cover_split",
+        "theme.json:layout_variants[0]"
+      ],
+      "value": "7:5"
+    },
+    {
+      "basis": "把正文示例的模块关系延展为卡片网格",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.content_structure",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:content and closing DOM branches",
+        "theme.json:executable_layout.content_structure",
+        "theme.json:layout_variants[1,4]"
+      ],
+      "value": "card-grid"
+    },
+    {
+      "basis": "安全区宽度支持三列企业内容卡",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.content_columns",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "theme.css:content/closing grid-template-columns",
+        "theme.json:executable_layout.content_columns",
+        "theme.json:layout_variants[1]"
+      ],
+      "value": "3"
+    },
+    {
+      "basis": "封面主视觉放在安全区右侧，不影响固定外框",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.image_placement",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:cover DOM order/background layer",
+        "theme.css:.pt-cover-layout placement geometry",
+        "theme.json:executable_layout.image_placement",
+        "theme.json:layout_variants[0]"
+      ],
+      "value": "right"
+    },
+    {
+      "basis": "在安全区内采用可逆的报告图片比例",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.image_aspect_ratio",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-art data-image-aspect-ratio",
+        "theme.css:.pt-cover-art aspect-ratio",
+        "theme.json:components.image",
+        "theme.json:executable_layout.image_aspect_ratio"
+      ],
+      "value": "4:3"
+    },
+    {
+      "basis": "避免报告图片裁切侵入固定外框",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.image_fit",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-art data-image-fit",
+        "theme.css:.pt-cover-art width/background fill",
+        "theme.json:components.image",
+        "theme.json:executable_layout.image_fit"
+      ],
+      "value": "contain"
+    },
+    {
+      "basis": "截图无法建立企业摄影处理规范，使用中性回退",
+      "compiled": false,
+      "eligible": false,
+      "path": "executable_layout.image_treatment",
+      "rule": "unknown is replaced only by a labeled neutral fallback",
+      "status": "unknown",
+      "usage": [],
+      "value": "unknown"
+    },
+    {
+      "basis": "数据页仅延展信息组织，不复用示例正文",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.data_structure",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "templates.html:data DOM branch",
+        "theme.css:data branch geometry",
+        "theme.json:executable_layout.data_structure",
+        "theme.json:layout_variants[3]"
+      ],
+      "value": "metrics-grid"
+    },
+    {
+      "basis": "数据页在安全区内使用三列指标",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.data_columns",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "theme.css:structure-specific data grid-template-columns",
+        "theme.json:executable_layout.data_columns",
+        "theme.json:layout_variants[3]"
+      ],
+      "value": "3"
+    },
+    {
+      "basis": "截图正文卡片使用轻边框和小圆角",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.module_organization",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "observed",
+      "usage": [
+        "theme.css:--pt-border/--pt-radius/--pt-shadow",
+        "theme.json:executable_layout.module_organization",
+        "theme.json:identity.module_language"
+      ],
+      "value": "soft-stack"
+    },
+    {
+      "basis": "页眉、标题、卡片之间保持中等信息密度",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.density",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "observed",
+      "usage": [
+        "templates.html:data-rhythm-check contracts",
+        "theme.css:--pt-rhythm-card-title-body",
+        "theme.css:--pt-rhythm-evidence-source",
+        "theme.css:--pt-rhythm-heading-content",
+        "theme.css:--pt-rhythm-label-title",
+        "theme.css:--pt-rhythm-title-lede",
+        "theme.css:semantic rhythm custom properties",
+        "theme.json:executable_layout.density",
+        "theme.json:layout_variants[2,4]",
+        "theme.json:tokens.rhythm_card_title_body",
+        "theme.json:tokens.rhythm_evidence_source",
+        "theme.json:tokens.rhythm_heading_content",
+        "theme.json:tokens.rhythm_label_title",
+        "theme.json:tokens.rhythm_title_lede"
+      ],
+      "value": "medium"
+    },
+    {
+      "basis": "企业封面在安全区内延展双焦点构图",
+      "compiled": true,
+      "eligible": true,
+      "path": "executable_layout.visual_focus",
+      "rule": "machine layout value compiled to the listed manifest, template, or CSS targets",
+      "status": "extension",
+      "usage": [
+        "theme.css:.pt-title/.pt-cover-art width and height",
+        "theme.json:executable_layout.visual_focus",
+        "theme.json:identity.composition"
+      ],
+      "value": "headline-and-image"
+    }
+  ],
+  "confirmed_inputs": {
+    "confirmation_phrase": "确认 VI",
+    "confirmation_status": "confirmed",
+    "customer_corrections": [
+      "确认 Logo、页眉、左侧品牌条与页脚全部锁定；正文只进入 safe-content。"
+    ],
+    "reference_image": "corporate-template-reference.png",
+    "reference_image_sha256": "ac0172ff956bed5fcb262adcd97139e9b2d8cd7127ceba3e21a76b6cca35f382",
+    "reference_mode": "corporate_fidelity",
+    "target_mode": "presentation",
+    "vi_contract": "corporate-template-vi-contract.json",
+    "vi_contract_sha256": "a80e8ceba32f1b309dd4f2402be151ab4a4d0be46e2402634faa10a8ab64b2e9"
+  },
+  "corporate_fidelity": {
+    "content_motion_scope": "editable_region_only",
+    "editable_region": {
+      "allowed_content": [
+        "cover",
+        "content",
+        "process",
+        "data",
+        "closing"
+      ],
+      "basis": "与全部固定元素无重叠，承载报告排版与运行时呈现",
+      "bbox": [
+        0.08,
+        0.16,
+        0.84,
+        0.7
+      ],
+      "id": "safe-content"
+    },
+    "extension_pages": [
+      {
+        "basis": "单张截图未观察封面",
+        "role": "cover",
+        "status": "extension"
+      },
+      {
+        "basis": "单张截图未观察章节页",
+        "role": "section",
+        "status": "extension"
+      },
+      {
+        "basis": "单张截图未证明正式数据页",
+        "role": "data",
+        "status": "extension"
+      }
+    ],
+    "fixed_elements": [
+      {
+        "basis": "左上完整 Logo 区域",
+        "bbox": [
+          0.04,
+          0.04,
+          0.12,
+          0.06
+        ],
+        "crop_sha256": "729cb07e3b487a8add771b5ecf40455c5a0a705eddcc6c0395721b491cae1f46",
+        "crop_size": [
+          192,
+          54
+        ],
+        "extraction": "crop",
+        "id": "company-logo",
+        "pixel_bbox": [
+          64,
+          36,
+          256,
+          90
+        ],
+        "status": "observed",
+        "type": "logo"
+      },
+      {
+        "basis": "右上页眉顶线、栏目名与年份",
+        "bbox": [
+          0.18,
+          0.04,
+          0.78,
+          0.06
+        ],
+        "crop_sha256": "729cc4cc4e9a7fa750d30d86df4192919ddaacd7340c0ad640b05d9cf6fd8cf4",
+        "crop_size": [
+          1248,
+          54
+        ],
+        "extraction": "crop",
+        "id": "page-header",
+        "pixel_bbox": [
+          288,
+          36,
+          1536,
+          90
+        ],
+        "status": "observed",
+        "type": "header"
+      },
+      {
+        "basis": "左侧纵向品牌色条",
+        "bbox": [
+          0.04,
+          0.14,
+          0.015,
+          0.72
+        ],
+        "crop_sha256": "cc9640580a6a98ff6471a0972884ad5d26f0f6442560f4df71aa3b15d9eec333",
+        "crop_size": [
+          24,
+          648
+        ],
+        "extraction": "crop",
+        "id": "left-brand-bar",
+        "pixel_bbox": [
+          64,
+          126,
+          88,
+          774
+        ],
+        "status": "observed",
+        "type": "brand_bar"
+      },
+      {
+        "basis": "底部保密标识、页码和深蓝底条",
+        "bbox": [
+          0.04,
+          0.91,
+          0.92,
+          0.04
+        ],
+        "crop_sha256": "f89c0ba1a13a571a85dc028a7c01090058183cabd5fc3988c4ce54aebf7c9ea9",
+        "crop_size": [
+          1472,
+          36
+        ],
+        "extraction": "crop",
+        "id": "page-footer",
+        "pixel_bbox": [
+          64,
+          819,
+          1536,
+          855
+        ],
+        "status": "observed",
+        "type": "footer"
+      }
+    ],
+    "fixed_motion": "none",
+    "full_screenshot_background": false,
+    "limitations": [
+      {
+        "basis": "截图不能还原母版结构或占位符",
+        "item": "原始 PPT 母版",
+        "status": "unknown"
+      },
+      {
+        "basis": "只承诺截图可见像素，不恢复不可见源资产",
+        "item": "矢量 Logo 与字体源文件",
+        "status": "unknown"
+      },
+      {
+        "basis": "单张静态截图不检查或推断动效",
+        "item": "静态输入边界",
+        "status": "unknown"
+      }
+    ],
+    "logo_redraw": false,
+    "source_image_sha256": "ac0172ff956bed5fcb262adcd97139e9b2d8cd7127ceba3e21a76b6cca35f382",
+    "source_image_size": [
+      1600,
+      900
+    ]
+  },
+  "fallback_records": [
+    {
+      "basis": "VI did not provide a usable signal color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "colors.signal",
+      "usage": [
+        "theme.json:tokens.signal",
+        "theme.css:--pt-signal"
+      ]
+    },
+    {
+      "basis": "VI did not provide a usable accent color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "colors.accent",
+      "usage": [
+        "theme.json:tokens.accent",
+        "theme.css:--pt-accent"
+      ]
+    },
+    {
+      "basis": "VI did not provide a usable panel color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "colors.panel",
+      "usage": [
+        "theme.json:tokens.panel",
+        "theme.css:--pt-panel"
+      ]
+    },
+    {
+      "basis": "VI did not provide a parseable heading size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "type.heading_size",
+      "usage": [
+        "theme.json:tokens.heading_size",
+        "theme.css:--pt-heading"
+      ]
+    },
+    {
+      "basis": "VI hierarchy does not require an exact caption size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "type.caption_size",
+      "usage": [
+        "theme.json:tokens.caption_size",
+        "theme.css:--pt-caption"
+      ]
+    },
+    {
+      "basis": "VI did not provide parseable horizontal canvas spacing; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "spacing.canvas_x",
+      "usage": [
+        "theme.json:tokens.canvas_x",
+        "theme.css:--pt-canvas-x"
+      ]
+    },
+    {
+      "basis": "Vertical safe area is a reversible runtime-fit fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "spacing.canvas_y",
+      "usage": [
+        "theme.json:tokens.canvas_y",
+        "theme.css:--pt-canvas-y"
+      ]
+    },
+    {
+      "basis": "VI did not provide parseable module gap; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "token": "spacing.gap",
+      "usage": [
+        "theme.json:tokens.gap",
+        "theme.css:--pt-gap"
+      ]
+    },
+    {
+      "basis": "Unknown VI layout value uses the neutral reversible compiler default.",
+      "field": "executable_layout.image_treatment",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:executable_layout.image_treatment",
+        "templates.html:.pt-cover-art data-image-treatment",
+        "theme.css:.pt-cover-art shape filter",
+        "theme.json:identity.image_treatment"
+      ],
+      "value": "natural"
+    }
+  ],
+  "motion_boundary": {
+    "disabled": [
+      "reference-inferred timing",
+      "reference-inferred transitions",
+      "cross-page morph"
+    ],
+    "enter": "generic opacity plus 14px upward reveal over 420ms",
+    "fixed_elements": "none",
+    "observed_from_reference": false,
+    "scope": "editable_region_only",
+    "source": "TaoHtml shared Runtime and report-task reveal decisions",
+    "stagger": "existing fragment and data-step syntax"
+  },
+  "schema_version": "1.0",
+  "theme_id": "project-northstar-corporate-fidelity"
+}

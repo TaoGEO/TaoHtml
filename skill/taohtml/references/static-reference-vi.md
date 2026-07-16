@@ -1,12 +1,12 @@
-# Single Static Reference To VI Board
+# Single Static Reference Dual Mode To VI Board
 
-Read this reference only when the customer chooses “use my reference” and supplies exactly one static image. This v1 route turns that image into a customer-viewable VI design standards board before any project theme or report production begins.
+Read this reference only when the customer chooses “use my reference” and supplies exactly one static PNG, JPEG, or WebP screenshot. The shared route supports `reconstruct` and `corporate_fidelity`, turns the still into one customer-viewable VI design standards board, waits for “确认 VI”, and only then hands the exact contract to project-theme compilation.
 
 ## Contents
 
-- Scope and readability gate
+- Scope, one-time mode routing, and readability gate
 - Boundary labels and extraction dimensions
-- Minimal structured contract and executable layout grammar
+- Shared structured contract, corporate regions, and executable layout grammar
 - Deterministic render and confirmation
 - Confirmed-VI handoff
 
@@ -14,9 +14,22 @@ Read this reference only when the customer chooses “use my reference” and su
 
 Analyze only visual properties visible in the supplied still image. Do not inspect, infer, or write rules for movement, animation, transitions, timing, or sequential states. A still image cannot establish those facts.
 
-Route here only for exactly one still image. A clear reference supplied as a PPT, webpage, dynamic HTML, video, multiple images, or a screenshot/state sequence is an unsupported reference input in v1, not “no clear reference.” State the boundary and ask the customer to provide one representative static screenshot. Do not infer movement from the source, silently reduce it to this contract, or route it to the four built-in systems unless the customer explicitly abandons the reference route.
+Route here only for exactly one raster still. A clear reference supplied as a PPT, webpage, dynamic HTML, video, multiple images, or a screenshot/state sequence is an unsupported reference input in v1, not “no clear reference.” State the boundary and ask the customer to provide one representative static screenshot. Do not infer movement from the source, silently reduce it to this contract, or route it to the four built-in systems unless the customer explicitly abandons the reference route. Legacy v1.1 reconstruct fixtures may still use safe offline SVG for backward compatibility; do not offer SVG as a new reference intake format.
 
-The model performs visual understanding and fills both the descriptive observations and the machine-executable layout grammar. This reference defines the extraction dimensions, evidence boundary, confirmation gate, and handoff contract. `scripts/render_reference_vi.py` only validates structured data, embeds the verified local reference, renders the fixed HTML/CSS board, and exports PNG.
+The model performs visual understanding and fills both the descriptive observations and the machine-executable contract. `scripts/render_reference_vi.py` validates data, checks the source binding, deterministically crops corporate fixed elements, embeds local bytes, renders the fixed HTML/CSS board, and exports PNG. It never redraws a Logo or understands an image.
+
+## One-Time Reference Mode Routing
+
+| Customer intent | `reference_mode` | Promise |
+|---|---|---|
+| 参考风格重构 | `reconstruct` | Extract design language; allow recomposition and visual innovation. Preserve the existing behavior. |
+| 企业模板保真 | `corporate_fidelity` | Lock screenshot-visible corporate elements and design only the editable safe region. |
+
+If the customer already says “企业模板保真”, “公司模板原样采用”, or equivalent, record `corporate_fidelity` without asking again. If intent is unclear, ask exactly one binary question using the two labels and promises above. Count it inside the existing six-question maximum. Do not repeat it after the mode is known.
+
+Both modes use the same readability check, observed/extension/unknown boundary, VI board, exact “确认 VI” gate, and project-theme compiler. Do not create a second customer flow or a fifth built-in visual system.
+
+`corporate_fidelity` means screenshot-visible fidelity only. It does not recover an original PPT master, vector Logo, font file, hidden layout, or unseen page asset. Never model-redraw a Logo. If the Logo or another fixed element cannot be reliably cropped, stop and request a clearer screenshot or an independent local Logo file.
 
 ## Current-Session Readability Gate
 
@@ -60,11 +73,20 @@ Create one board that includes all of these dimensions. A dimension not shown by
 9. Preserve and avoid guardrails, each tied to observed evidence or clearly labeled adaptation logic.
 10. Executable layout grammar for page axis/alignment, cover structure, content organization, image position/ratio/treatment, data structure, module organization, density, and visual focus. Assign status and basis field by field; never derive these values later by keyword-matching prose descriptions.
 
+For `corporate_fidelity`, the same board must additionally show:
+
+- the original screenshot with locked-region and editable-region overlays;
+- one crop preview for every locked Logo, header, footer, brand bar, or fixed decoration;
+- one exact editable safe-area preview and a fixed-element list;
+- the extensible design language for content inside the safe area;
+- two or three corporate-frame page miniatures; an unseen cover, section, or data role must say `extension`, never `observed`;
+- unknowns and limits, including unrecoverable master/vector/font assets or insufficient screenshot evidence.
+
 Do not reduce the result to a prose “visual DNA summary.” The PNG board is the primary customer deliverable; the JSON is an internal rendering contract.
 
 ## Minimal Structured Contract
 
-Use UTF-8 JSON with these exact top-level keys:
+The following exact v1.1 contract remains accepted as the backward-compatible `reconstruct` path:
 
 ```json
 {
@@ -126,6 +148,21 @@ Use UTF-8 JSON with these exact top-level keys:
 }
 ```
 
+For new PNG/JPEG/WebP inputs, use schema v1.2. Keep every v1.1 base field and add these exact top-level fields:
+
+| Field | Exact contract |
+|---|---|
+| `reference_mode` | `reconstruct` or `corporate_fidelity` |
+| `source_image` | `{sha256, width, height}`; digest is lowercase SHA-256 and dimensions are positive integers |
+| `locked_regions[]` | `{id, type, bbox, status, basis, extraction}`; type is `logo/header/footer/brand_bar/decoration`, status is `observed`, extraction is `crop` |
+| `editable_regions[]` | `{id, bbox, allowed_content, basis}`; the first vertical slice requires exactly one region allowing `cover/content/process/data/closing` |
+| `extension_pages[]` | two or three `{role, status, basis}` records; role is `cover/section/data`, status is always `extension` |
+| `limitations[]` | one to six `{item, status, basis}` records with `status: unknown` |
+
+Every `bbox` is `[x, y, width, height]` in normalized 0..1 coordinates. Width and height must be positive; the rectangle must remain inside the source; the editable rectangle must not overlap any locked rectangle. IDs are unique lowercase hyphenated strings. `corporate_fidelity` requires at least one locked region and the exact safe region above; `reconstruct` keeps all four mode-specific arrays empty.
+
+The source-image digest and dimensions are verified against the current raster before rendering and compilation. Corporate mode fails before output if the source is below 960×540, a crop is below 24×24 pixels, a bbox is invalid or conflicts with the editable region, the source is missing or changed, or a fixed element requests anything other than exact cropping. Request a clearer screenshot or independent Logo rather than weakening the contract.
+
 Every list must be non-empty. `palette` accepts one to six items, so one or two supported colors are valid. A palette item with `observed` or `extension` status must carry a six-digit hex value. An `unknown` palette item must use the literal value `unknown`; the renderer shows a neutral hatched placeholder and “未识别色值”, never a real color swatch. Do not add an unknown palette item when the supported colors already express the category clearly.
 
 `executable_layout` is an exact object, not a prose summary. Every field uses exactly `value`, `status`, and `basis`. Use these enums:
@@ -186,7 +223,7 @@ python scripts/render_reference_vi.py \
   --output /absolute/path/to/reference-vi-board
 ```
 
-The command creates `reference-vi-board.html` and a 3200×2400 `reference-vi-board.png` beside it. It accepts readable PNG, JPEG, WebP, or safe offline SVG input, embeds that image as a `data:` URI, and fails closed on invalid contracts, active SVG content, remote SVG references, fabricated unknown color values, or unsupported dynamic/time-sequence wording. Boundary statements such as “静态” or “无动态” remain valid; positive rules about movement, timing, sequences, easing, keyframes, or morphing do not.
+The command creates `reference-vi-board.html` and a 3200×2400 `reference-vi-board.png` beside it. New v1.2 input accepts readable PNG, JPEG, or WebP only; legacy v1.1 reconstruct remains readable with safe offline SVG. It embeds the source as a `data:` URI for board review. Corporate mode additionally verifies the declared source hash and dimensions, extracts each locked region to deterministic PNG bytes, displays crop hashes and safe-area overlays, and fails closed on invalid or conflicting bboxes, low-resolution sources/crops, source drift, unreliable extraction, or non-crop fixed elements. Boundary statements such as “静态” or “无动态” remain valid; positive rules inferred from movement, timing, sequences, easing, keyframes, or morphing do not.
 
 Run `check_assets.py --strict-offline` on the rendered HTML. Open the HTML in a real browser, verify the status labels and all sections, and inspect the PNG at original resolution for Chinese text, hex values, type hierarchy, component samples, and the three mini pages.
 
@@ -196,7 +233,7 @@ Show the PNG as the primary deliverable, optionally provide the HTML, and end wi
 
 > 请确认这张《VI 设计标准图》中的直接观察、报告适配建议和参考中无法判断三类边界。回复“确认 VI”后，TaoHtml 才会把它作为项目专用主题生成的输入；确认前不会开始正式报告制作。
 
-Treat only a clear confirmation of the current board as VI authorization. If the customer corrects a color, boundary label, crop rule, component, or guardrail, update the JSON, rerender the whole board, and request confirmation again. Earlier approval to use the reference is not VI confirmation, and VI confirmation is not Report Design Brief confirmation.
+Treat only a clear confirmation of the current board as VI authorization. If the customer corrects a color, boundary label, crop rule, locked element, editable region, extension page, component, or guardrail, update the JSON, rerender the whole board, and request confirmation again. In corporate fidelity, default to every identified fixed element being locked; “确认 VI” freezes the current locked regions and source/crop hashes. Production must not change them without invalidating confirmation and returning to this gate. Earlier approval to use the reference is not VI confirmation, and VI confirmation is not Report Design Brief confirmation.
 
 ## Confirmed-VI Handoff Boundary
 
@@ -207,5 +244,7 @@ After confirmation, retain these inputs and read `project-theme-compiler.md`:
 - rendered board HTML and PNG for comparison and human review;
 - customer corrections incorporated into the current contract;
 - target reading/presentation mode and any confirmed accessibility or brand constraints.
+
+For corporate fidelity, also retain the exact `reference_mode`, `source_image`, `locked_regions`, `editable_regions`, `extension_pages`, and `limitations`. Do not retain the full screenshot as a reusable page background; it remains a confirmation and extraction source only.
 
 Create the machine-checkable handoff in `project-theme-compiler.md`, bind the confirmation to the exact VI JSON and reference-image hashes, and compile the project-specific manifest, CSS, templates, and provenance. The compiler is a separate deterministic step: this reference renderer still does not compile theme assets. The result does not substitute or extend the four built-in themes and does not authorize report production without the remaining Report Design Brief gate.

@@ -485,7 +485,7 @@ Fix:
 
 ### The Reference Style Was Copied As A Palette Only
 
-Fix: use the applicable confirmed visual source. For one static reference image, return to the confirmed VI board and copy only its composition, hierarchy, motifs, source treatment, module language, evidence treatment, and preserve/avoid rules; never infer sequential behavior from the still image. Presentation behavior comes from the confirmed use mode and runtime contract, not from that reference. A visual system is created by layout behavior, not hex values alone.
+Fix: use the applicable confirmed visual source. For `reconstruct`, return to the confirmed VI board and compile its composition, hierarchy, motifs, source treatment, module language, evidence treatment, and preserve/avoid rules; never infer sequential behavior from the still image. For `corporate_fidelity`, load the compiled project shell unchanged: fixed screenshot crops stay stationary on every page, all report DOM and fragments stay inside the confirmed editable region, and the full screenshot never becomes a background. Presentation behavior comes from the confirmed use mode and runtime contract, not from the reference.
 
 ## 14. Minimal Delivery Template
 

@@ -257,7 +257,7 @@ TaoHtml 不会立刻写 HTML。标准流程是：
 补齐设计决策
   ↓
 视觉参考优先 / 内置主题选择
-  ↓ 单张静态参考先确认 VI 规范图
+  ↓ 单张静态参考按重构或企业保真确认 VI 规范图
 项目专用主题编译（仅参考路线）
   ↓
 报告设计简报
@@ -269,6 +269,8 @@ HTML 制作 + 模块化 Runtime
 
 详细状态门和提问规则见 [工作流说明](docs/workflow.md)。
 
+使用单张 PNG/JPEG/WebP 参考图时，TaoHtml 支持“参考风格重构”和“企业模板保真”两种模式。意图不清楚时只问一次二选一；已经明确要求企业模板原样采用时不重复提问。企业保真只承诺截图中可见效果：锁定可见 Logo、页眉、页脚、品牌条和固定装饰，只在安全内容区设计；不承诺恢复原始 PPT 母版、矢量 Logo、字体源文件或截图外资产。
+
 ## 内置资源
 
 ### 参考文档
@@ -276,8 +278,8 @@ HTML 制作 + 模块化 Runtime
 - `process-playbook.md`：完整课件 / 报告生产流程。
 - `design-quality-rubric.md`：100 分高设计评分标准和硬性失败门槛。
 - `layout-pattern-library.md`：12 类高设计版式母型。
-- `static-reference-vi.md`：单张静态参考可读性门、三类事实边界、v1.1 可执行布局语法、VI 数据合同、确认门和下一任务交接。
-- `project-theme-compiler.md`：“确认 VI”后的哈希 handoff、确定性结构编译、eligible/compiled usage 与 fallback 规则、显式渲染和验证。
+- `static-reference-vi.md`：参考图双模式路由、单张静态参考可读性门、三类事实边界、v1.2 企业锁定/安全区合同、可执行布局语法、确认门和下一任务交接；旧 v1.1 重构合同继续兼容。
+- `project-theme-compiler.md`：“确认 VI”后的哈希 handoff、确定性结构编译、企业固定裁切 shell、eligible/compiled usage 与 fallback 规则、显式渲染和验证。
 - `visual-systems.md`：四套内置视觉系统的选择、按需加载和 runtime 解耦规则。
 
 ### HTML 模板
@@ -294,8 +296,14 @@ HTML 制作 + 模块化 Runtime
 - `build_contact_sheet.py`：把 QA 截图合成总览图。
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
 - `render_visual_system.py`：把内容注入既有内置 theme id 或显式 `--project-theme` 目录，同时保留共享 runtime shell。真实来源图必须显式使用 `--source-kind verified --source-image ...`，文件缺失或无效时失败；本地路径本身不代表来源已核实，CLI 或 Python API 未传 `source_kind` 时即使有本地图也安全默认为 `illustrative`。没有真实证据图时可使用自动示意占位或 `--source-kind illustrative` 的本地图，渲染器会在相邻位置标“示意 / 待核实”，不会把它冒充来源证据。
-- `render_reference_vi.py`：校验内部 VI JSON，内嵌单张静态参考，通过固定 HTML/CSS 模板生成规范板并导出 3200×2400 PNG；不负责图片理解或项目主题编译。
-- `compile_project_theme.py`：校验已确认 VI handoff 与共享布局兼容矩阵，从可执行布局语法确定性生成项目主题 manifest、结构化 CSS、不同 DOM 页面模板和准确 provenance usage；未定义组合在 VI 校验阶段失败，不调用模型，也不修改四套内置主题。
+- `render_reference_vi.py`：校验内部 VI JSON；企业模式还会核对源图哈希/尺寸、严格校验归一化 bbox、精确裁切固定元素，再生成可查看的 3200×2400 规范板。
+- `compile_project_theme.py`：校验已确认 VI handoff 与共享布局兼容矩阵，确定性生成项目主题；企业模式只离线嵌入固定区域裁切，不把含示例正文的整张截图作为背景，并把内容限制在安全区。
+
+### 企业模板保真人工验收样例
+
+- 输入 fixture：[`tests/fixtures/corporate-template-reference.png`](tests/fixtures/corporate-template-reference.png)
+- VI 标准图：[`examples/corporate-template-fidelity/reference-vi-board.html`](examples/corporate-template-fidelity/reference-vi-board.html) / [`PNG`](examples/corporate-template-fidelity/reference-vi-board.png)
+- 5 页企业保真 HTML：[`examples/corporate-template-fidelity/corporate-fidelity-sample.html`](examples/corporate-template-fidelity/corporate-fidelity-sample.html)
 
 ## 开发、验证与版本管理
 
@@ -334,6 +342,7 @@ TaoHtml 是有明确审美立场的：
 - 不从页面开始，从受众决策和证据链开始。
 - 不装饰坏结构，先修故事。
 - 不只复制静态参考的颜色，而要落实可观察的构图、层级、组件与证据处理；动效由 Runtime 和报告任务决定，不从单图推断。
+- 企业模板保真时不重绘 Logo、不移动固定外框；固定元素来自源截图裁切，排版和动效只发生在已确认的可编辑安全区。
 - 不把截图当装饰，关键证据必须可读、可追溯。
 - 不依赖鼠标悬停和小点击区域，现场演讲必须能用翻页器推进。
 - 不在资产路径、视频、截图没有检查的情况下交付。

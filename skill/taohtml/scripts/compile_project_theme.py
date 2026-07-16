@@ -34,6 +34,10 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 NUMBER_PX = re.compile(r"(?P<value>\d{1,3})(?:\s*[–—-]\s*\d{1,3})?\s*px", re.IGNORECASE)
 PERCENT = re.compile(r"(?P<value>\d{1,2})\s*%")
+REMOTE_ASSET = re.compile(
+    r"(?:src|href)\s*=\s*['\"]\s*(?:https?:)?//|@import\b|url\(\s*['\"]?\s*(?:https?:)?//",
+    re.IGNORECASE,
+)
 
 
 def _exact_object(raw: object, keys: set[str], label: str) -> dict[str, Any]:
@@ -136,7 +140,7 @@ def load_handoff(path: Path) -> tuple[dict[str, Any], dict[str, Any], Path, Path
     ]
 
     contract = render_reference_vi.load_contract(vi_path)
-    render_reference_vi.source_data_uri(reference_path)
+    render_reference_vi.validate_source_binding(contract, reference_path)
     normalized = {
         "schema_version": SCHEMA_VERSION,
         "project": {"id": project_id, "display_name": display_name},
@@ -499,7 +503,12 @@ def _evidence_markup(sample: str) -> str:
     return '<div class="pt-metrics-focus fragment" data-step="2"><article><strong>{{S4_M1_VALUE}}</strong><span>{{S4_M1_LABEL}}</span></article><article><strong>{{S4_M2_VALUE}}</strong><span>{{S4_M2_LABEL}}</span></article><article><strong>{{S4_M3_VALUE}}</strong><span>{{S4_M3_LABEL}}</span></article></div>'
 
 
-def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
+def _css(
+    theme_id: str,
+    tokens: dict[str, str],
+    plan: dict[str, str],
+    corporate_shell: dict[str, Any] | None = None,
+) -> str:
     organization = plan["module_organization"]
     if organization == "hard-grid":
         border, radius, shadow = "3px solid var(--pt-ink)", "0", "none"
@@ -568,6 +577,16 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
         else "grid-template-columns:minmax(0,860px);justify-content:center"
     )
     selector = f'.deck[data-theme="{theme_id}"]'
+    corporate_css = ""
+    if corporate_shell is not None:
+        corporate_css = f"""
+{selector} .slide.pt-corporate-page {{ position:absolute; overflow:hidden; padding:0; background:var(--pt-canvas); }}
+{selector} .pt-corporate-fixed-shell {{ position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none; animation:none !important; transition:none !important; transform:none !important; }}
+{selector} .pt-corporate-fixed-region {{ position:absolute; z-index:1; display:block; object-fit:fill; pointer-events:none; animation:none !important; transition:none !important; transform:none !important; }}
+{selector} .pt-corporate-editable {{ position:absolute; z-index:2; display:grid; align-content:center; overflow:hidden; padding:18px; }}
+{selector} .pt-corporate-editable > .pt-cover-layout, {selector} .pt-corporate-editable > .pt-page-layout {{ min-height:0; height:100%; }}
+{selector} .pt-corporate-editable .source-btn {{ top:12px; right:12px; }}
+"""
     return f"""{selector} {{
   --pt-canvas: {tokens['canvas']};
   --pt-ink: {tokens['ink']};
@@ -659,6 +678,7 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
 .pt-closing-stack {{display:grid;gap:var(--pt-rhythm-heading-content)}}
 .pt-final {{padding:20px 24px;color:var(--pt-canvas);background:var(--pt-ink);border-left:12px solid var(--pt-signal);font-size:24px;font-weight:900}}
 {selector} .source-btn {{ top: 48px; right: var(--pt-canvas-x); background: var(--pt-ink); color: var(--pt-canvas); border-radius: var(--pt-radius); }}
+{corporate_css}
 """
 
 
@@ -682,9 +702,64 @@ def _page_layout(heading: str, body: str) -> str:
     )
 
 
-def _templates(
-    plan: dict[str, str], variants: list[dict[str, str]], evidence_sample: str
+def _bbox_style(bbox: list[float]) -> str:
+    x, y, width, height = bbox
+    return (
+        f"left:{x * 100:.6f}%;top:{y * 100:.6f}%;"
+        f"width:{width * 100:.6f}%;height:{height * 100:.6f}%"
+    )
+
+
+def _corporate_shell_contract(
+    contract: dict[str, Any], extracted_regions: list[dict[str, object]]
+) -> dict[str, Any] | None:
+    if contract.get("reference_mode") != "corporate_fidelity":
+        return None
+    editable = contract["editable_regions"][0]
+    fixed_html = "".join(
+        f'<img class="pt-corporate-fixed-region" data-locked-region="{region["id"]}" '
+        f'data-fixed-element-type="{region["type"]}" data-crop-sha256="{region["sha256"]}" '
+        f'src="{region["data_uri"]}" alt="" style="{_bbox_style(region["bbox"])}">'
+        for region in extracted_regions
+    )
+    return {
+        "editable_region": editable,
+        "fixed_regions": extracted_regions,
+        "shell_html": (
+            '<div class="pt-corporate-fixed-shell" aria-hidden="true" '
+            'data-fixed-motion="none">'
+            + fixed_html
+            + "</div>"
+        ),
+    }
+
+
+def _wrap_page_content(
+    role: str, body: str, corporate_shell: dict[str, Any] | None
 ) -> str:
+    if corporate_shell is None:
+        return body + '<div class="pt-footer">{{FOOTER}}</div>'
+    editable = corporate_shell["editable_region"]
+    if role not in editable["allowed_content"]:
+        raise ValueError(
+            f"Corporate editable region does not allow the generated {role} page role."
+        )
+    return (
+        corporate_shell["shell_html"]
+        + f'<div class="pt-corporate-editable" data-editable-region="{editable["id"]}" '
+        f'data-content-role="{role}" style="{_bbox_style(editable["bbox"])}">'
+        + body
+        + "</div>"
+    )
+
+
+def _templates(
+    plan: dict[str, str],
+    variants: list[dict[str, str]],
+    evidence_sample: str,
+    corporate_shell: dict[str, Any] | None = None,
+) -> str:
+    page_class = " pt-corporate-page" if corporate_shell is not None else ""
     background_claim = ""
     if plan["image_placement"] == "background":
         background_claim = (
@@ -718,7 +793,8 @@ def _templates(
         f'{art_claim}</div>'
     )
     cover_children = cover_art + cover_copy if plan["image_placement"] in {"left", "top"} else cover_copy + cover_art
-    cover = f'<section class="slide active pt-cover" data-title="核心命题" data-layout="{variants[0]["id"]}"><div class="pt-cover-layout pt-cover-{plan["cover_structure"]} pt-cover-image-{plan["image_placement"]}" data-cover-split="{plan["cover_split"]}">{cover_children}</div><div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    cover_body = f'<div class="pt-cover-layout pt-cover-{plan["cover_structure"]} pt-cover-image-{plan["image_placement"]}" data-cover-split="{plan["cover_split"]}">{cover_children}</div>'
+    cover = f'<section class="slide active pt-cover{page_class}" data-title="核心命题" data-layout="{variants[0]["id"]}">{_wrap_page_content("cover", cover_body, corporate_shell)}</section>'
 
     content_items = [
         f'<article class="pt-card fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title"><span class="pt-label" data-rhythm-from>{{{{S2_{index}_LABEL}}}}</span><div class="pt-card-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S2_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S2_{index}_BODY}}}}</p></div></article>'
@@ -740,7 +816,7 @@ def _templates(
     content_layout = _page_layout(
         _heading("S2_KICKER", "S2_TITLE", "S2_LEDE"), content_body
     )
-    content = f'<section class="slide" data-title="内容诊断" data-layout="{variants[1]["id"]}">{content_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    content = f'<section class="slide{page_class}" data-title="内容诊断" data-layout="{variants[1]["id"]}">{_wrap_page_content("content", content_layout, corporate_shell)}</section>'
 
     step_tag = "li" if plan["page_axis"] == "column" else "article"
     step_axis = ' data-rhythm-axis="inline"' if plan["page_axis"] == "column" else ""
@@ -753,7 +829,7 @@ def _templates(
     process_layout = _page_layout(
         _heading("S3_KICKER", "S3_TITLE", "S3_LEDE"), process_content
     )
-    process = f'<section class="slide" data-title="内容机制" data-layout="{variants[2]["id"]}">{process_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    process = f'<section class="slide{page_class}" data-title="内容机制" data-layout="{variants[2]["id"]}">{_wrap_page_content("process", process_layout, corporate_shell)}</section>'
 
     chart = _evidence_markup(evidence_sample)
     source_frame = '<figure class="pt-source-frame fragment" data-step="1"><img src="{{SOURCE_URI}}" alt="{{SOURCE_LABEL}}"></figure>'
@@ -774,7 +850,8 @@ def _templates(
     data_layout = _page_layout(
         _heading("S4_KICKER", "S4_TITLE", "S4_LEDE"), data_body
     )
-    data = f'<section class="slide" data-title="证据与数据" data-layout="{variants[3]["id"]}"><button class="source-btn" data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{data_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    data_body_with_source = f'<button class="source-btn" data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{data_layout}'
+    data = f'<section class="slide{page_class}" data-title="证据与数据" data-layout="{variants[3]["id"]}">{_wrap_page_content("data", data_body_with_source, corporate_shell)}</section>'
 
     if plan["content_structure"] == "card-grid":
         closing_body = '<div class="pt-actions-grid">' + "".join(
@@ -790,7 +867,7 @@ def _templates(
     closing_layout = _page_layout(
         _heading("S5_KICKER", "S5_TITLE", "S5_LEDE"), closing_content
     )
-    closing = f'<section class="slide" data-title="行动收束" data-layout="{variants[4]["id"]}">{closing_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    closing = f'<section class="slide{page_class}" data-title="行动收束" data-layout="{variants[4]["id"]}">{_wrap_page_content("closing", closing_layout, corporate_shell)}</section>'
     return "\n\n".join((cover, content, process, data, closing))
 
 
@@ -867,6 +944,11 @@ def _token_targets(source_key: str) -> list[str]:
 def compile_theme(request_path: Path, output_theme: Path) -> Path:
     request, contract, vi_path, reference_path = load_handoff(request_path)
     theme_id = f"project-{request['project']['id']}"
+    reference_mode = contract.get("reference_mode", "reconstruct")
+    extracted_regions = render_reference_vi.extract_locked_regions(
+        contract, reference_path
+    )
+    corporate_shell = _corporate_shell_contract(contract, extracted_regions)
     plan, structure_sources, structure_fallbacks = _layout_plan(contract)
     tokens, token_sources = _compile_tokens(contract, plan, structure_sources)
     variants = _layout_variants(plan)
@@ -958,6 +1040,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "id": request["project"]["id"],
             "target_mode": request["target_mode"],
             "global_built_in": False,
+            "reference_mode": reference_mode,
         },
         "files": {
             "tokens": "theme.css",
@@ -1013,6 +1096,37 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "required_markers": ["data-layout", "fragment", "data-step"],
         },
     }
+    if corporate_shell is not None:
+        manifest["corporate_shell"] = {
+            "source_image_sha256": request["confirmation"]["reference_image_sha256"],
+            "source_image_size": [
+                contract["source_image"]["width"],
+                contract["source_image"]["height"],
+            ],
+            "editable_region": contract["editable_regions"][0],
+            "fixed_elements": [
+                {
+                    "id": region["id"],
+                    "type": region["type"],
+                    "bbox": region["bbox"],
+                    "pixel_bbox": region["pixel_bbox"],
+                    "status": region["status"],
+                    "basis": region["basis"],
+                    "extraction": region["extraction"],
+                    "crop_sha256": region["sha256"],
+                    "crop_size": [region["width"], region["height"]],
+                }
+                for region in extracted_regions
+            ],
+            "extension_pages": contract["extension_pages"],
+            "limitations": contract["limitations"],
+            "fixed_motion": "none",
+            "content_motion_scope": "editable_region_only",
+            "full_screenshot_background": False,
+            "logo_redraw": False,
+        }
+        manifest["motion"]["fixed_elements"] = "none"
+        manifest["motion"]["scope"] = "editable_region_only"
     provenance = {
         "schema_version": SCHEMA_VERSION,
         "theme_id": theme_id,
@@ -1025,6 +1139,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "confirmation_phrase": request["confirmation"]["phrase"],
             "target_mode": request["target_mode"],
             "customer_corrections": request["customer_corrections"],
+            "reference_mode": reference_mode,
         },
         "boundary_policy": {
             "eligible": "observed or extension may compile, but eligibility alone never sets compiled true",
@@ -1038,10 +1153,14 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         "fallback_records": fallback_records,
         "motion_boundary": manifest["motion"],
     }
-    css = _css(theme_id, tokens, plan).strip() + "\n"
-    templates = _templates(plan, variants, evidence_sample).strip() + "\n"
+    if corporate_shell is not None:
+        provenance["corporate_fidelity"] = manifest["corporate_shell"]
+    css = _css(theme_id, tokens, plan, corporate_shell).strip() + "\n"
+    templates = _templates(
+        plan, variants, evidence_sample, corporate_shell
+    ).strip() + "\n"
     for text, label in ((css, "theme.css"), (templates, "templates.html")):
-        if re.search(r"(?:https?:)?//|@import\b", text, re.IGNORECASE):
+        if REMOTE_ASSET.search(text):
             raise ValueError(f"Compiled {label} contains a remote asset reference.")
 
     supplied_output = output_theme.expanduser()

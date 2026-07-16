@@ -37,7 +37,13 @@ Keep it readable by the customer. Include only fields that affect this project. 
 
 ## 视觉方向
 - 视觉来源：用户明确参考 / TaoHtml 内置主题
-- 用户参考（如适用）：链接、文件或可定位描述；贴近复现 / 仅提取设计 DNA
+- 用户参考（如适用）：本地文件或可定位描述
+- 参考图模式（如适用）：`reconstruct` 参考风格重构 / `corporate_fidelity` 企业模板保真
+- 保真边界（企业模板保真时保留）：只承诺截图中可见效果；不承诺恢复原始 PPT 母版、矢量 Logo、字体源文件或截图外资产
+- 锁定企业元素（企业模板保真时保留）：Logo / 页眉 / 页脚 / 品牌条 / 固定装饰的 id、类型和确认状态
+- 可编辑安全区（企业模板保真时保留）：区域 id、归一化 bbox、允许内容；固定外框不参与排版或动效
+- 参考事实边界（如适用）：`observed` 直接观察 / `extension` 可确认延展 / `unknown` 截图无法判断
+- 延展页面与限制（企业模板保真时保留）：封面 / 章节页 / 数据页小样的 extension 状态，以及更清晰截图或独立 Logo 等阻塞项
 - VI 规范图（单张静态参考时保留）：当前 PNG / HTML 路径 + 已确认状态
 - 所选内置主题（如适用）：完整主题名称 + 一句具体画面描述
 - 选择理由：...
@@ -65,9 +71,9 @@ Keep it readable by the customer. Include only fields that affect this project. 
 
 - For a simple report, merge short sections and keep the brief compact.
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
-- If the user supplied a clear visual reference, record whether it should be closely reproduced or treated as design DNA.
+- If the user supplied a clear visual reference, record `reference_mode`. Do not reduce `corporate_fidelity` to “closely reproduced”: state the screenshot-visible fidelity boundary, locked elements, editable region, and extension/unknown limits explicitly.
 - If the user supplied a clear visual reference, do not add a competing built-in-theme requirement.
-- For one static reference image, include the confirmed VI board path and confirmation state. Do not include a dynamic-analysis field or infer sequential behavior from the image.
+- For one static reference image, include the confirmed VI board path and confirmation state. In corporate fidelity, copy the exact locked-element and editable-region summary from the confirmed contract; do not silently alter it after “确认 VI”. Do not include a dynamic-analysis field or infer sequential behavior from the image.
 - Treat VI confirmation and Report Design Brief confirmation as separate gates. A confirmed VI board may enter the separate project-theme handoff, but it does not authorize report production.
 - If TaoHtml recommends or selects a built-in visual system, copy its full customer-facing name and one-line description, explain why it suits the topic, audience, and use mode, and record every necessary deviation. Write `无` when there is no deviation.
 - Include `行动闭环` only when the confirmed goal requires the audience to complete an external action. Omit it for explanatory, educational, or internal reports that do not require conversion; do not add a gratuitous CTA.

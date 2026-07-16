@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import html
+import io
 import json
+import math
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -27,7 +30,8 @@ from project_theme_layout import (
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = SKILL_ROOT / "assets" / "reference-vi-board" / "template.html"
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
+LEGACY_SCHEMA_VERSION = "1.1"
 BOARD_SIZE = (3200, 2400)
 EXPORT_VIEWPORT = (1600, 1200)
 STATUSES = {"observed", "extension", "unknown"}
@@ -36,7 +40,7 @@ STATUS_LABELS = {
     "extension": "报告适配建议",
     "unknown": "参考中无法判断",
 }
-TOP_LEVEL_KEYS = {
+BASE_TOP_LEVEL_KEYS = {
     "schema_version",
     "board",
     "palette",
@@ -49,6 +53,27 @@ TOP_LEVEL_KEYS = {
     "guardrails",
     "executable_layout",
 }
+CORPORATE_TOP_LEVEL_KEYS = BASE_TOP_LEVEL_KEYS | {
+    "reference_mode",
+    "source_image",
+    "locked_regions",
+    "editable_regions",
+    "extension_pages",
+    "limitations",
+}
+REFERENCE_MODES = {"reconstruct", "corporate_fidelity"}
+LOCKED_REGION_FIELDS = {"id", "type", "bbox", "status", "basis", "extraction"}
+EDITABLE_REGION_FIELDS = {"id", "bbox", "allowed_content", "basis"}
+EXTENSION_PAGE_FIELDS = {"role", "status", "basis"}
+LIMITATION_FIELDS = {"item", "status", "basis"}
+SOURCE_IMAGE_FIELDS = {"sha256", "width", "height"}
+LOCKED_REGION_TYPES = {"logo", "header", "footer", "brand_bar", "decoration"}
+PAGE_ROLES = {"cover", "content", "process", "data", "closing"}
+EXTENSION_PAGE_ROLES = {"cover", "section", "data"}
+REGION_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+CORPORATE_MIN_SOURCE_SIZE = (960, 540)
+CORPORATE_MIN_CROP_SIZE = (24, 24)
 SECTION_LIMITS = {
     "palette": (1, 6),
     "typography": (2, 4),
@@ -275,16 +300,180 @@ def _validate_executable_layout(raw: object) -> dict[str, dict[str, str]]:
     return normalized
 
 
+def _validate_bbox(raw: object, path: str) -> list[float]:
+    if (
+        not isinstance(raw, list)
+        or len(raw) != 4
+        or any(isinstance(value, bool) or not isinstance(value, (int, float)) for value in raw)
+    ):
+        raise ValueError(f"{path} must be [x, y, width, height] with four numbers.")
+    bbox = [float(value) for value in raw]
+    if any(not math.isfinite(value) for value in bbox):
+        raise ValueError(f"{path} values must be finite.")
+    x, y, width, height = bbox
+    if x < 0 or y < 0 or width <= 0 or height <= 0:
+        raise ValueError(f"{path} must use non-negative x/y and positive width/height.")
+    if x > 1 or y > 1 or width > 1 or height > 1 or x + width > 1 or y + height > 1:
+        raise ValueError(f"{path} must stay inside normalized coordinates 0..1.")
+    return bbox
+
+
+def _bbox_overlap(first: list[float], second: list[float]) -> bool:
+    ax, ay, aw, ah = first
+    bx, by, bw, bh = second
+    return min(ax + aw, bx + bw) > max(ax, bx) and min(ay + ah, by + bh) > max(ay, by)
+
+
+def _validate_source_image(raw: object) -> dict[str, object]:
+    source = _require_exact_keys(raw, SOURCE_IMAGE_FIELDS, "source_image")
+    digest = source["sha256"]
+    if not isinstance(digest, str) or not SHA256.fullmatch(digest):
+        raise ValueError("source_image.sha256 must be a lowercase SHA-256 digest.")
+    dimensions: dict[str, int] = {}
+    for field in ("width", "height"):
+        value = source[field]
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"source_image.{field} must be a positive integer.")
+        dimensions[field] = value
+    return {"sha256": digest, **dimensions}
+
+
+def _validate_locked_regions(raw: object) -> list[dict[str, object]]:
+    if not isinstance(raw, list) or not 1 <= len(raw) <= 12:
+        raise ValueError("locked_regions must contain between 1 and 12 fixed elements.")
+    normalized: list[dict[str, object]] = []
+    ids: set[str] = set()
+    for index, value in enumerate(raw):
+        path = f"locked_regions[{index}]"
+        item = _require_exact_keys(value, LOCKED_REGION_FIELDS, path)
+        region_id = _require_text(item["id"], "id", path)
+        if not REGION_ID.fullmatch(region_id) or region_id in ids:
+            raise ValueError(f"{path}.id must be a unique lowercase hyphenated id.")
+        ids.add(region_id)
+        region_type = _require_text(item["type"], "type", path)
+        if region_type not in LOCKED_REGION_TYPES:
+            raise ValueError(
+                f"{path}.type must be one of: {', '.join(sorted(LOCKED_REGION_TYPES))}."
+            )
+        status = _require_text(item["status"], "status", path)
+        if status != "observed":
+            raise ValueError(f"{path}.status must be observed for a locked visible element.")
+        extraction = _require_text(item["extraction"], "extraction", path)
+        if extraction != "crop":
+            raise ValueError(
+                f"{path}.extraction must be crop; fixed brand elements are never model-redrawn."
+            )
+        normalized.append(
+            {
+                "id": region_id,
+                "type": region_type,
+                "bbox": _validate_bbox(item["bbox"], f"{path}.bbox"),
+                "status": status,
+                "basis": _require_text(item["basis"], "basis", path),
+                "extraction": extraction,
+            }
+        )
+    return normalized
+
+
+def _validate_editable_regions(raw: object) -> list[dict[str, object]]:
+    if not isinstance(raw, list) or len(raw) != 1:
+        raise ValueError(
+            "editable_regions must contain exactly one safe content region in corporate_fidelity v1."
+        )
+    item = _require_exact_keys(raw[0], EDITABLE_REGION_FIELDS, "editable_regions[0]")
+    region_id = _require_text(item["id"], "id", "editable_regions[0]")
+    if not REGION_ID.fullmatch(region_id):
+        raise ValueError("editable_regions[0].id must be a lowercase hyphenated id.")
+    roles = item["allowed_content"]
+    if (
+        not isinstance(roles, list)
+        or not roles
+        or any(not isinstance(role, str) or role not in PAGE_ROLES for role in roles)
+        or len(set(roles)) != len(roles)
+    ):
+        raise ValueError(
+            "editable_regions[0].allowed_content must be a unique non-empty list of supported page roles."
+        )
+    if set(roles) != PAGE_ROLES:
+        raise ValueError(
+            "editable_regions[0].allowed_content must allow cover, content, process, data, and closing for the five-page shell."
+        )
+    return [
+        {
+            "id": region_id,
+            "bbox": _validate_bbox(item["bbox"], "editable_regions[0].bbox"),
+            "allowed_content": list(roles),
+            "basis": _require_text(item["basis"], "basis", "editable_regions[0]"),
+        }
+    ]
+
+
+def _validate_extension_pages(raw: object) -> list[dict[str, str]]:
+    if not isinstance(raw, list) or not 2 <= len(raw) <= 3:
+        raise ValueError("extension_pages must contain two or three proposed corporate page roles.")
+    normalized: list[dict[str, str]] = []
+    roles: set[str] = set()
+    for index, value in enumerate(raw):
+        path = f"extension_pages[{index}]"
+        item = _require_exact_keys(value, EXTENSION_PAGE_FIELDS, path)
+        role = _require_text(item["role"], "role", path)
+        if role not in EXTENSION_PAGE_ROLES or role in roles:
+            raise ValueError(f"{path}.role must be a unique cover, section, or data role.")
+        roles.add(role)
+        status = _require_text(item["status"], "status", path)
+        if status != "extension":
+            raise ValueError(
+                f"{path}.status must be extension; page types not visible in the screenshot cannot be observed."
+            )
+        normalized.append(
+            {
+                "role": role,
+                "status": status,
+                "basis": _require_text(item["basis"], "basis", path),
+            }
+        )
+    return normalized
+
+
+def _validate_limitations(raw: object) -> list[dict[str, str]]:
+    if not isinstance(raw, list) or not 1 <= len(raw) <= 6:
+        raise ValueError("limitations must contain between one and six explicit unknowns or limits.")
+    normalized: list[dict[str, str]] = []
+    for index, value in enumerate(raw):
+        path = f"limitations[{index}]"
+        item = _require_exact_keys(value, LIMITATION_FIELDS, path)
+        status = _require_text(item["status"], "status", path)
+        if status != "unknown":
+            raise ValueError(f"{path}.status must be unknown.")
+        normalized.append(
+            {
+                "item": _require_text(item["item"], "item", path),
+                "status": status,
+                "basis": _require_text(item["basis"], "basis", path),
+            }
+        )
+    return normalized
+
+
 def validate_contract(raw: object) -> dict[str, Any]:
-    contract = _require_exact_keys(raw, TOP_LEVEL_KEYS, "contract")
-    if contract["schema_version"] != SCHEMA_VERSION:
-        raise ValueError(f"schema_version must be {SCHEMA_VERSION}.")
+    if not isinstance(raw, dict):
+        raise ValueError("contract must be an object.")
+    schema_version = raw.get("schema_version")
+    if schema_version == LEGACY_SCHEMA_VERSION:
+        contract = _require_exact_keys(raw, BASE_TOP_LEVEL_KEYS, "contract")
+    elif schema_version == SCHEMA_VERSION:
+        contract = _require_exact_keys(raw, CORPORATE_TOP_LEVEL_KEYS, "contract")
+    else:
+        raise ValueError(
+            f"schema_version must be {LEGACY_SCHEMA_VERSION} or {SCHEMA_VERSION}."
+        )
 
     board = _require_exact_keys(
         contract["board"], {"title", "subtitle", "reference_label"}, "board"
     )
     normalized: dict[str, Any] = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": schema_version,
         "board": {
             field: _require_text(board[field], field, "board")
             for field in ("title", "subtitle", "reference_label")
@@ -319,6 +508,47 @@ def validate_contract(raw: object) -> dict[str, Any]:
     if statuses != STATUSES:
         missing = ", ".join(sorted(STATUSES - statuses))
         raise ValueError(f"The contract must expose all three boundary statuses; missing: {missing}.")
+
+    if schema_version == LEGACY_SCHEMA_VERSION:
+        return normalized
+
+    mode = contract["reference_mode"]
+    if mode not in REFERENCE_MODES:
+        raise ValueError(
+            f"reference_mode must be one of: {', '.join(sorted(REFERENCE_MODES))}."
+        )
+    normalized["reference_mode"] = mode
+    normalized["source_image"] = _validate_source_image(contract["source_image"])
+    if mode == "reconstruct":
+        for field in ("locked_regions", "editable_regions", "extension_pages", "limitations"):
+            if contract[field] != []:
+                raise ValueError(f"{field} must be empty when reference_mode is reconstruct.")
+            normalized[field] = []
+        return normalized
+
+    normalized["locked_regions"] = _validate_locked_regions(contract["locked_regions"])
+    normalized["editable_regions"] = _validate_editable_regions(contract["editable_regions"])
+    normalized["extension_pages"] = _validate_extension_pages(contract["extension_pages"])
+    normalized["limitations"] = _validate_limitations(contract["limitations"])
+    editable = normalized["editable_regions"][0]
+    for locked in normalized["locked_regions"]:
+        if _bbox_overlap(locked["bbox"], editable["bbox"]):
+            raise ValueError(
+                f"locked_regions.{locked['id']} overlaps editable_regions.{editable['id']}; "
+                "fixed corporate elements and report content must not conflict."
+            )
+    extension_roles = {item["role"] for item in normalized["extension_pages"]}
+    mini_to_extension_role = {"cover": "cover", "content": "section", "data": "data"}
+    for item in normalized["mini_pages"]:
+        role = mini_to_extension_role[item["kind"]]
+        if role in extension_roles and item["status"] != "extension":
+            raise ValueError(
+                f"corporate_fidelity mini page {item['kind']} is unseen and must be extension."
+            )
+        if role not in extension_roles and item["status"] != "observed":
+            raise ValueError(
+                f"corporate_fidelity mini page {item['kind']} must be observed or listed in extension_pages."
+            )
     return normalized
 
 
@@ -383,6 +613,105 @@ def source_data_uri(source_image: Path) -> str:
 
     encoded = base64.b64encode(payload).decode("ascii")
     return f"data:{mime_type};base64,{encoded}"
+
+
+def source_image_binding(source_image: Path) -> dict[str, object]:
+    try:
+        path = source_image.expanduser().resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise ValueError(f"Source image does not exist: {source_image}") from exc
+    if path.suffix.lower() not in RASTER_MIME_TYPES:
+        raise ValueError(
+            "corporate_fidelity requires exactly one raster PNG, JPEG, or WebP screenshot."
+        )
+    source_data_uri(path)
+    try:
+        from PIL import Image
+
+        with Image.open(path) as image:
+            width, height = image.size
+    except (ImportError, OSError, ValueError) as exc:
+        raise ValueError(f"Corporate source image is not readable: {path}") from exc
+    return {
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "width": width,
+        "height": height,
+    }
+
+
+def validate_source_binding(contract: dict[str, Any], source_image: Path) -> dict[str, object]:
+    if contract.get("schema_version") == LEGACY_SCHEMA_VERSION:
+        source_data_uri(source_image)
+        return {}
+    actual = source_image_binding(source_image)
+    declared = contract["source_image"]
+    if actual != declared:
+        raise ValueError(
+            "source_image sha256 or dimensions do not match the current screenshot."
+        )
+    if contract.get("reference_mode") == "corporate_fidelity":
+        minimum_width, minimum_height = CORPORATE_MIN_SOURCE_SIZE
+        if actual["width"] < minimum_width or actual["height"] < minimum_height:
+            raise ValueError(
+                "Corporate screenshot resolution is too low for reliable fixed-element extraction; "
+                f"need at least {minimum_width}x{minimum_height}, got {actual['width']}x{actual['height']}."
+            )
+    return actual
+
+
+def _pixel_bbox(bbox: list[float], width: int, height: int) -> list[int]:
+    x, y, region_width, region_height = bbox
+    left = math.floor(round(x * width, 10))
+    top = math.floor(round(y * height, 10))
+    right = math.ceil(round((x + region_width) * width, 10))
+    bottom = math.ceil(round((y + region_height) * height, 10))
+    return [left, top, right, bottom]
+
+
+def extract_locked_regions(
+    contract: dict[str, Any], source_image: Path
+) -> list[dict[str, object]]:
+    if contract.get("reference_mode") != "corporate_fidelity":
+        return []
+    binding = validate_source_binding(contract, source_image)
+    try:
+        from PIL import Image
+
+        with Image.open(source_image) as image:
+            source = image.convert("RGBA")
+            extracted: list[dict[str, object]] = []
+            for region in contract["locked_regions"]:
+                pixel_bbox = _pixel_bbox(
+                    region["bbox"], int(binding["width"]), int(binding["height"])
+                )
+                crop_width = pixel_bbox[2] - pixel_bbox[0]
+                crop_height = pixel_bbox[3] - pixel_bbox[1]
+                minimum_width, minimum_height = CORPORATE_MIN_CROP_SIZE
+                if crop_width < minimum_width or crop_height < minimum_height:
+                    raise ValueError(
+                        f"Locked region {region['id']} is only {crop_width}x{crop_height}px; "
+                        "request a clearer screenshot or an independent logo instead of redrawing it."
+                    )
+                crop = source.crop(tuple(pixel_bbox))
+                buffer = io.BytesIO()
+                crop.save(buffer, format="PNG", optimize=False, compress_level=9)
+                payload = buffer.getvalue()
+                extracted.append(
+                    {
+                        **region,
+                        "pixel_bbox": pixel_bbox,
+                        "width": crop_width,
+                        "height": crop_height,
+                        "sha256": hashlib.sha256(payload).hexdigest(),
+                        "data_uri": "data:image/png;base64,"
+                        + base64.b64encode(payload).decode("ascii"),
+                    }
+                )
+    except (ImportError, OSError, ValueError) as exc:
+        if isinstance(exc, ValueError):
+            raise
+        raise ValueError(f"Corporate fixed-element extraction failed: {source_image}") from exc
+    return extracted
 
 
 def _e(value: str) -> str:
@@ -504,9 +833,128 @@ def _render_evidence_sample(items: Iterable[dict[str, str]]) -> str:
     )
 
 
-def _render_mini_pages(items: Iterable[dict[str, str]]) -> str:
+def _bbox_style(bbox: list[float]) -> str:
+    x, y, width, height = bbox
+    return (
+        f"left:{x * 100:.6f}%;top:{y * 100:.6f}%;"
+        f"width:{width * 100:.6f}%;height:{height * 100:.6f}%"
+    )
+
+
+def _render_reference_image(
+    contract: dict[str, Any], source_uri: str, reference_alt: str
+) -> str:
+    if contract.get("reference_mode") != "corporate_fidelity":
+        return f'<img src="{_e(source_uri)}" alt="{reference_alt}">'
+    overlays = "".join(
+        f'<span class="reference-overlay locked-overlay" style="{_bbox_style(item["bbox"])}" '
+        f'data-locked-region="{_e(item["id"])}">{_e(item["id"])}</span>'
+        for item in contract["locked_regions"]
+    )
+    overlays += "".join(
+        f'<span class="reference-overlay editable-overlay" style="{_bbox_style(item["bbox"])}" '
+        f'data-editable-region="{_e(item["id"])}">SAFE</span>'
+        for item in contract["editable_regions"]
+    )
+    width = contract["source_image"]["width"]
+    height = contract["source_image"]["height"]
+    return (
+        f'<div class="reference-image-stack" style="aspect-ratio:{width}/{height}">'
+        f'<img src="{_e(source_uri)}" alt="{reference_alt}">{overlays}</div>'
+    )
+
+
+def _render_locked_region_items(items: list[dict[str, object]]) -> str:
+    labels = {
+        "logo": "Logo",
+        "header": "页眉",
+        "footer": "页脚",
+        "brand_bar": "品牌条",
+        "decoration": "固定装饰",
+    }
+    return "".join(
+        '<article class="component locked-item" data-fixed-element="true">'
+        f'{_status(item)}<h3>{_e(labels[item["type"]])} · {_e(item["id"])}</h3>'
+        f'<p>{_e(item["basis"])}</p><code>{_e(json.dumps(item["bbox"]))}</code>'
+        "</article>"
+        for item in items
+    )
+
+
+def _render_crop_previews(items: list[dict[str, object]]) -> str:
+    return "".join(
+        '<article class="crop-preview">'
+        f'<img src="{_e(item["data_uri"])}" alt="{_e(item["id"])} 固定元素裁切">'
+        f'<strong>{_e(item["id"])}</strong><span>{item["width"]}×{item["height"]} px</span>'
+        f'<code>{_e(item["sha256"][:12])}…</code></article>'
+        for item in items
+    )
+
+
+def _render_editable_preview(contract: dict[str, Any]) -> str:
+    if contract.get("reference_mode") != "corporate_fidelity":
+        return '<span class="generic-safe-label">SAFE<br>AREA</span>'
+    locked = "".join(
+        f'<span class="safe-locked" style="{_bbox_style(item["bbox"])}"></span>'
+        for item in contract["locked_regions"]
+    )
+    editable = contract["editable_regions"][0]
+    return (
+        f'{locked}<span class="safe-editable" style="{_bbox_style(editable["bbox"])}">'
+        f'{_e(editable["id"])}<small>仅此区域可排版与动效</small></span>'
+    )
+
+
+def _render_editable_items(contract: dict[str, Any]) -> str:
+    if contract.get("reference_mode") != "corporate_fidelity":
+        return "".join(
+            _info_item(item, "label", "value") for item in contract["layout"]
+        )
+    return "".join(
+        '<article class="info-item">'
+        f'<div class="info-head"><strong>{_e(item["id"])}</strong>'
+        '<span class="status status-extension">可编辑安全区</span></div>'
+        f'<p class="info-value">{_e(" / ".join(item["allowed_content"]))}</p>'
+        f'<p class="item-basis">{_e(item["basis"])}</p></article>'
+        for item in contract["editable_regions"]
+    )
+
+
+def _render_limitations(contract: dict[str, Any]) -> str:
+    if contract.get("reference_mode") != "corporate_fidelity":
+        return ""
+    return (
+        '<div class="limitations-group"><h3>未知项 / 限制</h3>'
+        + "".join(
+            '<article class="info-item">'
+            f'<div class="info-head"><strong>{_e(item["item"])}</strong>{_status(item)}</div>'
+            f'{_basis(item)}</article>'
+            for item in contract["limitations"]
+        )
+        + "</div>"
+    )
+
+
+def _render_mini_pages(
+    items: Iterable[dict[str, str]],
+    contract: dict[str, Any] | None = None,
+    extracted_regions: list[dict[str, object]] | None = None,
+) -> str:
     by_kind = {item["kind"]: item for item in items}
     cards: list[str] = []
+    corporate = bool(contract and contract.get("reference_mode") == "corporate_fidelity")
+    shell = ""
+    editable = ""
+    if corporate and extracted_regions:
+        shell = "".join(
+            f'<img class="mini-fixed-region" src="{_e(region["data_uri"])}" '
+            f'alt="" style="{_bbox_style(region["bbox"])}">'
+            for region in extracted_regions
+        )
+        editable_region = contract["editable_regions"][0]
+        editable = (
+            f'<span class="mini-editable-region" style="{_bbox_style(editable_region["bbox"])}"></span>'
+        )
     for kind in ("cover", "content", "data"):
         item = by_kind[kind]
         if kind == "cover":
@@ -518,6 +966,9 @@ def _render_mini_pages(items: Iterable[dict[str, str]]) -> str:
             canvas = '<div class="mini-canvas"><div></div><div></div></div>'
         else:
             canvas = '<div class="mini-canvas"><i></i><i></i><i></i></div>'
+        if corporate:
+            canvas = canvas.replace('class="mini-canvas"', 'class="mini-canvas corporate-mini-canvas"', 1)
+            canvas = canvas.replace('>', f'>{shell}{editable}', 1)
         cards.append(
             f'<article class="mini-page-card mini-{kind}">{canvas}'
             f'<div class="mini-copy">{_status(item)}<h3>{_e(item["title"])}</h3>'
@@ -526,8 +977,18 @@ def _render_mini_pages(items: Iterable[dict[str, str]]) -> str:
     return "".join(cards)
 
 
-def render_html(contract: dict[str, Any], source_uri: str) -> str:
+def render_html(
+    contract: dict[str, Any],
+    source_uri: str,
+    extracted_regions: list[dict[str, object]] | None = None,
+) -> str:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
+    corporate = contract.get("reference_mode") == "corporate_fidelity"
+    if corporate and extracted_regions is None:
+        raise ValueError(
+            "corporate_fidelity VI rendering requires deterministic locked-region crops."
+        )
+    extracted_regions = extracted_regions or []
     colors = [
         item["value"]
         for item in contract["palette"]
@@ -546,35 +1007,64 @@ def render_html(contract: dict[str, Any], source_uri: str) -> str:
         f"--sample-{index}:{color}" for index, color in enumerate(colors, start=1)
     )
     reference_alt = _e(contract["board"]["reference_label"])
+    if corporate:
+        imagery_body = (
+            '<div class="crop-preview-grid">'
+            + _render_crop_previews(extracted_regions)
+            + "</div>"
+        )
+        component_items = _render_locked_region_items(contract["locked_regions"])
+        reference_caption = "企业模板保真｜红框为固定元素，绿框为可编辑安全区"
+        components_title = "固定企业元素清单"
+        footer_note = "截图中可见效果保真｜固定层无动效｜未见页面只作延展建议"
+        reference_mode = "corporate_fidelity"
+    else:
+        imagery_body = (
+            f'<div class="crop-demo"><img src="{_e(source_uri)}" '
+            f'alt="{reference_alt}的裁切示意"></div><div class="stack">'
+            + "".join(
+                _info_item(item, "label", "description")
+                for item in contract["imagery"]
+            )
+            + "</div>"
+        )
+        component_items = _render_components(contract["components"])
+        reference_caption = "单张静态参考｜提取设计语言并允许重新构图"
+        components_title = "卡片 · 面板 · 标签 · 边框"
+        footer_note = "三类边界已显式标注｜结构字段可机器校验｜缺失类别保持未知"
+        reference_mode = contract.get("reference_mode", "reconstruct")
     replacements = {
         "DOCUMENT_TITLE": _e(contract["board"]["title"]),
         "BOARD_TITLE": _e(contract["board"]["title"]),
         "BOARD_SUBTITLE": _e(contract["board"]["subtitle"]),
         "BOARD_STYLE": _e(board_style),
-        "REFERENCE_IMAGE": f'<img src="{_e(source_uri)}" alt="{reference_alt}">',
-        "CROP_IMAGE": f'<img src="{_e(source_uri)}" alt="{reference_alt}的裁切示意">',
+        "REFERENCE_IMAGE": _render_reference_image(contract, source_uri, reference_alt),
         "REFERENCE_LABEL": reference_alt,
+        "REFERENCE_CAPTION": reference_caption,
+        "REFERENCE_MODE": reference_mode,
         "PALETTE_ITEMS": _render_palette(contract["palette"]),
         "TYPOGRAPHY_ITEMS": _render_typography(contract["typography"]),
-        "LAYOUT_ITEMS": "".join(
-            _info_item(item, "label", "value") for item in contract["layout"]
-        ),
-        "COMPONENT_ITEMS": _render_components(contract["components"]),
-        "IMAGERY_ITEMS": "".join(
-            _info_item(item, "label", "description") for item in contract["imagery"]
-        ),
+        "EDITABLE_REGION_PREVIEW": _render_editable_preview(contract),
+        "LAYOUT_ITEMS": _render_editable_items(contract),
+        "COMPONENTS_PANEL_TITLE": components_title,
+        "COMPONENT_ITEMS": component_items,
+        "IMAGERY_BODY": imagery_body,
         "EVIDENCE_ITEMS": "".join(
             _info_item(item, "label", "description")
             for item in contract["evidence_language"]
         ),
         "EVIDENCE_SAMPLE": _render_evidence_sample(contract["evidence_language"]),
         "GUARDRAIL_GROUPS": _render_guardrails(contract["guardrails"]),
-        "MINI_PAGE_ITEMS": _render_mini_pages(contract["mini_pages"]),
+        "LIMITATION_ITEMS": _render_limitations(contract),
+        "MINI_PAGE_ITEMS": _render_mini_pages(
+            contract["mini_pages"], contract, extracted_regions
+        ),
         "EXECUTABLE_LAYOUT_ITEMS": _render_executable_layout(
             contract["executable_layout"]
         ),
-        "SCHEMA_VERSION": SCHEMA_VERSION,
-        "SCHEMA_VERSION_LABEL": SCHEMA_VERSION,
+        "SCHEMA_VERSION": contract["schema_version"],
+        "SCHEMA_VERSION_LABEL": contract["schema_version"],
+        "FOOTER_NOTE": footer_note,
     }
     rendered = template
     for marker, value in replacements.items():
@@ -674,13 +1164,17 @@ def render_board(
 ) -> tuple[Path, Path]:
     normalized = validate_contract(contract)
     source_uri = source_data_uri(source_image)
+    validate_source_binding(normalized, source_image)
+    extracted_regions = extract_locked_regions(normalized, source_image)
     output_base = output_base.expanduser().resolve()
     if output_base.suffix:
         raise ValueError("--output must be a base path without a file extension.")
     output_base.parent.mkdir(parents=True, exist_ok=True)
     html_path = output_base.with_suffix(".html")
     png_path = output_base.with_suffix(".png")
-    html_path.write_text(render_html(normalized, source_uri), encoding="utf-8")
+    html_path.write_text(
+        render_html(normalized, source_uri, extracted_regions), encoding="utf-8"
+    )
     png_path.unlink(missing_ok=True)
     export_png(html_path, png_path)
     return html_path, png_path

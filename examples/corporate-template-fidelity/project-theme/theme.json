@@ -1,0 +1,624 @@
+{
+  "canvas": {
+    "aspect_ratio": "16:9",
+    "grid": "row axis; 3 content column(s); start alignment",
+    "safe_area": "64px horizontal; 46px vertical"
+  },
+  "compilation": {
+    "boundary_summary": {
+      "compiled": 22,
+      "eligible": 32,
+      "extension": 20,
+      "observed": 12,
+      "unknown": 4
+    },
+    "confirmation": "确认 VI",
+    "customer_corrections": [
+      "确认 Logo、页眉、左侧品牌条与页脚全部锁定；正文只进入 safe-content。"
+    ],
+    "reference_image_sha256": "ac0172ff956bed5fcb262adcd97139e9b2d8cd7127ceba3e21a76b6cca35f382",
+    "vi_contract_sha256": "a80e8ceba32f1b309dd4f2402be151ab4a4d0be46e2402634faa10a8ab64b2e9",
+    "vi_schema_version": "1.2"
+  },
+  "components": {
+    "border": "Border, radius, and shadow are compiled from soft-stack.",
+    "card": "soft-stack module used by the card-grid content structure.",
+    "chart": "安全区内使用直接数值与短标签",
+    "image": "Cover visual at right, 4:3, contain fit; this data structure does not place a local source image, and source_kind remains renderer-controlled.",
+    "label": "Compact solid section tag with no provenance implication.",
+    "panel": "metrics-grid evidence panel at medium density."
+  },
+  "corporate_shell": {
+    "content_motion_scope": "editable_region_only",
+    "editable_region": {
+      "allowed_content": [
+        "cover",
+        "content",
+        "process",
+        "data",
+        "closing"
+      ],
+      "basis": "与全部固定元素无重叠，承载报告排版与运行时呈现",
+      "bbox": [
+        0.08,
+        0.16,
+        0.84,
+        0.7
+      ],
+      "id": "safe-content"
+    },
+    "extension_pages": [
+      {
+        "basis": "单张截图未观察封面",
+        "role": "cover",
+        "status": "extension"
+      },
+      {
+        "basis": "单张截图未观察章节页",
+        "role": "section",
+        "status": "extension"
+      },
+      {
+        "basis": "单张截图未证明正式数据页",
+        "role": "data",
+        "status": "extension"
+      }
+    ],
+    "fixed_elements": [
+      {
+        "basis": "左上完整 Logo 区域",
+        "bbox": [
+          0.04,
+          0.04,
+          0.12,
+          0.06
+        ],
+        "crop_sha256": "729cb07e3b487a8add771b5ecf40455c5a0a705eddcc6c0395721b491cae1f46",
+        "crop_size": [
+          192,
+          54
+        ],
+        "extraction": "crop",
+        "id": "company-logo",
+        "pixel_bbox": [
+          64,
+          36,
+          256,
+          90
+        ],
+        "status": "observed",
+        "type": "logo"
+      },
+      {
+        "basis": "右上页眉顶线、栏目名与年份",
+        "bbox": [
+          0.18,
+          0.04,
+          0.78,
+          0.06
+        ],
+        "crop_sha256": "729cc4cc4e9a7fa750d30d86df4192919ddaacd7340c0ad640b05d9cf6fd8cf4",
+        "crop_size": [
+          1248,
+          54
+        ],
+        "extraction": "crop",
+        "id": "page-header",
+        "pixel_bbox": [
+          288,
+          36,
+          1536,
+          90
+        ],
+        "status": "observed",
+        "type": "header"
+      },
+      {
+        "basis": "左侧纵向品牌色条",
+        "bbox": [
+          0.04,
+          0.14,
+          0.015,
+          0.72
+        ],
+        "crop_sha256": "cc9640580a6a98ff6471a0972884ad5d26f0f6442560f4df71aa3b15d9eec333",
+        "crop_size": [
+          24,
+          648
+        ],
+        "extraction": "crop",
+        "id": "left-brand-bar",
+        "pixel_bbox": [
+          64,
+          126,
+          88,
+          774
+        ],
+        "status": "observed",
+        "type": "brand_bar"
+      },
+      {
+        "basis": "底部保密标识、页码和深蓝底条",
+        "bbox": [
+          0.04,
+          0.91,
+          0.92,
+          0.04
+        ],
+        "crop_sha256": "f89c0ba1a13a571a85dc028a7c01090058183cabd5fc3988c4ce54aebf7c9ea9",
+        "crop_size": [
+          1472,
+          36
+        ],
+        "extraction": "crop",
+        "id": "page-footer",
+        "pixel_bbox": [
+          64,
+          819,
+          1536,
+          855
+        ],
+        "status": "observed",
+        "type": "footer"
+      }
+    ],
+    "fixed_motion": "none",
+    "full_screenshot_background": false,
+    "limitations": [
+      {
+        "basis": "截图不能还原母版结构或占位符",
+        "item": "原始 PPT 母版",
+        "status": "unknown"
+      },
+      {
+        "basis": "只承诺截图可见像素，不恢复不可见源资产",
+        "item": "矢量 Logo 与字体源文件",
+        "status": "unknown"
+      },
+      {
+        "basis": "单张静态截图不检查或推断动效",
+        "item": "静态输入边界",
+        "status": "unknown"
+      }
+    ],
+    "logo_redraw": false,
+    "source_image_sha256": "ac0172ff956bed5fcb262adcd97139e9b2d8cd7127ceba3e21a76b6cca35f382",
+    "source_image_size": [
+      1600,
+      900
+    ]
+  },
+  "description": "由已确认单张静态参考 VI 合同编译的当前项目专用主题",
+  "display_name": "Northstar 企业模板保真｜项目专用主题",
+  "executable_layout": {
+    "alignment": "start",
+    "content_columns": "3",
+    "content_structure": "card-grid",
+    "cover_split": "7:5",
+    "cover_structure": "split",
+    "data_columns": "3",
+    "data_structure": "metrics-grid",
+    "density": "medium",
+    "image_aspect_ratio": "4:3",
+    "image_fit": "contain",
+    "image_placement": "right",
+    "image_treatment": "natural",
+    "module_organization": "soft-stack",
+    "page_axis": "row",
+    "visual_focus": "headline-and-image"
+  },
+  "files": {
+    "provenance": "provenance.json",
+    "templates": "templates.html",
+    "tokens": "theme.css"
+  },
+  "forbidden": [
+    "不得把包含示例正文的整张截图设为页面背景",
+    "固定外框不移动，只允许安全区内容呈现"
+  ],
+  "id": "project-northstar-corporate-fidelity",
+  "identity": {
+    "chart_evidence": "安全区内使用直接数值与短标签",
+    "composition": "split cover (7:5) with image right; card-grid content in 3 column(s); row process; metrics-grid data page in 3 column(s); soft-stack modules, medium density, headline-and-image focus.",
+    "hierarchy": "start-aligned headline-and-image hierarchy at medium information density.",
+    "image_treatment": "natural cover visual and applicable local evidence imagery, contain fit, 4:3 ratio.",
+    "module_language": "soft-stack organization with card-grid content modules.",
+    "motion": "TaoHtml Runtime reveal syntax; not observed or inferred from the static reference."
+  },
+  "kind": "project",
+  "layout_variants": [
+    {
+      "id": "cover-split-7-5-image-right-start",
+      "role": "cover"
+    },
+    {
+      "id": "content-card-grid-3-col-soft-stack",
+      "role": "content"
+    },
+    {
+      "id": "process-row-soft-stack-medium",
+      "role": "content"
+    },
+    {
+      "id": "data-metrics-grid-3-col",
+      "role": "evidence-data"
+    },
+    {
+      "id": "closing-card-grid-start-medium",
+      "role": "closing"
+    }
+  ],
+  "motion": {
+    "disabled": [
+      "reference-inferred timing",
+      "reference-inferred transitions",
+      "cross-page morph"
+    ],
+    "enter": "generic opacity plus 14px upward reveal over 420ms",
+    "fixed_elements": "none",
+    "observed_from_reference": false,
+    "scope": "editable_region_only",
+    "source": "TaoHtml shared Runtime and report-task reveal decisions",
+    "stagger": "existing fragment and data-step syntax"
+  },
+  "preserve": [
+    "确认 VI 后不得改动位置、尺寸或像素内容"
+  ],
+  "project": {
+    "global_built_in": false,
+    "id": "northstar-corporate-fidelity",
+    "reference_mode": "corporate_fidelity",
+    "target_mode": "presentation"
+  },
+  "schema_version": "1.0",
+  "structure_sources": {
+    "alignment": {
+      "source": "executable_layout.alignment",
+      "status": "observed",
+      "usage": [
+        "templates.html:heading wrappers",
+        "theme.css:--pt-text-align",
+        "theme.json:executable_layout.alignment",
+        "theme.json:identity.composition"
+      ]
+    },
+    "content_columns": {
+      "source": "executable_layout.content_columns",
+      "status": "extension",
+      "usage": [
+        "theme.css:content/closing grid-template-columns",
+        "theme.json:executable_layout.content_columns",
+        "theme.json:layout_variants[1]"
+      ]
+    },
+    "content_structure": {
+      "source": "executable_layout.content_structure",
+      "status": "extension",
+      "usage": [
+        "templates.html:content and closing DOM branches",
+        "theme.json:executable_layout.content_structure",
+        "theme.json:layout_variants[1,4]"
+      ]
+    },
+    "cover_split": {
+      "source": "executable_layout.cover_split",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-layout data-cover-split",
+        "theme.css:.pt-cover-layout grid-template-columns",
+        "theme.json:executable_layout.cover_split",
+        "theme.json:layout_variants[0]"
+      ]
+    },
+    "cover_structure": {
+      "source": "executable_layout.cover_structure",
+      "status": "extension",
+      "usage": [
+        "templates.html:cover DOM wrapper",
+        "theme.css:.pt-cover-layout",
+        "theme.json:executable_layout.cover_structure",
+        "theme.json:layout_variants[0]"
+      ]
+    },
+    "data_columns": {
+      "source": "executable_layout.data_columns",
+      "status": "extension",
+      "usage": [
+        "theme.css:structure-specific data grid-template-columns",
+        "theme.json:executable_layout.data_columns",
+        "theme.json:layout_variants[3]"
+      ]
+    },
+    "data_structure": {
+      "source": "executable_layout.data_structure",
+      "status": "extension",
+      "usage": [
+        "templates.html:data DOM branch",
+        "theme.css:data branch geometry",
+        "theme.json:executable_layout.data_structure",
+        "theme.json:layout_variants[3]"
+      ]
+    },
+    "density": {
+      "source": "executable_layout.density",
+      "status": "observed",
+      "usage": [
+        "templates.html:data-rhythm-check contracts",
+        "theme.css:--pt-rhythm-card-title-body",
+        "theme.css:--pt-rhythm-evidence-source",
+        "theme.css:--pt-rhythm-heading-content",
+        "theme.css:--pt-rhythm-label-title",
+        "theme.css:--pt-rhythm-title-lede",
+        "theme.css:semantic rhythm custom properties",
+        "theme.json:executable_layout.density",
+        "theme.json:layout_variants[2,4]",
+        "theme.json:tokens.rhythm_card_title_body",
+        "theme.json:tokens.rhythm_evidence_source",
+        "theme.json:tokens.rhythm_heading_content",
+        "theme.json:tokens.rhythm_label_title",
+        "theme.json:tokens.rhythm_title_lede"
+      ]
+    },
+    "image_aspect_ratio": {
+      "source": "executable_layout.image_aspect_ratio",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-art data-image-aspect-ratio",
+        "theme.css:.pt-cover-art aspect-ratio",
+        "theme.json:components.image",
+        "theme.json:executable_layout.image_aspect_ratio"
+      ]
+    },
+    "image_fit": {
+      "source": "executable_layout.image_fit",
+      "status": "extension",
+      "usage": [
+        "templates.html:.pt-cover-art data-image-fit",
+        "theme.css:.pt-cover-art width/background fill",
+        "theme.json:components.image",
+        "theme.json:executable_layout.image_fit"
+      ]
+    },
+    "image_placement": {
+      "source": "executable_layout.image_placement",
+      "status": "extension",
+      "usage": [
+        "templates.html:cover DOM order/background layer",
+        "theme.css:.pt-cover-layout placement geometry",
+        "theme.json:executable_layout.image_placement",
+        "theme.json:layout_variants[0]"
+      ]
+    },
+    "image_treatment": {
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "templates.html:.pt-cover-art data-image-treatment",
+        "theme.css:.pt-cover-art shape filter",
+        "theme.json:executable_layout.image_treatment",
+        "theme.json:identity.image_treatment"
+      ]
+    },
+    "module_organization": {
+      "source": "executable_layout.module_organization",
+      "status": "observed",
+      "usage": [
+        "theme.css:--pt-border/--pt-radius/--pt-shadow",
+        "theme.json:executable_layout.module_organization",
+        "theme.json:identity.module_language"
+      ]
+    },
+    "page_axis": {
+      "source": "executable_layout.page_axis",
+      "status": "extension",
+      "usage": [
+        "templates.html:process DOM axis",
+        "theme.css:.pt-process",
+        "theme.json:executable_layout.page_axis",
+        "theme.json:identity.composition"
+      ]
+    },
+    "visual_focus": {
+      "source": "executable_layout.visual_focus",
+      "status": "extension",
+      "usage": [
+        "theme.css:.pt-title/.pt-cover-art width and height",
+        "theme.json:executable_layout.visual_focus",
+        "theme.json:identity.composition"
+      ]
+    }
+  },
+  "template_contract": {
+    "minimum_slides": 5,
+    "placeholder_format": "{{UPPER_SNAKE_CASE}}",
+    "required_markers": [
+      "data-layout",
+      "fragment",
+      "data-step"
+    ]
+  },
+  "token_sources": {
+    "colors.accent": {
+      "basis": "VI did not provide a usable accent color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.accent",
+        "theme.css:--pt-accent"
+      ]
+    },
+    "colors.canvas": {
+      "basis": "页眉和固定品牌条直接可见",
+      "source": "palette[1]",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.canvas",
+        "theme.css:--pt-canvas"
+      ]
+    },
+    "colors.ink": {
+      "basis": "Logo 区、页脚和正文标题重复使用",
+      "source": "palette[0]",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.ink",
+        "theme.css:--pt-ink"
+      ]
+    },
+    "colors.panel": {
+      "basis": "VI did not provide a usable panel color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.panel",
+        "theme.css:--pt-panel"
+      ]
+    },
+    "colors.paper": {
+      "basis": "页眉和固定品牌条直接可见；v1 复用为卡片纸色。",
+      "source": "palette[1]",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.paper",
+        "theme.css:--pt-paper"
+      ]
+    },
+    "colors.signal": {
+      "basis": "VI did not provide a usable signal color; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.signal",
+        "theme.css:--pt-signal"
+      ]
+    },
+    "rhythm.card_title_body": {
+      "basis": "页眉、标题、卡片之间保持中等信息密度；确定性映射为 medium 语义排版节奏。",
+      "source": "executable_layout.density",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.rhythm_card_title_body",
+        "theme.css:--pt-rhythm-card-title-body"
+      ]
+    },
+    "rhythm.evidence_source": {
+      "basis": "页眉、标题、卡片之间保持中等信息密度；确定性映射为 medium 语义排版节奏。",
+      "source": "executable_layout.density",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.rhythm_evidence_source",
+        "theme.css:--pt-rhythm-evidence-source"
+      ]
+    },
+    "rhythm.heading_content": {
+      "basis": "页眉、标题、卡片之间保持中等信息密度；确定性映射为 medium 语义排版节奏。",
+      "source": "executable_layout.density",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.rhythm_heading_content",
+        "theme.css:--pt-rhythm-heading-content"
+      ]
+    },
+    "rhythm.label_title": {
+      "basis": "页眉、标题、卡片之间保持中等信息密度；确定性映射为 medium 语义排版节奏。",
+      "source": "executable_layout.density",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.rhythm_label_title",
+        "theme.css:--pt-rhythm-label-title"
+      ]
+    },
+    "rhythm.title_lede": {
+      "basis": "页眉、标题、卡片之间保持中等信息密度；确定性映射为 medium 语义排版节奏。",
+      "source": "executable_layout.density",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.rhythm_title_lede",
+        "theme.css:--pt-rhythm-title-lede"
+      ]
+    },
+    "spacing.canvas_x": {
+      "basis": "VI did not provide parseable horizontal canvas spacing; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.canvas_x",
+        "theme.css:--pt-canvas-x"
+      ]
+    },
+    "spacing.canvas_y": {
+      "basis": "Vertical safe area is a reversible runtime-fit fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.canvas_y",
+        "theme.css:--pt-canvas-y"
+      ]
+    },
+    "spacing.gap": {
+      "basis": "VI did not provide parseable module gap; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.gap",
+        "theme.css:--pt-gap"
+      ]
+    },
+    "type.body_size": {
+      "basis": "把截图正文层级延展为报告安全区排版",
+      "source": "typography[1]",
+      "status": "extension",
+      "usage": [
+        "theme.json:tokens.body_size",
+        "theme.css:--pt-body"
+      ]
+    },
+    "type.caption_size": {
+      "basis": "VI hierarchy does not require an exact caption size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.caption_size",
+        "theme.css:--pt-caption"
+      ]
+    },
+    "type.display_size": {
+      "basis": "截图正文主标题直接可见",
+      "source": "typography[0]",
+      "status": "observed",
+      "usage": [
+        "theme.json:tokens.display_size",
+        "theme.css:--pt-display"
+      ]
+    },
+    "type.heading_size": {
+      "basis": "VI did not provide a parseable heading size; neutral reversible fallback.",
+      "source": "compiler-neutral-default",
+      "status": "fallback",
+      "usage": [
+        "theme.json:tokens.heading_size",
+        "theme.css:--pt-heading"
+      ]
+    }
+  },
+  "tokens": {
+    "accent": "#C8A64B",
+    "body_size": "18px",
+    "canvas": "#3E8EDE",
+    "canvas_x": "64px",
+    "canvas_y": "46px",
+    "caption_size": "13px",
+    "display_size": "52px",
+    "gap": "22px",
+    "heading_size": "36px",
+    "ink": "#102A43",
+    "panel": "#233C37",
+    "paper": "#3E8EDE",
+    "rhythm_card_title_body": "12px",
+    "rhythm_evidence_source": "18px",
+    "rhythm_heading_content": "32px",
+    "rhythm_label_title": "18px",
+    "rhythm_title_lede": "16px",
+    "signal": "#B94B3F"
+  }
+}

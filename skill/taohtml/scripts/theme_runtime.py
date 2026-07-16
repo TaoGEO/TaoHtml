@@ -84,7 +84,7 @@ def _read_theme_assets(root: Path, manifest: dict[str, Any]) -> tuple[str, str]:
 
 
 def _validate_project_structure(
-    manifest: dict[str, Any], provenance: dict[str, Any], templates: str
+    manifest: dict[str, Any], provenance: dict[str, Any], templates: str, css: str
 ) -> None:
     layout = manifest.get("executable_layout")
     sources = manifest.get("structure_sources")
@@ -172,6 +172,70 @@ def _validate_project_structure(
     if not isinstance(identity, dict) or not isinstance(identity.get("composition"), str) or not identity["composition"].strip():
         raise ValueError("Project theme identity.composition must be non-empty.")
 
+    project = manifest.get("project")
+    reference_mode = project.get("reference_mode", "reconstruct") if isinstance(project, dict) else None
+    if reference_mode not in {"reconstruct", "corporate_fidelity"}:
+        raise ValueError("Project theme reference_mode is invalid.")
+    if reference_mode == "corporate_fidelity":
+        shell = manifest.get("corporate_shell")
+        provenance_shell = provenance.get("corporate_fidelity")
+        if not isinstance(shell, dict) or provenance_shell != shell:
+            raise ValueError("Corporate shell manifest and provenance must match exactly.")
+        fixed = shell.get("fixed_elements")
+        editable = shell.get("editable_region")
+        if (
+            not isinstance(fixed, list)
+            or not fixed
+            or not isinstance(editable, dict)
+            or shell.get("fixed_motion") != "none"
+            or shell.get("content_motion_scope") != "editable_region_only"
+            or shell.get("full_screenshot_background") is not False
+            or shell.get("logo_redraw") is not False
+        ):
+            raise ValueError("Corporate shell safety contract is incomplete.")
+        region_ids: set[str] = set()
+        for region in fixed:
+            if not isinstance(region, dict):
+                raise ValueError("Corporate fixed element record must be an object.")
+            region_id = region.get("id")
+            crop_hash = region.get("crop_sha256")
+            if (
+                not isinstance(region_id, str)
+                or region_id in region_ids
+                or not isinstance(crop_hash, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", crop_hash)
+                or region.get("status") != "observed"
+                or region.get("extraction") != "crop"
+            ):
+                raise ValueError("Corporate fixed element record is invalid.")
+            region_ids.add(region_id)
+            if templates.count(f'data-locked-region="{region_id}"') != 5:
+                raise ValueError(f"Corporate fixed element {region_id} must appear once on every page.")
+            if templates.count(f'data-crop-sha256="{crop_hash}"') != 5:
+                raise ValueError(f"Corporate crop hash drifted for fixed element {region_id}.")
+        editable_id = editable.get("id")
+        if not isinstance(editable_id, str) or templates.count(
+            f'data-editable-region="{editable_id}"'
+        ) != 5:
+            raise ValueError("Corporate editable region must wrap every page exactly once.")
+        if templates.count('data-fixed-motion="none"') != 5:
+            raise ValueError("Corporate fixed shell must explicitly disable motion on every page.")
+        for selector_name in ("pt-corporate-fixed-shell", "pt-corporate-fixed-region"):
+            rule = re.search(rf"\.{selector_name}\s*\{{(?P<body>[^}}]+)\}}", css)
+            if (
+                rule is None
+                or "animation:none !important" not in rule.group("body")
+                or "transition:none !important" not in rule.group("body")
+                or "transform:none !important" not in rule.group("body")
+            ):
+                raise ValueError("Corporate fixed shell CSS must disable fixed-element animation.")
+        if re.search(
+            r'class="[^"]*fragment[^"]*"[^>]*data-locked-region|'
+            r'data-locked-region="[^"]+"[^>]*class="[^"]*fragment',
+            templates,
+        ):
+            raise ValueError("Corporate fixed elements must never use fragment motion.")
+
 
 def load_built_in_theme(theme_id: str) -> ThemeBundle:
     if theme_id not in BUILT_IN_THEME_IDS:
@@ -236,7 +300,7 @@ def load_project_theme(theme_dir: Path) -> ThemeBundle:
     if provenance.get("schema_version") != "1.0" or provenance.get("theme_id") != theme_id:
         raise ValueError("Project theme provenance does not match the manifest.")
     css, templates = _read_theme_assets(root, manifest)
-    _validate_project_structure(manifest, provenance, templates)
+    _validate_project_structure(manifest, provenance, templates, css)
     selector = f'.deck[data-theme="{theme_id}"]'
     if selector not in css:
         raise ValueError(f"Project theme CSS is not scoped to {selector}.")

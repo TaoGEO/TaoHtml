@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import copy
+import base64
+import hashlib
+import io
 import importlib.util
 import json
 import re
@@ -21,6 +24,8 @@ RENDERER_PATH = SKILL_ROOT / "scripts" / "render_reference_vi.py"
 LAYOUT_GRAMMAR_PATH = SKILL_ROOT / "scripts" / "project_theme_layout.py"
 CONTRACT_PATH = ROOT / "tests" / "fixtures" / "reference-vi-contract.json"
 SOURCE_PATH = ROOT / "tests" / "fixtures" / "reference-vi-source.svg"
+CORPORATE_CONTRACT_PATH = ROOT / "tests" / "fixtures" / "corporate-template-vi-contract.json"
+CORPORATE_SOURCE_PATH = ROOT / "tests" / "fixtures" / "corporate-template-reference.png"
 CHECK_ASSETS = SKILL_ROOT / "scripts" / "check_assets.py"
 BUILT_IN_IDS = {
     "black-white-fluorescent-cards",
@@ -449,6 +454,121 @@ class ReferenceVIContractTests(unittest.TestCase):
         self.assertEqual(normalized["schema_version"], "1.1")
 
 
+class CorporateFidelityVIContractTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.raw = json.loads(CORPORATE_CONTRACT_PATH.read_text(encoding="utf-8"))
+        self.contract = RENDERER.validate_contract(self.raw)
+
+    def test_v12_extends_the_same_contract_and_legacy_reconstruct_stays_compatible(self) -> None:
+        self.assertEqual(self.contract["schema_version"], "1.2")
+        self.assertEqual(self.contract["reference_mode"], "corporate_fidelity")
+        legacy = RENDERER.load_contract(CONTRACT_PATH)
+        self.assertEqual(legacy["schema_version"], "1.1")
+        self.assertNotIn("reference_mode", legacy)
+        reconstruct = copy.deepcopy(self.raw)
+        reconstruct["reference_mode"] = "reconstruct"
+        for field in ("locked_regions", "editable_regions", "extension_pages", "limitations"):
+            reconstruct[field] = []
+        normalized = RENDERER.validate_contract(reconstruct)
+        self.assertEqual(normalized["reference_mode"], "reconstruct")
+        self.assertEqual(normalized["locked_regions"], [])
+
+    def test_normalized_bbox_and_locked_editable_conflicts_fail_closed(self) -> None:
+        outside = copy.deepcopy(self.raw)
+        outside["locked_regions"][0]["bbox"] = [0.95, 0.04, 0.12, 0.06]
+        with self.assertRaisesRegex(ValueError, "normalized coordinates 0..1"):
+            RENDERER.validate_contract(outside)
+
+        overlap = copy.deepcopy(self.raw)
+        overlap["editable_regions"][0]["bbox"] = [0.08, 0.04, 0.84, 0.82]
+        with self.assertRaisesRegex(ValueError, "overlaps editable_regions"):
+            RENDERER.validate_contract(overlap)
+
+    def test_locked_logo_is_observed_crop_only_and_extensions_cannot_masquerade_as_observed(self) -> None:
+        logo = self.contract["locked_regions"][0]
+        self.assertEqual(
+            {key: logo[key] for key in ("type", "status", "extraction")},
+            {"type": "logo", "status": "observed", "extraction": "crop"},
+        )
+        redraw = copy.deepcopy(self.raw)
+        redraw["locked_regions"][0]["extraction"] = "redraw"
+        with self.assertRaisesRegex(ValueError, "never model-redrawn"):
+            RENDERER.validate_contract(redraw)
+
+        fake_observed = copy.deepcopy(self.raw)
+        fake_observed["extension_pages"][0]["status"] = "observed"
+        with self.assertRaisesRegex(ValueError, "must be extension"):
+            RENDERER.validate_contract(fake_observed)
+
+    def test_source_hash_dimensions_resolution_and_raster_boundary_are_enforced(self) -> None:
+        binding = RENDERER.validate_source_binding(self.contract, CORPORATE_SOURCE_PATH)
+        self.assertEqual(binding, self.contract["source_image"])
+
+        wrong_hash = copy.deepcopy(self.raw)
+        wrong_hash["source_image"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "sha256 or dimensions do not match"):
+            RENDERER.validate_source_binding(
+                RENDERER.validate_contract(wrong_hash), CORPORATE_SOURCE_PATH
+            )
+
+        with self.assertRaisesRegex(ValueError, "PNG, JPEG, or WebP"):
+            RENDERER.validate_source_binding(self.contract, SOURCE_PATH)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            low_path = Path(temp_dir) / "low.png"
+            Image.new("RGB", (800, 450), "white").save(low_path)
+            low = copy.deepcopy(self.raw)
+            low["source_image"] = {
+                "sha256": hashlib.sha256(low_path.read_bytes()).hexdigest(),
+                "width": 800,
+                "height": 450,
+            }
+            with self.assertRaisesRegex(ValueError, "too low for reliable"):
+                RENDERER.validate_source_binding(
+                    RENDERER.validate_contract(low), low_path
+                )
+
+    def test_locked_regions_are_exact_deterministic_crops_with_hashes(self) -> None:
+        first = RENDERER.extract_locked_regions(self.contract, CORPORATE_SOURCE_PATH)
+        second = RENDERER.extract_locked_regions(self.contract, CORPORATE_SOURCE_PATH)
+        self.assertEqual(first, second)
+        self.assertEqual(
+            {item["id"]: item["pixel_bbox"] for item in first},
+            {
+                "company-logo": [64, 36, 256, 90],
+                "page-header": [288, 36, 1536, 90],
+                "left-brand-bar": [64, 126, 88, 774],
+                "page-footer": [64, 819, 1536, 855],
+            },
+        )
+        with Image.open(CORPORATE_SOURCE_PATH) as source:
+            source_rgba = source.convert("RGBA")
+            for item in first:
+                encoded = item["data_uri"].split(",", 1)[1]
+                payload = base64.b64decode(encoded)
+                self.assertEqual(hashlib.sha256(payload).hexdigest(), item["sha256"])
+                with Image.open(io.BytesIO(payload)) as crop:
+                    expected = source_rgba.crop(tuple(item["pixel_bbox"]))
+                    self.assertEqual(crop.size, expected.size)
+                    self.assertEqual(crop.tobytes(), expected.tobytes())
+
+    def test_corporate_board_shows_overlay_crops_safe_area_extensions_and_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html_path, png_path = RENDERER.render_board(
+                self.contract,
+                CORPORATE_SOURCE_PATH,
+                Path(temp_dir) / "corporate-reference-vi",
+            )
+            document = html_path.read_text(encoding="utf-8")
+            text = visible_text(document)
+            self.assertTrue(png_path.is_file())
+            self.assertEqual(document.count('class="crop-preview"'), 4)
+            self.assertEqual(document.count('data-locked-region="'), 4)
+            self.assertIn('data-editable-region="safe-content"', document)
+            for marker in ("固定企业元素清单", "未知项 / 限制", "企业框架封面", "报告适配建议"):
+                self.assertIn(marker, text)
+
+
 class ReferenceVIRenderingTests(unittest.TestCase):
     def test_output_png_exists_is_high_resolution_and_html_is_offline(self) -> None:
         contract = RENDERER.load_contract(CONTRACT_PATH)
@@ -506,6 +626,24 @@ class ReferenceVIWorkflowTests(unittest.TestCase):
         )
         self.assertIn("When no clear reference exists", router)
         self.assertIn("four built-in systems", router)
+
+    def test_corporate_mode_uses_shared_vi_gate_and_screenshot_visible_fidelity(self) -> None:
+        reference = (SKILL_ROOT / "references" / "static-reference-vi.md").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "One-Time Reference Mode Routing",
+            "`reconstruct`",
+            "`corporate_fidelity`",
+            "screenshot-visible fidelity only",
+            "Never model-redraw a Logo",
+            "locked-region and editable-region overlays",
+            "two or three corporate-frame page miniatures",
+            "does not recover an original PPT master",
+        ):
+            self.assertIn(marker, reference)
+        self.assertIn("Both modes use the same", reference)
+        self.assertIn("exact “确认 VI” gate", reference)
 
     def test_vi_confirmation_is_required_before_brief_theme_or_production(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")

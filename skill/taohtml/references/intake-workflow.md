@@ -92,12 +92,13 @@ Treat this as a judgment layer, not a four-question form. Visual style, motion d
 
 Resolve the visual source only after content and chapter structure are clear enough to judge fit.
 
-- If the user chooses “use my reference” and supplies exactly one static image, read `static-reference-vi.md`. Use the current session for only the minimal image-readability check defined there. When readable, analyze static visual facts, render the VI design standards board, and wait for “确认 VI”. Do not require an internal-theme choice, do not infer dynamic behavior, and do not begin project-theme generation or report production before confirmation.
+- If the user chooses “use my reference” and supplies exactly one static image in PNG, JPEG, or WebP format, resolve `reference_mode` once. When the user already asks for “企业模板保真”, “公司模板原样采用”, or equivalent screenshot-visible fidelity, record `corporate_fidelity` without asking again. When intent is still unclear, ask one binary question: **参考风格重构**—提取设计语言，允许重新构图和创新；or **企业模板保真**—锁定截图中可见的 Logo、页眉、页脚、品牌条和固定装饰，只设计安全内容区. Record `reconstruct` or `corporate_fidelity`, count this as one ordinary clarification question, and never repeat it after the answer is known.
+- For either mode, read `static-reference-vi.md`. Use the current session for only the minimal image-readability check defined there. When readable, analyze static visual facts, render the VI design standards board through the shared contract, and wait for “确认 VI”. In corporate fidelity, the board must expose the screenshot-visible fidelity boundary, all locked elements, the editable safe region, exact observed/extension/unknown labels, and limitations; customer corrections before confirmation replace the current contract. Do not require an internal-theme choice, do not infer dynamic behavior, and do not begin project-theme generation or report production before confirmation.
 - If the user has a clear reference but it is a PPT, webpage, video, multiple images, or a state sequence, stop at the unsupported v1 boundary and ask for one representative static screenshot. This is not the no-reference route: do not infer movement and do not recommend the four built-in systems unless the user explicitly abandons the reference route.
 - Treat model choice as a platform/session-entry decision. WorkBuddy first use gets one recommendation to use Auto; Codex and Claude Code continue with the current session model. Never ask the user to select or repeatedly switch models inside the intake. If the current session cannot locate reliable static facts, say “当前会话无法可靠读取参考图” and offer only a manual model change followed by a restarted task, or a downgrade to the four built-in systems.
 - If no clear reference exists, read `visual-systems.md` and recommend 2-3 genuinely suitable built-in systems. Show each system's exact customer-facing name, one-line description, and bundled preview. Ask the user to choose once, or invite explicit delegation to TaoHtml.
 - Do not ask open-ended aesthetic questions such as “What style do you like?”. Do not repeat a theme-selection question after the user chooses or delegates.
-- Theme selection uses the same clarification counter and never expands the six-question hard maximum. If the project reaches the maximum or the three-no-gain stop before a theme is selected, choose the lowest-risk fit, move it to `inferred`, and disclose the basis in the Report Design Brief.
+- Reference-mode resolution and theme selection use the same clarification counter; visual route selection never expands the six-question hard maximum. Do not ask the reference-mode question after explicit intent. If the project reaches the maximum or the three-no-gain stop before a low-risk visual choice is selected, apply only a safely delegated choice: choose the lowest-risk fit and disclose the basis in the Report Design Brief. Never infer corporate fidelity from an ambiguous request because it creates a fixed-asset lock.
 - A selected theme fixes a reusable visual grammar, not a palette. Preserve its composition, hierarchy, image treatment, module language, chart/evidence treatment, and motion grammar unless the brief records a necessary deviation.
 
 ## Select The Next Question
@@ -116,7 +117,7 @@ For a missing conversion action path, delegation authorizes TaoHtml to locate an
 
 ## Question Budget And Stop Rules
 
-Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
+Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt and the one-time ambiguous reference-mode choice as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
 
 - Allow **0 clarification questions** when the input already passes the source and design-ready gates.
 - Treat **3-5 clarification questions** as the ordinary target, not a quota.
@@ -179,7 +180,7 @@ Treat a project as design-ready when:
 - No unresolved conflict can reverse the main conclusion.
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
 - Visual direction is known or safely delegated to TaoHtml.
-- The visual source is recorded as a user reference or one selected built-in visual system; any necessary deviation is explicit.
+- The visual source is recorded as one selected built-in visual system or a user reference with known `reference_mode`; corporate fidelity also records the screenshot-visible fidelity boundary, locked elements, and editable region. Any necessary deviation is explicit.
 - On the single-static-reference route, the current VI board is explicitly confirmed and its contract/output paths are recorded; VI approval is not inferred from earlier agreement to use the reference.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
