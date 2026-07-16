@@ -242,6 +242,33 @@ class ReferenceVIContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mini_pages must contain between 3 and 3"):
             RENDERER.validate_contract(invalid)
 
+    def test_executable_layout_grammar_is_exact_typed_and_not_description_parsing(self) -> None:
+        self.assertEqual(
+            set(self.contract["executable_layout"]),
+            set(RENDERER.EXECUTABLE_LAYOUT_OPTIONS),
+        )
+        self.assertEqual(self.contract["executable_layout"]["cover_structure"]["value"], "split")
+        self.assertEqual(self.contract["executable_layout"]["content_columns"]["value"], "3")
+
+        invalid = copy.deepcopy(self.raw)
+        invalid["executable_layout"]["content_structure"]["value"] = "free prose"
+        with self.assertRaisesRegex(ValueError, "must be one of"):
+            RENDERER.validate_contract(invalid)
+
+        unknown = copy.deepcopy(self.raw)
+        unknown["executable_layout"]["visual_focus"] = {
+            "value": "unknown",
+            "status": "unknown",
+            "basis": "参考证据不足，视觉焦点保持未知",
+        }
+        normalized = RENDERER.validate_contract(unknown)
+        self.assertEqual(normalized["executable_layout"]["visual_focus"]["value"], "unknown")
+
+        fabricated = copy.deepcopy(unknown)
+        fabricated["executable_layout"]["visual_focus"]["value"] = "image-first"
+        with self.assertRaisesRegex(ValueError, "must be 'unknown'"):
+            RENDERER.validate_contract(fabricated)
+
     def test_reference_workflow_embeds_a_valid_contract_example(self) -> None:
         workflow = (SKILL_ROOT / "references" / "static-reference-vi.md").read_text(
             encoding="utf-8"
@@ -250,7 +277,7 @@ class ReferenceVIContractTests(unittest.TestCase):
         self.assertIsNotNone(match)
         example = json.loads(match.group("body"))
         normalized = RENDERER.validate_contract(example)
-        self.assertEqual(normalized["schema_version"], "1.0")
+        self.assertEqual(normalized["schema_version"], "1.1")
 
 
 class ReferenceVIRenderingTests(unittest.TestCase):
@@ -274,6 +301,8 @@ class ReferenceVIRenderingTests(unittest.TestCase):
                 "#B94B3F",
                 "字体层级",
                 "卡片 · 面板 · 标签 · 边框",
+                "可执行布局语法",
+                "source-chart-split",
                 "代表性封面",
                 "代表性内容页",
                 "代表性数据页",

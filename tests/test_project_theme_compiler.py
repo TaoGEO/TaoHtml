@@ -21,6 +21,9 @@ FIXTURES = ROOT / "tests" / "fixtures"
 HANDOFF_FIXTURE = FIXTURES / "reference-theme-handoff.json"
 VI_FIXTURE = FIXTURES / "reference-vi-contract.json"
 REFERENCE_FIXTURE = FIXTURES / "reference-vi-source.svg"
+CENTERED_HANDOFF_FIXTURE = FIXTURES / "reference-theme-centered-handoff.json"
+CENTERED_VI_FIXTURE = FIXTURES / "reference-vi-centered-contract.json"
+CENTERED_REFERENCE_FIXTURE = FIXTURES / "reference-vi-centered-source.svg"
 CONTENT_FIXTURE = (
     ROOT / "evals" / "taohtml-quality-v1" / "fixtures" / "visual-systems-content.json"
 )
@@ -70,7 +73,7 @@ class ProjectThemeHandoffTests(unittest.TestCase):
         self.assertEqual(
             request["confirmation"]["reference_image_sha256"], sha256(reference_path)
         )
-        self.assertEqual(contract["schema_version"], "1.0")
+        self.assertEqual(contract["schema_version"], "1.1")
 
     def test_unconfirmed_vi_fails_closed_before_creating_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -124,7 +127,7 @@ class ProjectThemeHandoffTests(unittest.TestCase):
             write_handoff(vi_path, vi_raw)
             raw["confirmation"]["vi_contract_sha256"] = sha256(vi_path)
             write_handoff(handoff, raw)
-            with self.assertRaisesRegex(ValueError, "schema_version must be 1.0"):
+            with self.assertRaisesRegex(ValueError, "schema_version must be 1.1"):
                 COMPILER.compile_theme(handoff, root / "bad-vi")
 
             shutil.copy2(VI_FIXTURE, vi_path)
@@ -160,7 +163,17 @@ class ProjectThemeCompilationTests(unittest.TestCase):
             provenance = json.loads((theme / "provenance.json").read_text(encoding="utf-8"))
             records = {record["path"]: record for record in provenance["boundary_records"]}
             self.assertEqual(records["components[3]"]["status"], "extension")
-            self.assertTrue(records["components[3]"]["compiled"])
+            self.assertTrue(records["components[3]"]["eligible"])
+            self.assertFalse(records["components[3]"]["compiled"])
+            self.assertEqual(records["components[3]"]["usage"], [])
+            self.assertEqual(records["layout[1]"]["status"], "observed")
+            self.assertTrue(records["layout[1]"]["eligible"])
+            self.assertFalse(records["layout[1]"]["compiled"])
+            self.assertEqual(records["layout[1]"]["usage"], [])
+            self.assertTrue(records["evidence_language[0]"]["compiled"])
+            self.assertTrue(records["evidence_language[0]"]["usage"])
+            self.assertTrue(records["executable_layout.cover_structure"]["compiled"])
+            self.assertTrue(records["executable_layout.cover_structure"]["usage"])
             self.assertEqual(records["imagery[1]"]["status"], "unknown")
             self.assertFalse(records["imagery[1]"]["compiled"])
             self.assertNotIn(
@@ -168,8 +181,77 @@ class ProjectThemeCompilationTests(unittest.TestCase):
             )
             self.assertTrue(provenance["fallback_records"])
             self.assertTrue(
-                all(record["status"] == "fallback" for record in provenance["fallback_records"])
+                all(
+                    record["status"] == "fallback" and record["usage"]
+                    for record in provenance["fallback_records"]
+                )
             )
+
+    def test_unknown_executable_layout_uses_separate_reversible_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            handoff, raw = stage_handoff(root)
+            vi_path = root / VI_FIXTURE.name
+            contract = json.loads(vi_path.read_text(encoding="utf-8"))
+            contract["executable_layout"]["visual_focus"] = {
+                "value": "unknown",
+                "status": "unknown",
+                "basis": "参考没有足够证据确定单一视觉焦点",
+            }
+            write_handoff(vi_path, contract)
+            raw["confirmation"]["vi_contract_sha256"] = sha256(vi_path)
+            write_handoff(handoff, raw)
+
+            theme = COMPILER.compile_theme(handoff, root / "theme")
+            manifest = json.loads((theme / "theme.json").read_text(encoding="utf-8"))
+            provenance = json.loads((theme / "provenance.json").read_text(encoding="utf-8"))
+            boundary = next(
+                record
+                for record in provenance["boundary_records"]
+                if record["path"] == "executable_layout.visual_focus"
+            )
+            fallback = next(
+                record
+                for record in provenance["fallback_records"]
+                if record.get("field") == "executable_layout.visual_focus"
+            )
+            self.assertFalse(boundary["eligible"])
+            self.assertFalse(boundary["compiled"])
+            self.assertEqual(boundary["usage"], [])
+            self.assertEqual(fallback["status"], "fallback")
+            self.assertEqual(fallback["value"], "balanced")
+            self.assertTrue(fallback["usage"])
+            self.assertEqual(manifest["executable_layout"]["visual_focus"], "balanced")
+            self.assertEqual(manifest["structure_sources"]["visual_focus"]["status"], "fallback")
+            THEME_RUNTIME.load_project_theme(theme)
+
+    def test_opposite_vi_contracts_compile_different_dom_css_variants_and_composition(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            city = COMPILER.compile_theme(HANDOFF_FIXTURE, root / "city")
+            centered = COMPILER.compile_theme(CENTERED_HANDOFF_FIXTURE, root / "centered")
+            city_templates = (city / "templates.html").read_text(encoding="utf-8")
+            centered_templates = (centered / "templates.html").read_text(encoding="utf-8")
+            city_css = (city / "theme.css").read_text(encoding="utf-8")
+            centered_css = (centered / "theme.css").read_text(encoding="utf-8")
+            city_manifest = json.loads((city / "theme.json").read_text(encoding="utf-8"))
+            centered_manifest = json.loads((centered / "theme.json").read_text(encoding="utf-8"))
+
+            self.assertNotEqual(city_templates, centered_templates)
+            self.assertNotEqual(city_manifest["layout_variants"], centered_manifest["layout_variants"])
+            self.assertNotEqual(city_manifest["identity"]["composition"], centered_manifest["identity"]["composition"])
+            self.assertIn("pt-card-grid", city_templates)
+            self.assertIn("pt-process-row", city_templates)
+            self.assertIn("pt-evidence-layout", city_templates)
+            self.assertNotIn("pt-content-focus", city_templates)
+            self.assertIn("pt-content-focus", centered_templates)
+            self.assertIn('<ol class="pt-process pt-process-column">', centered_templates)
+            self.assertIn("pt-chart-focus", centered_templates)
+            self.assertNotIn("pt-card-grid", centered_templates)
+            self.assertIn("grid-template-columns:7fr 5fr", city_css)
+            self.assertIn("flex-direction:column", centered_css)
+            self.assertIn("--pt-radius: 0", city_css)
+            self.assertIn("--pt-radius: 22px", centered_css)
 
     def test_manifest_encodes_full_visual_grammar_and_static_motion_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -184,11 +266,39 @@ class ProjectThemeCompilationTests(unittest.TestCase):
             self.assertEqual(
                 set(manifest["components"]), {"card", "panel", "label", "border", "image", "chart"}
             )
+            self.assertEqual(
+                set(manifest["executable_layout"]),
+                set(THEME_RUNTIME.EXECUTABLE_LAYOUT_OPTIONS),
+            )
             self.assertEqual({item["role"] for item in manifest["layout_variants"]}, {"cover", "content", "evidence-data", "closing"})
             self.assertFalse(manifest["motion"]["observed_from_reference"])
             self.assertIn("shared Runtime", manifest["motion"]["source"])
             self.assertTrue(manifest["preserve"])
             self.assertTrue(manifest["forbidden"])
+
+    def test_loader_rejects_structure_provenance_or_variant_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            theme = COMPILER.compile_theme(HANDOFF_FIXTURE, root / "theme")
+            provenance_path = theme / "provenance.json"
+            provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+            record = next(
+                item
+                for item in provenance["boundary_records"]
+                if item["path"] == "executable_layout.cover_structure"
+            )
+            record["compiled"] = False
+            provenance_path.write_text(json.dumps(provenance, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "compiled state|compiled provenance mismatch"):
+                THEME_RUNTIME.load_project_theme(theme)
+
+            COMPILER.compile_theme(HANDOFF_FIXTURE, theme)
+            manifest_path = theme / "theme.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["layout_variants"][0]["id"] = "drifted-cover"
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "layout_variants"):
+                THEME_RUNTIME.load_project_theme(theme)
 
     def test_compiler_writes_only_inside_clean_target_and_rejects_extras(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -223,8 +333,8 @@ class ProjectThemeRendererTests(unittest.TestCase):
             self.assertIn('data-source-kind="illustrative"', document)
             self.assertIn("示意内容图片（待核实）", document)
             self.assertIn("示意 / 待核实", document)
-            self.assertIn('data-layout="reference-hero-cover"', document)
-            self.assertIn('data-layout="source-and-direct-bars"', document)
+            self.assertIn('data-layout="cover-split-7-5-image-right-start"', document)
+            self.assertIn('data-layout="data-source-chart-split-2-col-image-right"', document)
             check = subprocess.run(
                 [sys.executable, str(CHECK_ASSETS), str(output), "--strict-offline"],
                 cwd=ROOT,
@@ -248,9 +358,9 @@ class ProjectThemeRendererTests(unittest.TestCase):
             project_layouts = re.findall(r'data-layout="([^"]+)"', project_html)
             built_in_layouts = re.findall(r'data-layout="([^"]+)"', built_in_html)
             self.assertNotEqual(project_layouts, built_in_layouts)
-            self.assertIn("pt-cover-grid", project_html)
-            self.assertNotIn("pt-cover-grid", built_in_html)
-            self.assertIn("grid-template-columns: 7fr 5fr", project_html)
+            self.assertIn("pt-cover-layout", project_html)
+            self.assertNotIn("pt-cover-layout", built_in_html)
+            self.assertIn("grid-template-columns:7fr 5fr", project_html)
 
     def test_existing_four_built_in_ids_and_cli_calls_remain_unchanged(self) -> None:
         self.assertEqual(RENDERER.THEME_IDS, THEME_RUNTIME.BUILT_IN_THEME_IDS)

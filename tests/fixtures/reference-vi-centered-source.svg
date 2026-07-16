@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#F7F4EF"/>
+  <text x="800" y="170" fill="#333A42" font-family="Arial, sans-serif" font-size="24" font-weight="700" text-anchor="middle" letter-spacing="6">QUIET FIELD NOTE</text>
+  <text x="800" y="260" fill="#26313A" font-family="Arial, sans-serif" font-size="70" font-weight="700" text-anchor="middle">一处空间，一个焦点</text>
+  <text x="800" y="315" fill="#6C747B" font-family="Arial, sans-serif" font-size="25" text-anchor="middle">用大留白承接一张主图与一条结论</text>
+  <rect x="310" y="390" width="980" height="360" rx="36" fill="#DCE8E4"/>
+  <circle cx="800" cy="570" r="118" fill="#91B5AA"/>
+  <path d="M510 650 Q650 480 800 600 T1090 540" fill="none" stroke="#6F8F9D" stroke-width="18" stroke-linecap="round"/>
+  <rect x="660" y="790" width="280" height="10" rx="5" fill="#C9A88A"/>
+</svg>

@@ -19,6 +19,23 @@ BUILT_IN_THEME_IDS = (
 )
 PROJECT_THEME_FILES = {"theme.json", "theme.css", "templates.html", "provenance.json"}
 PROJECT_ID = re.compile(r"^project-[a-z0-9]+(?:-[a-z0-9]+)*$")
+EXECUTABLE_LAYOUT_OPTIONS = {
+    "page_axis": {"row", "column"},
+    "alignment": {"start", "center", "end"},
+    "cover_structure": {"split", "single-column"},
+    "cover_split": {"7:5", "5:7", "1:1", "none"},
+    "content_structure": {"card-grid", "stack", "single-focus"},
+    "content_columns": {"1", "2", "3"},
+    "image_placement": {"left", "right", "top", "bottom", "background", "inline"},
+    "image_aspect_ratio": {"16:9", "4:3", "3:2", "1:1", "3:4"},
+    "image_fit": {"cover", "contain"},
+    "image_treatment": {"natural", "muted", "monochrome", "high-contrast"},
+    "data_structure": {"source-chart-split", "chart-focus", "table-focus", "metrics-grid"},
+    "data_columns": {"1", "2", "3"},
+    "module_organization": {"hard-grid", "soft-stack", "open-field"},
+    "density": {"low", "medium", "high"},
+    "visual_focus": {"headline-and-image", "headline-only", "image-first", "data-first", "balanced"},
+}
 REMOTE_ASSET = re.compile(
     r"(?:src|href)\s*=\s*['\"]\s*(?:https?:)?//|@import\b|url\(\s*['\"]?\s*(?:https?:)?//",
     re.IGNORECASE,
@@ -73,6 +90,95 @@ def _read_theme_assets(root: Path, manifest: dict[str, Any]) -> tuple[str, str]:
         if marker not in templates:
             raise ValueError(f"Theme templates are missing required marker: {marker}")
     return css, templates
+
+
+def _validate_project_structure(
+    manifest: dict[str, Any], provenance: dict[str, Any], templates: str
+) -> None:
+    layout = manifest.get("executable_layout")
+    sources = manifest.get("structure_sources")
+    if not isinstance(layout, dict) or set(layout) != set(EXECUTABLE_LAYOUT_OPTIONS):
+        raise ValueError("Project theme executable_layout contract is incomplete.")
+    if not isinstance(sources, dict) or set(sources) != set(EXECUTABLE_LAYOUT_OPTIONS):
+        raise ValueError("Project theme structure_sources contract is incomplete.")
+    for field, options in EXECUTABLE_LAYOUT_OPTIONS.items():
+        if layout[field] not in options:
+            raise ValueError(f"Project theme executable_layout.{field} is invalid.")
+
+    raw_records = provenance.get("boundary_records")
+    raw_fallbacks = provenance.get("fallback_records")
+    if not isinstance(raw_records, list) or not isinstance(raw_fallbacks, list):
+        raise ValueError("Project theme provenance must include boundary and fallback records.")
+    records = {
+        record.get("path"): record for record in raw_records if isinstance(record, dict)
+    }
+    fallbacks = {
+        record.get("field"): record
+        for record in raw_fallbacks
+        if isinstance(record, dict) and isinstance(record.get("field"), str)
+    }
+    for record in raw_records:
+        if not isinstance(record, dict):
+            raise ValueError("Project theme provenance boundary record must be an object.")
+        compiled = record.get("compiled")
+        eligible = record.get("eligible")
+        usage = record.get("usage")
+        if not isinstance(compiled, bool) or not isinstance(eligible, bool) or not isinstance(usage, list):
+            raise ValueError("Project theme provenance eligible, compiled, and usage fields are invalid.")
+        if eligible != (record.get("status") in {"observed", "extension"}):
+            raise ValueError("Project theme provenance eligibility does not match boundary status.")
+        if compiled != bool(usage) or (compiled and record.get("status") == "unknown"):
+            raise ValueError("Project theme provenance compiled state does not match usage targets.")
+
+    for field, source in sources.items():
+        if not isinstance(source, dict):
+            raise ValueError(f"Project theme structure_sources.{field} must be an object.")
+        status = source.get("status")
+        usage = source.get("usage")
+        source_path = source.get("source")
+        if not isinstance(usage, list) or not usage:
+            raise ValueError(f"Project theme structure_sources.{field} requires usage targets.")
+        contract_path = f"executable_layout.{field}"
+        if status == "fallback":
+            fallback = fallbacks.get(contract_path)
+            boundary = records.get(contract_path)
+            if (
+                source_path != "compiler-neutral-default"
+                or not isinstance(fallback, dict)
+                or fallback.get("status") != "fallback"
+                or fallback.get("value") != layout[field]
+                or set(fallback.get("usage", [])) != set(usage)
+                or not isinstance(boundary, dict)
+                or boundary.get("status") != "unknown"
+                or boundary.get("compiled") is not False
+            ):
+                raise ValueError(f"Project theme fallback provenance mismatch for {field}.")
+        else:
+            record = records.get(contract_path)
+            if (
+                source_path != contract_path
+                or status not in {"observed", "extension"}
+                or not isinstance(record, dict)
+                or record.get("status") != status
+                or record.get("value") != layout[field]
+                or record.get("compiled") is not True
+                or set(record.get("usage", [])) != set(usage)
+            ):
+                raise ValueError(f"Project theme compiled provenance mismatch for {field}.")
+
+    variants = manifest.get("layout_variants")
+    if not isinstance(variants, list) or any(
+        not isinstance(item, dict) or not isinstance(item.get("id"), str)
+        for item in variants
+    ):
+        raise ValueError("Project theme layout_variants contract is invalid.")
+    manifest_ids = [item["id"] for item in variants]
+    template_ids = re.findall(r'data-layout="([^"]+)"', templates)
+    if template_ids != manifest_ids:
+        raise ValueError("Project theme templates do not match manifest layout_variants.")
+    identity = manifest.get("identity")
+    if not isinstance(identity, dict) or not isinstance(identity.get("composition"), str) or not identity["composition"].strip():
+        raise ValueError("Project theme identity.composition must be non-empty.")
 
 
 def load_built_in_theme(theme_id: str) -> ThemeBundle:
@@ -138,6 +244,7 @@ def load_project_theme(theme_dir: Path) -> ThemeBundle:
     if provenance.get("schema_version") != "1.0" or provenance.get("theme_id") != theme_id:
         raise ValueError("Project theme provenance does not match the manifest.")
     css, templates = _read_theme_assets(root, manifest)
+    _validate_project_structure(manifest, provenance, templates)
     selector = f'.deck[data-theme="{theme_id}"]'
     if selector not in css:
         raise ValueError(f"Project theme CSS is not scoped to {selector}.")

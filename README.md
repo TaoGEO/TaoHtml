@@ -46,8 +46,8 @@ TaoHtml 的核心原则是：
 
 - 先输出材料理解摘要，让用户纠正 Agent 对 Word / PDF 的理解。
 - 通过一次一个关键问题，补齐真正影响报告设计的信息。
-- 单张静态参考图先生成可查看的高清《VI 设计标准图》，明确区分直接观察、报告适配建议和参考中无法判断，再等待客户确认。
-- “确认 VI”后，用哈希绑定的机器 handoff 确定性编译当前项目专用主题，输出 manifest、CSS、页面模板和边界 provenance；它不是第五套内置主题。
+- 单张静态参考图先生成可查看的高清《VI 设计标准图》，明确区分直接观察、报告适配建议和参考中无法判断，并记录严格枚举的可执行布局语法，再等待客户确认。
+- “确认 VI”后，用哈希绑定的机器 handoff 确定性编译当前项目专用主题；封面分栏/单栏、内容组织、图片、数据结构与组件秩序会生成不同 DOM 和 CSS，不是固定模板换肤，也不是第五套内置主题。
 - 在制作前生成客户可读的《报告设计简报》，并设置明确确认门。
 - 提供四套可执行的内置视觉系统，让构图、层级、证据、图片、图表和动效不再只依赖模型临场发挥。
 - 允许重组结构和优化表达，同时保留全部确认过的核心观点。
@@ -76,7 +76,7 @@ TaoHtml 的核心原则是：
 
 - 用户选择“使用我的参考”并提供单张静态图时，先检查当前会话能否可靠定位可见事实，再以确定性 HTML/CSS 模板生成 3200×2400 的 VI 规范图；确认前不进入项目专用主题或正式报告制作，也不强迫选择内置主题。
 - 静态参考只分析可见设计语言，不从单图推断动态规则。VI 图必须把观察、延展建议和无法判断三类边界直接标在画面上。
-- 用户回复“确认 VI”后，编译器校验确认状态、VI/参考图哈希、目标模式和客户修正，生成只属于当前项目的完整主题目录；未知项不会被编译成观察事实，必要默认值保持 fallback，动效明确来自共享 Runtime 与报告任务。
+- 用户回复“确认 VI”后，编译器校验确认状态、VI/参考图哈希、目标模式和客户修正，生成只属于当前项目的完整主题目录；provenance 分开记录 eligible 与真实 compiled targets，未知项不会被编译成观察事实，必要默认值保持 fallback，动效明确来自共享 Runtime 与报告任务。
 - 明确参考若不是恰好一张静态图（如 PPT、网页、视频、多张图或状态序列），v1 会请用户提供一张代表性静态截图；不会把它当成无参考而自动落入内置主题，也不会推断动效。
 - 没有明确参考时，等内容与结构清楚后，TaoHtml 从四套中推荐 2–3 套，展示“名称 + 简述 + 预览”，由用户选择或授权 TaoHtml 决定。
 - 不做开放式审美盘问，不重复提问，也不突破现有澄清问题上限。达到上限或用户授权决定时，TaoHtml 选择最匹配的一套，并在设计简报中披露所选主题和必要偏离。
@@ -276,8 +276,8 @@ HTML 制作 + 模块化 Runtime
 - `process-playbook.md`：完整课件 / 报告生产流程。
 - `design-quality-rubric.md`：100 分高设计评分标准和硬性失败门槛。
 - `layout-pattern-library.md`：12 类高设计版式母型。
-- `static-reference-vi.md`：单张静态参考可读性门、三类事实边界、VI 数据合同、确认门和下一任务交接。
-- `project-theme-compiler.md`：“确认 VI”后的哈希 handoff、确定性项目主题编译、边界/fallback 规则、显式渲染和验证。
+- `static-reference-vi.md`：单张静态参考可读性门、三类事实边界、v1.1 可执行布局语法、VI 数据合同、确认门和下一任务交接。
+- `project-theme-compiler.md`：“确认 VI”后的哈希 handoff、确定性结构编译、eligible/compiled usage 与 fallback 规则、显式渲染和验证。
 - `visual-systems.md`：四套内置视觉系统的选择、按需加载和 runtime 解耦规则。
 
 ### HTML 模板
@@ -295,7 +295,7 @@ HTML 制作 + 模块化 Runtime
 - `package_deck.py`：将 HTML 课件文件夹打包成 zip。
 - `render_visual_system.py`：把内容注入既有内置 theme id 或显式 `--project-theme` 目录，同时保留共享 runtime shell。真实来源图必须显式使用 `--source-kind verified --source-image ...`，文件缺失或无效时失败；本地路径本身不代表来源已核实，CLI 或 Python API 未传 `source_kind` 时即使有本地图也安全默认为 `illustrative`。没有真实证据图时可使用自动示意占位或 `--source-kind illustrative` 的本地图，渲染器会在相邻位置标“示意 / 待核实”，不会把它冒充来源证据。
 - `render_reference_vi.py`：校验内部 VI JSON，内嵌单张静态参考，通过固定 HTML/CSS 模板生成规范板并导出 3200×2400 PNG；不负责图片理解或项目主题编译。
-- `compile_project_theme.py`：校验已确认 VI handoff，确定性生成项目主题 manifest、CSS、页面模板和 provenance；不调用模型，也不修改四套内置主题。
+- `compile_project_theme.py`：校验已确认 VI handoff，从可执行布局语法确定性生成项目主题 manifest、结构化 CSS、不同 DOM 页面模板和 provenance usage；不调用模型，也不修改四套内置主题。
 
 ## 开发、验证与版本管理
 

@@ -2,6 +2,14 @@
 
 Read this reference only after the customer has explicitly replied “确认 VI” for the current single-static-reference board. This step compiles that confirmed VI into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
 
+## Contents
+
+- Responsibility and handoff contract
+- Fail-closed compilation
+- Executable layout and provenance policy
+- Shared Runtime rendering
+- Verification and remaining model work
+
 ## Responsibility Boundary
 
 - The model understands the single still image and produces the confirmed VI JSON under `static-reference-vi.md`.
@@ -77,19 +85,23 @@ project-theme/
 └── provenance.json
 ```
 
-- `theme.json` contains the project identity, executable tokens, page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary.
-- `theme.css` applies palette, type hierarchy, spacing/grid, border language, image crop/treatment, cards, panels, labels, data treatment, cover, content, evidence/data, and closing-page structures.
-- `templates.html` provides five reusable page variants using the same placeholders and `fragment` / `data-step` syntax as the built-in systems.
-- `provenance.json` records every VI item, whether it is observed, extension, or unknown, whether it was compiled, every neutral fallback, and the motion boundary.
+- `theme.json` contains the project identity, executable tokens, normalized `executable_layout`, per-field `structure_sources`, generated page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary.
+- `theme.css` applies palette, type hierarchy, spacing/grid, border language, image crop/treatment, cards, panels, labels, data treatment, cover, content, evidence/data, and closing-page structures selected from the executable layout grammar.
+- `templates.html` provides five reusable, grammar-selected DOM variants using the same placeholders and `fragment` / `data-step` syntax as the built-in systems. It is not a fixed template set with VI color substitution.
+- `provenance.json` records every VI item, eligibility, actual compiled state, concrete usage targets, every neutral fallback, and the motion boundary.
 
 The output is project-local. Do not copy it into `assets/visual-systems/`, rename it to one of the four built-in ids, add it to the built-in router, or treat it as a globally available style.
 
 ## Boundary Compilation Policy
 
-- Compile `observed` items directly when the contract provides an executable value or a deterministic mapping.
-- Compile `extension` items only as report adaptations, preserving their extension status in provenance.
-- Retain `unknown` records with `compiled: false`. Never use an unknown item as a token source or relabel it as observed.
-- When runtime completeness requires a missing value, use a neutral reversible `fallback`. Record its token, source, and basis in `fallback_records`; never describe it as reference evidence.
+- `eligible: true` means an `observed` or `extension` item may enter deterministic compilation. Eligibility alone never implies use.
+- Set `compiled: true` only when the item actually enters a token, CSS rule, template DOM branch, manifest execution field, or explicit preserve/forbidden guardrail. Every compiled record must list concrete `usage` targets.
+- An unused `observed` or `extension` item remains `eligible: true`, `compiled: false`, with an empty usage list. Descriptive layout, component, imagery, evidence, or miniature copy must not be promoted merely because it appears in the confirmed JSON.
+- Compile `extension` items only as report adaptations and preserve their extension status in provenance.
+- Retain `unknown` records with `eligible: false`, `compiled: false`, and no usage. Never use an unknown item as a token source or relabel it as observed.
+- When runtime completeness requires a missing value, use a neutral reversible `fallback`. Record its token or executable-layout field, value, source, basis, and concrete usage in `fallback_records`; never describe it as reference evidence.
+
+The compiler reads structure only from the exact `executable_layout` object defined in `static-reference-vi.md`. It uses those enums to choose cover split versus single-column DOM, card grid versus stack/single-focus content, row versus column process, evidence/data DOM, image placement/ratio/fit/treatment, module border/radius/shadow language, density, alignment, and focus. Natural-language descriptions remain review context and may supply parseable scalar tokens such as an explicit margin, but they are not the primary source of structural branching.
 
 The compiler may derive a fixed pixel value from an explicit VI measurement, such as converting a confirmed five-percent outer margin against the 1600px theme canvas. Record that deterministic derivation in the token basis. Do not use free-form model judgment inside the script.
 
@@ -108,7 +120,7 @@ python scripts/render_visual_system.py \
 
 Use `--source-kind verified` only when the local image is grounded in confirmed source material. A generated image, ordinary local file, or missing source kind remains illustrative and receives the adjacent `示意 / 待核实` label. Project themes never weaken this fail-safe source contract.
 
-The renderer validates the four project-theme files, rejects symlinks, extra files, remote assets, manifest/provenance mismatch, invalid selectors, and incomplete templates. It then injects project CSS and pages into `assets/html-deck-template/index.html`. Do not fork the Runtime or add a project-specific state machine.
+The renderer validates the four project-theme files, rejects symlinks, extra files, remote assets, invalid selectors, and incomplete templates. For every machine-executed layout field it also checks that manifest value, structure source, provenance status/value/compiled flag/usage targets, neutral fallback when applicable, and template `data-layout` ids agree. It then injects project CSS and pages into `assets/html-deck-template/index.html`. Do not fork the Runtime or add a project-specific state machine.
 
 The four built-in calls remain unchanged:
 
@@ -124,11 +136,12 @@ python scripts/render_visual_system.py \
 For the compiled theme and at least one full sample deck:
 
 1. Compile twice into separate directories and compare every output file hash.
-2. Inspect `provenance.json` for distinct observed, extension, unknown, and fallback records.
-3. Run `check_assets.py --strict-offline` on the HTML.
-4. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080.
-5. Build a contact sheet from the 1600×900 screenshots.
-6. Compare the original reference, rendered VI board, and final themed sample. Confirm that composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
+2. Compile a second, schema-complete VI with an intentionally opposite layout grammar. Compare `templates.html`, key DOM classes, structural CSS, `layout_variants`, and `identity.composition`; all must differ.
+3. Inspect `provenance.json` for distinct observed, extension, unknown, and fallback records, concrete usage targets, and at least one eligible-but-unused record that remains `compiled: false`.
+4. Run `check_assets.py --strict-offline` on the HTML.
+5. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080.
+6. Build a contact sheet from the 1600×900 screenshots.
+7. Compare the original reference, rendered VI board, and final themed sample. Confirm that composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
 
 Use fixed synthetic sample content for visual acceptance and label it as illustrative. Do not present the sample as customer evidence or achieved results.
 
