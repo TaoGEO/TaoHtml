@@ -19,8 +19,8 @@ BUNDLE_NAME = "taohtml-marketplace"
 PLUGIN_NAME = "taohtml"
 MARKETPLACE_NAME = "taohtml"
 DESCRIPTION = (
-    "Turn ideas and source material into confirmed design briefs and polished "
-    "offline HTML reports."
+    "Turn ideas and source material into polished 16:9 offline HTML reports "
+    "and decks using built-in or reference-based visual systems."
 )
 
 
@@ -53,13 +53,13 @@ def build_bundle(bundle_root: Path, version: str) -> Path:
         **claude_manifest,
         "interface": {
             "displayName": "TaoHtml",
-            "shortDescription": "Turn source material into polished offline HTML",
+            "shortDescription": "Create polished 16:9 offline HTML reports and decks",
             "longDescription": DESCRIPTION,
             "developerName": "Tao",
             "category": "Productivity",
             "capabilities": ["Write"],
             "defaultPrompt": [
-                "Use $taohtml to turn my idea or source material into a confirmed report design brief."
+                "Use $taohtml to turn my idea or source material into a polished 16:9 offline HTML report or deck."
             ],
         },
     }
@@ -121,7 +121,14 @@ def package_bundle(output_zip: Path) -> None:
         with zipfile.ZipFile(output_zip, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for path in sorted(bundle_root.rglob("*")):
                 if path.is_file():
-                    archive.write(path, path.relative_to(bundle_root.parent))
+                    info = zipfile.ZipInfo(
+                        path.relative_to(bundle_root.parent).as_posix()
+                    )
+                    info.date_time = (1980, 1, 1, 0, 0, 0)
+                    info.create_system = 3
+                    info.external_attr = 0o644 << 16
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    archive.writestr(info, path.read_bytes())
 
     print(f"Packaged TaoHtml marketplace {version}: {output_zip}")
 
