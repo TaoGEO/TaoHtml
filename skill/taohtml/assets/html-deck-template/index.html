@@ -188,6 +188,7 @@
       display: inline-flex;
       align-items: center;
       min-height: 28px;
+      margin-bottom: 8px;
       padding: 0 10px;
       background: var(--signal);
       color: var(--ink);
@@ -379,7 +380,7 @@
   </style>
 </head>
 <body>
-  <main class="deck" id="deck">
+  <main class="deck" id="deck" data-taohtml-step-contract="fragment-v1">
     <!-- TAOHTML_SLIDES_START -->
     <section class="slide active" data-title="Cover">
       <div class="signal-disc"></div>
@@ -446,9 +447,10 @@
     const moreMenu = document.getElementById('moreMenu');
     const modeToggle = document.getElementById('modeToggle');
     const fullscreenToggle = document.getElementById('fullscreenToggle');
+    const CONTROLLED_STEP_SELECTOR = '.fragment';
 
     function fragments(slide) {
-      return [...slide.querySelectorAll('.fragment')];
+      return [...slide.querySelectorAll(CONTROLLED_STEP_SELECTOR)];
     }
 
     function normalizeSteps(slide) {

@@ -26,7 +26,7 @@ Do not promise dual-screen presenter view, embedded speaker notes, in-browser co
 Keep these hooks when generating or redesigning a deck:
 
 ```html
-<main class="deck" id="deck" data-mode="presentation">
+<main class="deck" id="deck" data-mode="presentation" data-taohtml-step-contract="fragment-v1">
   <section class="slide active" data-title="...">
     <div class="fragment" data-step="1">...</div>
     <div class="fragment" data-step="1">...</div>
@@ -41,6 +41,7 @@ Keep these hooks when generating or redesigning a deck:
 - `.fragment`: an element controlled by a presentation step.
 - `data-step`: optional positive step number. Elements sharing a number change together. Fragments without it are numbered in DOM order for backward compatibility.
 - `.fragment.visible`: a step already revealed in presentation mode.
+- `data-taohtml-step-contract="fragment-v1"`: the current single controlled-presentation-step contract. QA normalizes `.fragment` plus `data-step` into per-page `data-taohtml-step` values through this named contract. A future equivalent state-node system must declare a new contract and update Runtime and QA together; it must not bypass the zero-step gate with an unrelated selector.
 - `data-step-index` on each slide: current numeric presentation state, available to page-specific CSS.
 - `#pageIndicator`: current page and total pages.
 - `#prev` / `#next`: whole-page navigation controls.
@@ -104,6 +105,7 @@ Optional future modules must use this API and event rather than replacing core n
 
 Before delivery, verify:
 
+- A deck whose initial mode is presentation has at least one controlled presentation step across the report. Reading mode may validly contain zero steps.
 - Reading mode exposes all current-page fragments.
 - Presentation mode starts with unrevealed fragments.
 - Step and whole-page keys have different behavior.
@@ -114,3 +116,5 @@ Before delivery, verify:
 - Hash routes and page numbers match the active page.
 - Controls and fullscreen actions do not advance the report; fullscreen closes the more menu and controls auto-hide again after idle time.
 - Asset, console, and visible-bound checks pass at the target viewport.
+- Every active slide's rendered rectangle covers the deck canvas within the QA tolerance at each target viewport.
+- Independent visible text labels, including HTML text and SVG `<text>`, do not intersect and retain the small QA safety gap. Exempt an intentional overlay only on the exact text owner with `data-qa-ignore-text-collision="reason"`; the report must list every opt-out.

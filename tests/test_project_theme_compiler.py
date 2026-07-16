@@ -99,7 +99,10 @@ def write_handoff(path: Path, raw: dict[str, object]) -> None:
 class ProjectThemeHandoffTests(unittest.TestCase):
     def test_fixture_records_exact_confirmation_inputs_mode_and_corrections(self) -> None:
         request, contract, vi_path, reference_path = COMPILER.load_handoff(HANDOFF_FIXTURE)
-        self.assertEqual(request["confirmation"]["phrase"], "确认 VI")
+        self.assertEqual(
+            request["confirmation"]["confirmation_ref"],
+            "synthetic-current-turn-vi-approval",
+        )
         self.assertEqual(request["target_mode"], "presentation")
         self.assertTrue(request["customer_corrections"])
         self.assertEqual(request["confirmation"]["vi_contract_sha256"], sha256(vi_path))
@@ -108,12 +111,20 @@ class ProjectThemeHandoffTests(unittest.TestCase):
         )
         self.assertEqual(contract["schema_version"], "1.1")
 
+    def test_confirmation_uses_current_reference_not_a_fixed_reply_phrase(self) -> None:
+        compiler_source = (SCRIPTS_ROOT / "compile_project_theme.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn('confirmation["phrase"]', compiler_source)
+        self.assertNotIn("phrase must be", compiler_source)
+        request, *_ = COMPILER.load_handoff(HANDOFF_FIXTURE)
+        self.assertTrue(request["confirmation"]["confirmation_ref"])
+
     def test_unconfirmed_vi_fails_closed_before_creating_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             handoff, raw = stage_handoff(root)
             raw["confirmation"]["status"] = "pending"
-            raw["confirmation"]["phrase"] = "继续"
             write_handoff(handoff, raw)
             output = root / "theme"
             with self.assertRaisesRegex(ValueError, "VI is not confirmed"):
@@ -1159,11 +1170,13 @@ class ProjectThemeWorkflowTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("references/project-theme-compiler.md", skill)
+        confirmation_marker = "After clear confirmation of the current VI board"
         self.assertLess(
-            skill.index('After “确认 VI”'), skill.index("Report Design Brief", skill.index('After “确认 VI”'))
+            skill.index(confirmation_marker),
+            skill.index("Report Design Brief", skill.index(confirmation_marker)),
         )
         for marker in (
-            '"phrase": "确认 VI"',
+            '"confirmation_ref"',
             '"vi_contract_sha256"',
             '"reference_image_sha256"',
             '"target_mode"',

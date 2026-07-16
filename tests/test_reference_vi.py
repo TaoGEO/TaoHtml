@@ -768,7 +768,7 @@ class ReferenceVIWorkflowTests(unittest.TestCase):
         ):
             self.assertIn(marker, reference)
         self.assertIn("Both modes use the same", reference)
-        self.assertIn("exact “确认 VI” gate", reference)
+        self.assertIn("artifact-bound confirmation gate", reference)
 
     def test_vi_confirmation_is_required_before_brief_theme_or_production(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -782,7 +782,10 @@ class ReferenceVIWorkflowTests(unittest.TestCase):
             encoding="utf-8"
         )
         for text in (skill, intake, workflow):
-            self.assertIn("确认 VI", text)
+            self.assertIn("current", text)
+            self.assertIn("confirmation", text)
+        self.assertNotIn("exact authorization phrase", intake)
+        self.assertNotIn("exact “确认 VI” gate", workflow)
         self.assertIn("start formal report production before this confirmation", skill)
         self.assertIn("begin project-theme generation/report production before confirmation", intake)
         self.assertIn("VI confirmation is not Report Design Brief confirmation", workflow)

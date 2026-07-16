@@ -1,6 +1,6 @@
 # Static Reference Dual Mode To VI Board
 
-Read this reference only when the customer chooses “use my reference”. The shared route accepts one static PNG/JPEG/WebP screenshot for `reconstruct`, or one to three same-family static screenshots for `corporate_fidelity`; it turns the supported inputs into one customer-viewable VI design standards board, waits for “确认 VI”, and only then hands the exact contract to project-theme compilation.
+Read this reference only when the customer chooses “use my reference”. The shared route accepts one static PNG/JPEG/WebP screenshot for `reconstruct`, or one to three same-family static screenshots for `corporate_fidelity`; it turns the supported inputs into one customer-viewable VI design standards board, waits for clear confirmation of the exact current board, and only then hands the hash-bound contract to project-theme compilation.
 
 Before opening, decoding, or visually analyzing any reference image, run the
 `static-reference` profile in `environment-preflight.md`. Both reference modes depend
@@ -34,7 +34,7 @@ The model performs visual understanding, identifies each supplied corporate page
 
 If the customer already says “企业模板保真”, “公司模板原样采用”, or equivalent, record `corporate_fidelity` without asking again. If intent is unclear, ask exactly one binary question using the two labels and promises above. Count it inside the existing six-question maximum. Do not repeat it after the mode is known.
 
-Both modes use the same readability check, observed/extension/unknown boundary, VI board, exact “确认 VI” gate, and project-theme compiler. Do not create a second customer flow or a fifth built-in visual system.
+Both modes use the same readability check, observed/extension/unknown boundary, VI board, artifact-bound confirmation gate, and project-theme compiler. Do not create a second customer flow or a fifth built-in visual system.
 
 `corporate_fidelity` means screenshot-visible fidelity only. It does not recover an original PPT master, vector Logo, font file, hidden layout, or unseen page asset. Never model-redraw a Logo. Prefer the clearest supplied screenshot when cropping a Logo or other shared asset. If every supplied screenshot is insufficient, stop and request a clearer screenshot; this stage does not promise independent Logo upload.
 
@@ -267,9 +267,9 @@ Run `check_assets.py --strict-offline` on the rendered HTML. Open the HTML in a 
 
 Show the PNG as the primary deliverable, optionally provide the HTML, and end with:
 
-> 请确认这张《VI 设计标准图》中的直接观察、报告适配建议和参考中无法判断三类边界。回复“确认 VI”后，TaoHtml 才会把它作为项目专用主题生成的输入；确认前不会开始正式报告制作。
+> 请确认或修正这张《VI 设计标准图》中的直接观察、报告适配建议和参考中无法判断三类边界。当前版本得到明确确认后，TaoHtml 才会把它作为项目专用主题生成的输入；确认前不会开始正式报告制作。
 
-Treat only a clear confirmation of the current board as VI authorization. If the customer corrects a source role, color, boundary label, crop rule, locked element, editable region, extension page, component, or guardrail, update the JSON, rerender the whole board, and request confirmation again. In corporate fidelity, default to every identified fixed element being locked; “确认 VI” freezes source roles, canvas crops, shared assets, shell placements, editable regions, and hashes. Production must not change them without invalidating confirmation and returning to this gate. Earlier approval to use the reference is not VI confirmation, and VI confirmation is not Report Design Brief confirmation.
+Treat only a clear confirmation of the current board as VI authorization and record its current conversation reference; do not match a fixed phrase. If the customer corrects a source role, color, boundary label, crop rule, locked element, editable region, extension page, component, or guardrail, update the JSON, rerender the whole board, and request confirmation again. In corporate fidelity, confirmation freezes source roles, canvas crops, shared assets, shell placements, editable regions, and hashes. Production must not change them without invalidating confirmation and returning to this gate. Earlier approval to use the reference is not VI confirmation, and VI confirmation is not Report Design Brief confirmation.
 
 ## Confirmed-VI Handoff Boundary
 

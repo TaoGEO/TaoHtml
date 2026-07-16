@@ -6,8 +6,8 @@
   },
   "confirmation": {
     "status": "confirmed",
-    "phrase": "确认 VI",
-    "vi_contract_sha256": "a80e8ceba32f1b309dd4f2402be151ab4a4d0be46e2402634faa10a8ab64b2e9",
+    "confirmation_ref": "synthetic-current-turn-corporate-vi-approval",
+    "vi_contract_sha256": "f8a491b8d1cb9f743b5d33ef0a443770a098e5ddf502c2895e1a98b6d78fd72e",
     "reference_image_sha256": "ac0172ff956bed5fcb262adcd97139e9b2d8cd7127ceba3e21a76b6cca35f382"
   },
   "inputs": {

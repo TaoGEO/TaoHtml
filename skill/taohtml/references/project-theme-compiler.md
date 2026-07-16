@@ -1,6 +1,6 @@
 # Confirmed VI To Project Theme
 
-Read this reference only after the customer has explicitly replied “确认 VI” for the current static-reference board. This shared step compiles either one-image `reconstruct` or one-to-three-image `corporate_fidelity` into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
+Read this reference only after the customer has clearly confirmed the exact current static-reference board and the task records that conversation reference. This shared step compiles either one-image `reconstruct` or one-to-three-image `corporate_fidelity` into a deterministic theme for the current project. It does not add a fifth built-in visual system and does not authorize formal report production.
 
 The `static-reference` environment profile must already have passed before the
 reference images were processed. If compilation moves to another interpreter or
@@ -40,7 +40,7 @@ Create one UTF-8 JSON file beside the confirmed VI JSON and reference input(s). 
   },
   "confirmation": {
     "status": "confirmed",
-    "phrase": "确认 VI",
+    "confirmation_ref": "current-conversation-turn-reference",
     "vi_contract_sha256": "<64 lowercase hex characters>",
     "reference_image_sha256": "<64 lowercase hex characters>"
   },
@@ -63,7 +63,7 @@ For VI schema v1.3, use handoff v1.1 and replace the singular fields with ordere
   "project": {"id": "corporate-family", "display_name": "企业模板族｜项目专用主题"},
   "confirmation": {
     "status": "confirmed",
-    "phrase": "确认 VI",
+    "confirmation_ref": "current-conversation-turn-reference",
     "vi_contract_sha256": "<64 lowercase hex characters>",
     "reference_images_sha256": ["<cover hash>", "<toc hash>", "<section hash>"]
   },
@@ -76,7 +76,7 @@ For VI schema v1.3, use handoff v1.1 and replace the singular fields with ordere
 }
 ```
 
-Use `reading` or `presentation` for `target_mode`. Use a lowercase hyphenated slug for `project.id`. Keep input paths relative to the handoff file and inside the same handoff directory. Array order must exactly match `reference_pages[]`. Compute SHA-256 after the current VI JSON and all reference inputs are final. The hashes bind “确认 VI” to exact bytes; changing any bound file invalidates the handoff and requires a new confirmation. Legacy v1.1/v1.2 VI contracts require handoff v1.0; VI v1.3 requires handoff v1.1.
+Use `reading` or `presentation` for `target_mode`. Use a lowercase hyphenated slug for `project.id`. Keep input paths relative to the handoff file and inside the same handoff directory. Array order must exactly match `reference_pages[]`. Compute SHA-256 after the current VI JSON and all reference inputs are final. `confirmation_ref` identifies the current conversation confirmation while the hashes bind it to exact bytes; changing any bound file invalidates the handoff and requires a new confirmation. Legacy v1.1/v1.2 VI contracts require handoff v1.0; VI v1.3 requires handoff v1.1.
 
 Do not record an approval timestamp, machine path, or volatile build metadata in the contract. The minimal contract stays portable and produces byte-identical theme assets from identical inputs.
 
@@ -84,7 +84,7 @@ Do not record an approval timestamp, machine path, or volatile build metadata in
 
 Compilation must stop before creating the output directory when any of these is true:
 
-- confirmation status is not `confirmed` or phrase is not exactly `确认 VI`;
+- confirmation status is not `confirmed` or `confirmation_ref` is empty/invalid;
 - the handoff has missing or extra schema fields;
 - an input path is absolute, leaves the handoff directory, is missing, or is not a regular file;
 - any bound SHA-256 digest does not match the current file or ordered source arrays disagree;

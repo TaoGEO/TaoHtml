@@ -113,15 +113,20 @@ def load_handoff(
     display_name = _text(project["display_name"], "handoff.project.display_name", 80)
 
     confirmation_fields = (
-        {"status", "phrase", "vi_contract_sha256", "reference_image_sha256"}
+        {"status", "confirmation_ref", "vi_contract_sha256", "reference_image_sha256"}
         if handoff_schema == SCHEMA_VERSION
-        else {"status", "phrase", "vi_contract_sha256", "reference_images_sha256"}
+        else {"status", "confirmation_ref", "vi_contract_sha256", "reference_images_sha256"}
     )
     confirmation = _exact_object(
         request["confirmation"], confirmation_fields, "handoff.confirmation"
     )
-    if confirmation["status"] != "confirmed" or confirmation["phrase"] != "确认 VI":
-        raise ValueError('VI is not confirmed; status must be "confirmed" and phrase must be "确认 VI".')
+    if confirmation["status"] != "confirmed":
+        raise ValueError('VI is not confirmed; status must be "confirmed".')
+    confirmation_ref = _text(
+        confirmation["confirmation_ref"],
+        "handoff.confirmation.confirmation_ref",
+        160,
+    )
     if not isinstance(confirmation["vi_contract_sha256"], str) or not SHA256.fullmatch(
         confirmation["vi_contract_sha256"]
     ):
@@ -197,7 +202,7 @@ def load_handoff(
     normalized = {
         "schema_version": handoff_schema,
         "project": {"id": project_id, "display_name": display_name},
-        "confirmation": dict(confirmation),
+        "confirmation": {**confirmation, "confirmation_ref": confirmation_ref},
         "inputs": (
             {"vi_contract": vi_path.name, "reference_image": reference_paths[0].name}
             if handoff_schema == SCHEMA_VERSION
@@ -1303,7 +1308,8 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
             "disabled": ["reference-inferred timing", "reference-inferred transitions", "cross-page morph"],
         },
         "compilation": {
-            "confirmation": "确认 VI",
+            "confirmation_status": request["confirmation"]["status"],
+            "confirmation_ref": request["confirmation"]["confirmation_ref"],
             "vi_schema_version": contract["schema_version"],
             "vi_contract_sha256": request["confirmation"]["vi_contract_sha256"],
             **(
@@ -1425,7 +1431,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
                 }
             ),
             "confirmation_status": request["confirmation"]["status"],
-            "confirmation_phrase": request["confirmation"]["phrase"],
+            "confirmation_ref": request["confirmation"]["confirmation_ref"],
             "target_mode": request["target_mode"],
             "customer_corrections": request["customer_corrections"],
             "reference_mode": reference_mode,

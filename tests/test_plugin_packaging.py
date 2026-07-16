@@ -77,7 +77,12 @@ class PluginPackagingTests(unittest.TestCase):
                     archive.read(skill_path),
                     (ROOT / "skill" / "taohtml" / "SKILL.md").read_bytes(),
                 )
-                for relative in ("requirements.txt", "scripts/preflight.py"):
+                for relative in (
+                    "requirements.txt",
+                    "scripts/preflight.py",
+                    "scripts/check_production_authorization.py",
+                    "references/production-authorization.md",
+                ):
                     bundled = (
                         f"{ARCHIVE_ROOT}/plugins/taohtml/skills/taohtml/{relative}"
                     )
@@ -239,6 +244,8 @@ class PluginPackagingTests(unittest.TestCase):
                 self.assertIn("references/agent-workflow.md", names)
                 self.assertIn("requirements.txt", names)
                 self.assertIn("scripts/preflight.py", names)
+                self.assertIn("scripts/check_production_authorization.py", names)
+                self.assertIn("references/production-authorization.md", names)
                 self.assertEqual(
                     archive.read("requirements.txt"),
                     (ROOT / "skill" / "taohtml" / "requirements.txt").read_bytes(),

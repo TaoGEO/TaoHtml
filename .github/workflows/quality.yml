@@ -100,6 +100,11 @@ jobs:
       - name: Run preflight regression tests
         run: python -m unittest discover -s tests -p "test_preflight.py" -v
 
+      - name: Run immediate authorization and browser QA gate regressions
+        run: |
+          python -m unittest discover -s tests -p "test_production_authorization.py" -v
+          python -m unittest discover -s tests -p "test_html_qa_gates.py" -v
+
       - name: Run Windows capability preflights
         run: |
           python skill/taohtml/scripts/preflight.py --profile core --workspace .

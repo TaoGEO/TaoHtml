@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Invalid empty collision opt-out</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .axis-label { position: absolute; top: 300px; font-size: 30px; }
+    .axis-label.first { left: 420px; }
+    .axis-label.second { left: 500px; }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Invalid opt out">
+      <h1>Synthetic invalid opt out</h1>
+      <span class="axis-label first" data-qa-text-label>Quarter one</span>
+      <span class="axis-label second" data-qa-text-label data-qa-ignore-text-collision>Quarter two</span>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

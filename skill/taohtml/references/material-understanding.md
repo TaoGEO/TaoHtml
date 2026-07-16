@@ -1,6 +1,6 @@
 # Material Understanding
 
-Use this reference for Word and PDF input before designing the report.
+Use this reference for an explicitly bound Word, PDF, PPT, or HTML input before designing or migrating the report.
 
 ## Goal
 

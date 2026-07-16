@@ -20,6 +20,9 @@ MATERIAL = (SKILL_DIR / "references" / "material-understanding.md").read_text(
 ENVIRONMENT = (SKILL_DIR / "references" / "environment-preflight.md").read_text(
     encoding="utf-8"
 )
+AUTHORIZATION = (
+    SKILL_DIR / "references" / "production-authorization.md"
+).read_text(encoding="utf-8")
 
 
 class IntakeContractTests(unittest.TestCase):
@@ -67,6 +70,18 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("Do not call `reconstruct`", ENVIRONMENT)
         self.assertIn("technical", ENVIRONMENT)
         self.assertIn("downgrade because it requires the same", ENVIRONMENT)
+
+    def test_formal_html_uses_current_state_and_allowed_action_matrix(self) -> None:
+        self.assertIn("Allowed-Action Matrix", AUTHORIZATION)
+        self.assertIn("current-invocation-id", AUTHORIZATION)
+        self.assertIn("--action formal-html", AUTHORIZATION)
+        self.assertIn("--action deliver-formal-html", AUTHORIZATION)
+        self.assertIn("not formal report HTML", AUTHORIZATION)
+        self.assertIn(
+            "scripts/check_production_authorization.py --action formal-html", SKILL
+        )
+        self.assertIn("never use a fixed authorization phrase", INTAKE)
+        self.assertIn("confirmation_ref", AUTHORIZATION)
 
     def test_clear_idea_can_stop_with_zero_questions(self) -> None:
         self.assertIn("Allow **0 clarification questions**", INTAKE)

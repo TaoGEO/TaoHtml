@@ -12,7 +12,7 @@ Move through these states in order:
 | S0A Startup completion | Reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
 | S2 Design completion | Only outcome-changing decisions and hard-boundary gaps are resolved, and the visual route is selected | The project passes the design-ready gate, or intake stops on a minimum hard boundary |
-| S3 Reference VI | On the supported static-reference route, one unified VI design standards board is shown; other visual routes bypass this state | The user explicitly replies “确认 VI” for the current board, or the state is not applicable |
+| S3 Reference VI | On the supported static-reference route, one unified VI design standards board is shown; other visual routes bypass this state | The user clearly confirms the exact current board and its conversation reference is recorded, or the state is not applicable |
 | S4 Design brief | One customer-readable brief is shown | The user explicitly confirms the current brief |
 | S5 Production | HTML, visual system, presentation behavior, and objective QA are completed | Objective failures are fixed |
 | S6 Delivery | Files, checks, and a structured verification handoff are reported | Deliverables are usable and creative supplements are easy for the customer to review |
@@ -21,10 +21,16 @@ Apply the source gate as follows:
 
 - **Idea only**: seed the ledger from the conversation. Do not create or ask the user to confirm a fictional Material Understanding Summary.
 - **Word/PDF**: show the Material Understanding Summary defined in `material-understanding.md` and wait for confirmation or correction.
-- **PPT/HTML**: inspect the available artifact and preserve its confirmed core viewpoints; resolve faithful migration versus reorganization only if both remain reasonable.
+- **PPT/HTML**: show the same source-grounded Material Understanding Summary, preserve its confirmed core viewpoints, and resolve faithful migration versus reorganization only if both remain reasonable.
 
 Never write a Report Design Brief while a minimum hard-boundary gap remains. Never write HTML before the current brief is explicitly confirmed. Ordinary absent facts are not a reason to stop: plan reasonable creative supplements, finish the report, and disclose the generated details at delivery.
 On the static-reference route, never write the brief before the current VI board is confirmed.
+
+Maintain the exact current-task state and allowed actions in
+`production-authorization.md`. A Material Understanding Summary, VI standards board,
+and Report Design Brief are confirmation artifacts. Formal report HTML, browser QA,
+and delivery remain forbidden until the machine gate authorizes them for the current
+task. Do not treat a formal or nearly finished HTML deck as a confirmation preview.
 
 ## New Invocation Handshake
 
@@ -165,7 +171,7 @@ Treat this as a judgment layer, not a four-question form. Visual style, motion d
 Resolve the visual source only after content and chapter structure are clear enough to judge fit.
 
 - If the user chooses “use my reference”, resolve `reference_mode` once. `reconstruct` accepts exactly one static PNG/JPEG/WebP; `corporate_fidelity` accepts one to three representative static PNG/JPEG/WebP screenshots from the same template family. When the user already asks for “企业模板保真”, “公司模板原样采用”, or equivalent screenshot-visible fidelity, record `corporate_fidelity` without asking again. When intent is still unclear, ask one binary question: **参考风格重构**—提取设计语言，允许重新构图和创新；or **企业模板保真**—锁定截图中可见的企业固定元素，只设计各页面壳的安全内容区. Record `reconstruct` or `corporate_fidelity`, count this as one ordinary clarification question, and never repeat it after the answer is known.
-- For either mode, read `static-reference-vi.md`. Use the current session for only the minimal readability check defined there. When readable, analyze static visual facts, render one VI board through the shared contract, and wait for “确认 VI”. In corporate fidelity, automatically identify each source role unless truly ambiguous; the board must expose all source thumbnails and role bindings, screenshot-visible fidelity boundary, shell-specific locked/editable regions, exact observed/extension/unknown labels, proposed unseen roles, and limitations. Customer corrections before confirmation replace the current contract. Do not require an internal-theme choice, infer dynamic behavior, or begin project-theme generation/report production before confirmation.
+- For either mode, read `static-reference-vi.md`. Use the current session for only the minimal readability check defined there. When readable, analyze static visual facts, render one VI board through the shared contract, and wait for clear confirmation of that exact board without requiring a fixed reply phrase. In corporate fidelity, automatically identify each source role unless truly ambiguous; the board must expose all source thumbnails and role bindings, screenshot-visible fidelity boundary, shell-specific locked/editable regions, exact observed/extension/unknown labels, proposed unseen roles, and limitations. Customer corrections before confirmation replace the current contract. Do not require an internal-theme choice, infer dynamic behavior, or begin project-theme generation/report production before confirmation.
 - If the user has a clear reference but it is a PPT, webpage, video, state sequence, more than three corporate screenshots, or multiple screenshots for reconstruct, stop at the unsupported boundary and ask for a supported representative raster input. This is not the no-reference route: do not infer movement and do not recommend the four built-in systems unless the user explicitly abandons the reference route.
 - Treat model choice as a platform/session-entry decision. WorkBuddy first use gets one recommendation to use Auto; Codex and Claude Code continue with the current session model. Never ask the user to select or repeatedly switch models inside the intake. If the current session cannot locate reliable static facts, say “当前会话无法可靠读取参考图” and offer only a manual model change followed by a restarted task, or a downgrade to the four built-in systems.
 - If no clear reference exists, read `visual-systems.md` and recommend 2-3 genuinely suitable built-in systems. Show each system's exact customer-facing name, one-line description, and bundled preview. Ask the user to choose once, or invite explicit delegation to TaoHtml.
@@ -265,20 +271,16 @@ Stop asking as soon as these conditions are met. A clear idea can therefore proc
 
 ### Material summary gate
 
-For Word/PDF only, ask the user to confirm or correct the displayed Material Understanding Summary. If they correct it, issue an updated summary before continuing. Do not impose this gate on an idea-only input.
+For any bound Word/PDF/PPT/HTML material route, ask the user to confirm or correct the displayed Material Understanding Summary. If they correct it, issue an updated summary before continuing. Do not impose this gate on an idea-only input.
 
 ### Static-reference VI gate
 
-After the content and structure are clear enough to interpret visual fit, follow `static-reference-vi.md`, show the rendered VI PNG, and ask the user to confirm or correct the current board. Use the exact authorization phrase “确认 VI”. If the user corrects any visual item or boundary status, rerender the complete board and request confirmation again.
+After the content and structure are clear enough to interpret visual fit, follow `static-reference-vi.md`, show the rendered VI PNG, and ask the user to confirm or correct the current board. Bind any clear confirmation to the exact current artifact and conversation turn; never use a fixed authorization phrase as a cross-task token. If the user corrects any visual item or boundary status, rerender the complete board and request confirmation again.
 
 VI confirmation authorizes only the confirmed-VI handoff to the separate project-theme step. It does not confirm the Report Design Brief and does not authorize formal report production. If the project-specific theme output is not yet available, stop at the handoff boundary rather than substituting a built-in theme.
 
 ### Design brief gate
 
-Show one current Report Design Brief and end with:
-
-> 回复“确认”后，TaoHtml 将按这份设计简报开始制作 HTML。
-
-Only a reply that clearly confirms this displayed brief opens production. Earlier approval to discuss, use TaoHtml, or begin intake does not count. Brief confirmation is authorization, not clarification, so it remains required even when the clarification counter is already six.
+Show one current Report Design Brief and ask the user to confirm or correct that exact artifact. Only a reply that clearly confirms this displayed brief opens production; record its current conversation reference rather than matching a fixed reply phrase. Earlier approval to discuss, use TaoHtml, or begin intake does not count. Brief confirmation is authorization, not clarification, so it remains required even when the clarification counter is already six.
 
 If the user adds source material or changes a core viewpoint after confirmation, invalidate the brief, update it, and ask for confirmation again. During production, resolve non-core omissions with a reasonable default or creative supplement, add the exact item to the delivery verification ledger, and continue instead of repeatedly interrupting the user.

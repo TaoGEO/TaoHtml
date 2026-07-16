@@ -4,6 +4,12 @@ This playbook generalizes a complete collaborative process for turning loose mat
 
 Use it only after the current Report Design Brief has been confirmed. Intake, material-summary, and confirmation rules live in `intake-workflow.md` and `material-understanding.md`; do not restart those questions here.
 
+Before saving the first runnable formal `index.html`, require a successful
+`scripts/check_production_authorization.py --action formal-html` result for the current
+task state in `production-authorization.md`. Before delivery, require
+`--action deliver-formal-html`. An existing file or earlier task state is not evidence
+of current authorization.
+
 It is not tied to any single topic. Use it for salon decks, training courseware, sales proposals, consulting reports, diagnostic reports, product presentations, investor-style narratives, internal strategy decks, and other slide-based reports.
 
 ## 1. Start With The Real Objective
