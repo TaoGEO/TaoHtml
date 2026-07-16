@@ -40,6 +40,19 @@ FAMILY_ROLES = ("cover", "toc", "section", "content", "data")
 CORPORATE_FIXED_SHELL_CLASS = "pt-corporate-fixed-shell"
 CORPORATE_FIXED_REGION_CLASS = "pt-corporate-fixed-region"
 CORPORATE_EDITABLE_CLASS = "pt-corporate-editable"
+ACTIVE_TEMPLATE_TAGS = {
+    "applet",
+    "embed",
+    "iframe",
+    "link",
+    "object",
+    "script",
+    "style",
+    "animate",
+    "animatemotion",
+    "animatetransform",
+    "set",
+}
 
 
 class _CssDeclaration(NamedTuple):
@@ -103,10 +116,20 @@ class _CorporateTemplateParser(HTMLParser):
             CORPORATE_FIXED_REGION_CLASS,
             CORPORATE_EDITABLE_CLASS,
         }
-        if tag in {"style", "link"}:
+        if tag in ACTIVE_TEMPLATE_TAGS:
             raise ValueError(
-                "Corporate templates must not contain embedded or linked stylesheets."
+                f"Corporate templates must not contain active {tag} elements."
             )
+        for name, value in attrs.items():
+            if name.startswith("on"):
+                raise ValueError(
+                    f"Corporate templates must not contain event attribute {name}."
+                )
+            compact_value = re.sub(r"[\x00-\x20]+", "", value).lower()
+            if "javascript:" in compact_value:
+                raise ValueError(
+                    f"Corporate templates must not contain javascript: in {name}."
+                )
         if tag == "section" and "slide" in classes:
             if self._section is not None:
                 raise ValueError("Corporate template sections must not be nested.")
@@ -474,7 +497,9 @@ def _compound_may_match(compound: str, shape: _ElementShape) -> bool:
         )
     top_level = _top_level_css_compound(compound)
     required_ids = set(re.findall(r"#([A-Za-z_][\w-]*)", top_level))
-    if required_ids and required_ids != ({shape.element_id} if shape.element_id else set()):
+    if required_ids and required_ids != (
+        {shape.element_id} if shape.element_id else set()
+    ):
         return False
     required_classes = set(re.findall(r"\.([A-Za-z_][\w-]*)", top_level))
     if not required_classes.issubset(shape.classes):
@@ -496,6 +521,15 @@ def _selector_may_target(selector: str, element: _ProtectedElement) -> bool:
     )
     if not _compound_may_match(compounds[-1], element_shape):
         return False
+    protected_classes = element.classes & {
+        "pt-corporate-page",
+        CORPORATE_FIXED_SHELL_CLASS,
+        CORPORATE_FIXED_REGION_CLASS,
+        CORPORATE_EDITABLE_CLASS,
+    }
+    subject = _top_level_css_compound(compounds[-1]).lower()
+    if any(protected_class.lower() in subject for protected_class in protected_classes):
+        return True
     for compound in compounds[:-1]:
         if not any(
             _compound_may_match(compound, ancestor)
@@ -622,7 +656,7 @@ def _validate_fixed_css(css: str, theme_id: str) -> None:
     shell = _ElementShape(
         "div", frozenset({CORPORATE_FIXED_SHELL_CLASS}), None
     )
-    protected = (
+    protected_pages = (
         _ProtectedElement(
             "corporate page",
             "section",
@@ -644,6 +678,8 @@ def _validate_fixed_css(css: str, theme_id: str) -> None:
             None,
             page_ancestors,
         ),
+    )
+    protected_fixed = (
         _ProtectedElement(
             "fixed shell",
             "div",
@@ -658,6 +694,8 @@ def _validate_fixed_css(css: str, theme_id: str) -> None:
             None,
             (shell,) + page_shapes + page_ancestors,
         ),
+    )
+    protected_editable = (
         _ProtectedElement(
             "editable region",
             "div",
@@ -679,6 +717,21 @@ def _validate_fixed_css(css: str, theme_id: str) -> None:
                     "and preserve protected geometry."
                 )
             continue
+        non_custom = [
+            declaration
+            for declaration in rule.declarations
+            if not declaration.name.startswith("--")
+        ]
+        if non_custom:
+            for element in protected_fixed:
+                if _selector_may_target(rule.selector, element):
+                    properties = ", ".join(
+                        sorted({declaration.name for declaration in non_custom})
+                    )
+                    raise ValueError(
+                        f"Corporate fixed-layer CSS rule {rule.selector!r} is not "
+                        f"the unique canonical rule and declares: {properties}."
+                    )
         risky = [
             declaration
             for declaration in rule.declarations
@@ -686,7 +739,7 @@ def _validate_fixed_css(css: str, theme_id: str) -> None:
         ]
         if not risky:
             continue
-        for element in protected:
+        for element in protected_pages + protected_editable:
             if _selector_may_target(rule.selector, element):
                 properties = ", ".join(
                     sorted({declaration.name for declaration in risky})

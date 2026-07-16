@@ -994,6 +994,32 @@ class CorporateTemplateFamilyThemeTests(unittest.TestCase):
             ),
             "generic image motion": (
                 "img { transform:translateX(20px) !important; }",
+                "fixed-layer CSS|protected CSS",
+            ),
+            "fixed filter": (
+                ".pt-corporate-fixed-region { filter:blur(20px) !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed clip path": (
+                ".pt-corporate-fixed-region { clip-path:inset(50%) !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed mask": (
+                ".pt-corporate-fixed-region { "
+                "mask-image:linear-gradient(transparent,transparent) !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed object position": (
+                ".pt-corporate-fixed-region { "
+                "object-position:100px 100px !important; }",
+                "fixed-layer CSS",
+            ),
+            "fixed under unknown host": (
+                ".future-host .pt-corporate-fixed-region { filter:blur(1px); }",
+                "fixed-layer CSS",
+            ),
+            "editable under unknown host": (
+                ".future-host .pt-corporate-editable { left:0 !important; }",
                 "protected CSS",
             ),
         }
@@ -1020,10 +1046,44 @@ class CorporateTemplateFamilyThemeTests(unittest.TestCase):
                 css_path.read_text(encoding="utf-8")
                 + "\n"
                 + '.deck[data-theme="project-orbital-corporate-family"] '
-                + ".pt-corporate-editable .source-btn { top:9px; right:9px; }\n",
+                + ".pt-corporate-editable .source-btn { top:9px; right:9px; }\n"
+                + ".pt-corporate-editable .pt-card { filter:blur(0); "
+                + "clip-path:inset(0); mask-image:none; object-position:center; }\n",
                 encoding="utf-8",
             )
             THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_rejects_active_content_anywhere_in_corporate_templates(self) -> None:
+        attacks = {
+            "script": (
+                '<script>document.querySelectorAll(".pt-corporate-fixed-region")'
+                '.forEach(e=>e.animate([{transform:"none"},'
+                '{transform:"translateX(100px)"}],1000))</script>',
+                "active script",
+            ),
+            "event attribute": (
+                '<div onclick="document.body.dataset.pwned=1"></div>',
+                "event attribute onclick",
+            ),
+            "javascript url": (
+                '<a href="java&#x73;cript:document.body.dataset.pwned=1">x</a>',
+                "javascript:",
+            ),
+        }
+        for label, (payload, message) in attacks.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                theme = COMPILER.compile_theme(
+                    FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+                )
+                templates_path = theme / "templates.html"
+                original = templates_path.read_text(encoding="utf-8")
+                changed = original.replace(
+                    "</section>", payload + "</section>", 1
+                )
+                self.assertNotEqual(changed, original)
+                templates_path.write_text(changed, encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, message):
+                    THEME_RUNTIME.load_project_theme(theme)
 
     def test_runtime_rejects_fixed_element_id_class_specificity_bypass(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
