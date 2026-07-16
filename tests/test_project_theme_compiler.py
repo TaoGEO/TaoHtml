@@ -1022,6 +1022,22 @@ class CorporateTemplateFamilyThemeTests(unittest.TestCase):
                 ".future-host .pt-corporate-editable { left:0 !important; }",
                 "protected CSS",
             ),
+            "fixed shell before overlay": (
+                '.pt-corporate-fixed-shell::before { content:""; '
+                "position:absolute; inset:0; background:black !important; "
+                "z-index:999; }",
+                "fixed-layer CSS",
+            ),
+            "fixed shell after under unknown host": (
+                '.future-host .pt-corporate-fixed-shell:after { content:""; '
+                "position:absolute; inset:0; filter:blur(10px); }",
+                "fixed-layer CSS",
+            ),
+            "editable before geometry escape": (
+                '.pt-corporate-editable::before { content:""; position:fixed; '
+                "inset:0; background:black; z-index:999; }",
+                "protected CSS",
+            ),
         }
         for label, (attack, message) in attacks.items():
             with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:

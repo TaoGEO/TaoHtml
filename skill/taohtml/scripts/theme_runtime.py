@@ -516,20 +516,20 @@ def _selector_may_target(selector: str, element: _ProtectedElement) -> bool:
     compounds = _css_compounds(selector)
     if not compounds:
         return True
-    element_shape = _ElementShape(
-        element.tag, element.classes, element.element_id
-    )
-    if not _compound_may_match(compounds[-1], element_shape):
-        return False
     protected_classes = element.classes & {
         "pt-corporate-page",
         CORPORATE_FIXED_SHELL_CLASS,
         CORPORATE_FIXED_REGION_CLASS,
         CORPORATE_EDITABLE_CLASS,
     }
-    subject = _top_level_css_compound(compounds[-1]).lower()
+    subject = compounds[-1].lower()
     if any(protected_class.lower() in subject for protected_class in protected_classes):
         return True
+    element_shape = _ElementShape(
+        element.tag, element.classes, element.element_id
+    )
+    if not _compound_may_match(compounds[-1], element_shape):
+        return False
     for compound in compounds[:-1]:
         if not any(
             _compound_may_match(compound, ancestor)
