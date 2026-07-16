@@ -105,6 +105,22 @@ The compiler reads structure only from the exact `executable_layout` object defi
 
 The compiler may derive a fixed pixel value from an explicit VI measurement, such as converting a confirmed five-percent outer margin against the 1600px theme canvas. Record that deterministic derivation in the token basis. Do not use free-form model judgment inside the script.
 
+## Semantic Rhythm Policy
+
+The project theme does not use heading margins to encode relationships. Its scoped low-level reset sets `h1`, `h2`, `h3`, and `p` margins to zero; the nearest semantic container owns the space between its direct children through CSS `gap`. This prevents a more-specific reset from silently collapsing an intended label-to-title distance.
+
+The confirmed `executable_layout.density` enum deterministically selects five relationship tokens:
+
+| Density | label → title | title → lede | page heading → content | card title → body | evidence → source |
+|---|---:|---:|---:|---:|---:|
+| `low` | 24px | 20px | 44px | 14px | 20px |
+| `medium` | 18px | 16px | 32px | 12px | 18px |
+| `high` | 12px | 10px | 24px | 8px | 12px |
+
+These compile to `theme.json` tokens and `--pt-rhythm-*` CSS properties, with exact provenance usage targets attributed to `executable_layout.density`. An unknown density does not become observed; it uses the neutral `medium` scale and produces separate field and token fallback records.
+
+Generated templates mark the relationship owner and its direct endpoints with `data-rhythm-check`, `data-rhythm-from`, and `data-rhythm-to`. Horizontal relationships additionally use `data-rhythm-axis="inline"`; vertical relationships default to the block axis. `check_html_deck.py` measures the computed browser rectangles and fails when the actual distance differs from the declared token. This check complements overflow QA: a page can fit its viewport and still have a broken visual relationship.
+
 ## Render Through The Shared Runtime
 
 Render a report explicitly with the compiled directory:
@@ -139,7 +155,7 @@ For the compiled theme and at least one full sample deck:
 2. Compile a second, schema-complete VI with an intentionally opposite layout grammar. Compare `templates.html`, key DOM classes, structural CSS, `layout_variants`, and `identity.composition`; all must differ.
 3. Inspect `provenance.json` for distinct observed, extension, unknown, and fallback records, concrete usage targets, and at least one eligible-but-unused record that remains `compiled: false`.
 4. Run `check_assets.py --strict-offline` on the HTML.
-5. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080.
+5. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080; require empty overflow and semantic-rhythm failure lists on every page.
 6. Build a contact sheet from the 1600×900 screenshots.
 7. Compare the original reference, rendered VI board, and final themed sample. Confirm that composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
 

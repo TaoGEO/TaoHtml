@@ -9,16 +9,19 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 - Add a hash-bound confirmed-VI handoff and deterministic compiler for project-local theme manifests, CSS, page templates, and provenance.
 - Add fail-closed coverage for confirmation, schema, paths, input hashes, observed/extension/unknown boundaries, neutral fallbacks, offline output, and deterministic reproduction.
 - Add a strict v1.1 executable layout grammar and an opposite centered/single-column VI fixture for structural compilation regression.
+- Add density-derived semantic rhythm tokens and browser geometry checks for label/title, title/lede, page/content, card copy, and evidence/source relationships.
 
 ### Changed
 
 - Allow the production renderer to load an explicit project theme while preserving all four built-in theme ids and the shared Runtime shell.
 - Compile cover, content, process, evidence/data, and closing DOM/CSS variants from the confirmed layout grammar and record concrete provenance usage targets.
+- Make semantic containers own typography spacing through `gap`, with block- and inline-axis QA markers in generated templates.
 
 ### Fixed
 
 - Wait for reveal transitions to settle before browser QA captures final-state screenshots.
 - Keep eligible-but-unused VI records uncompiled and make the project-theme loader reject structure/provenance or layout-variant drift.
+- Prevent scoped heading resets from collapsing the confirmed label-to-title rhythm.
 
 ## [0.2.0] - 2026-07-15
 

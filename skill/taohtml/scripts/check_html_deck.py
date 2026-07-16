@@ -42,6 +42,39 @@ OVERFLOW_CHECK = """() => {
     });
 }"""
 
+RHYTHM_CHECK = """() => {
+  const root = document.querySelector('.slide.active');
+  if (!root) return [];
+  return [...root.querySelectorAll('[data-rhythm-check]')]
+    .map(container => {
+      const token = container.getAttribute('data-rhythm-check') || '';
+      const axis = container.getAttribute('data-rhythm-axis') || 'block';
+      const from = container.querySelector(':scope > [data-rhythm-from]');
+      const to = container.querySelector(':scope > [data-rhythm-to]');
+      const expected = Number.parseFloat(getComputedStyle(container).getPropertyValue(token));
+      if (!from || !to || !Number.isFinite(expected) || !['block', 'inline'].includes(axis)) {
+        return { token, axis, error: 'invalid rhythm contract' };
+      }
+      const fromRect = from.getBoundingClientRect();
+      const toRect = to.getBoundingClientRect();
+      const actual = axis === 'inline'
+        ? toRect.left - fromRect.right
+        : toRect.top - fromRect.bottom;
+      if (Math.abs(actual - expected) <= 1.25) return null;
+      return {
+        token,
+        axis,
+        expected,
+        actual: Math.round(actual * 100) / 100,
+        container: typeof container.className === 'string' ? container.className : '',
+        from: (from.textContent || '').trim().slice(0, 60),
+        to: (to.textContent || '').trim().slice(0, 60),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 20);
+}"""
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run browser QA for an HTML deck.")
@@ -320,6 +353,7 @@ def main() -> int:
                 .map(img => img.getAttribute('src') || '')"""
             )
             overflow = page.evaluate(OVERFLOW_CHECK)
+            rhythm_failures = page.evaluate(RHYTHM_CHECK)
             screenshot = args.output_dir / f"page-{i + 1:02d}.png"
             page.screenshot(path=str(screenshot), full_page=False)
             current_console_errors = console_errors[console_start:]
@@ -339,6 +373,7 @@ def main() -> int:
                 "source_failures": source_failures,
                 "image_failures": image_failures,
                 "offscreen_elements": overflow,
+                "rhythm_failures": rhythm_failures,
                 "console_errors": current_console_errors,
                 "page_errors": current_page_errors,
             }
@@ -360,6 +395,10 @@ def main() -> int:
                 failures.append(f"Page {i + 1}: image failed to load: {image_failures}")
             if overflow:
                 failures.append(f"Page {i + 1}: visible content exceeds slide bounds: {overflow[:3]}")
+            if rhythm_failures:
+                failures.append(
+                    f"Page {i + 1}: semantic rhythm differs from declared tokens: {rhythm_failures[:3]}"
+                )
             if current_console_errors:
                 failures.append(f"Page {i + 1}: console errors: {current_console_errors}")
             if current_page_errors:

@@ -149,6 +149,8 @@ Every list must be non-empty. `palette` accepts one to six items, so one or two 
 
 Every enum also accepts `unknown`, but only together with `status: unknown`; an unknown field cannot carry a concrete value. A `single-column` cover uses `cover_split: none`, while a `split` cover cannot use `none`. The upstream model must select these values from the confirmed static observation and explicitly labeled report adaptation. Descriptive `layout`, `components`, and `mini_pages` remain useful review material, but they are not the compiler's primary structural input.
 
+Choose `density` from the visible relationship between labels, titles, explanatory copy, and major modules—not from the number of words in the eventual report. Use `low` for conspicuous whitespace and one dominant focal group, `medium` for a balanced report rhythm, and `high` for deliberately compact information groupings. The compiler turns this enum into semantic relationship spacing; the model must not invent pixel gaps. If the static reference does not establish density, use `unknown` so the compiler can record its neutral medium fallback separately.
+
 `mini_pages` must contain exactly one each of `cover`, `content`, and `data`. `guardrails` must contain at least one `preserve` and one `avoid`. Across the whole contract, all three boundary statuses must appear at least once. Use an `unknown` item for a missing category instead of omitting the category. For `evidence_language`, set `sample` to `bar`, `line`, `table`, `metric`, or `citation` only when that language is directly observed or explicitly proposed as an `extension`; an `unknown` item must use `none`, which renders an explicit “参考中未出现” state instead of a fabricated chart.
 
 ## Deterministic Render

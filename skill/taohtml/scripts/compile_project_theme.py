@@ -307,7 +307,36 @@ def _boundary_records(
     return records
 
 
-def _compile_tokens(contract: dict[str, Any]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+RHYTHM_BY_DENSITY = {
+    "low": {
+        "label_title": "24px",
+        "title_lede": "20px",
+        "heading_content": "44px",
+        "card_title_body": "14px",
+        "evidence_source": "20px",
+    },
+    "medium": {
+        "label_title": "18px",
+        "title_lede": "16px",
+        "heading_content": "32px",
+        "card_title_body": "12px",
+        "evidence_source": "18px",
+    },
+    "high": {
+        "label_title": "12px",
+        "title_lede": "10px",
+        "heading_content": "24px",
+        "card_title_body": "8px",
+        "evidence_source": "12px",
+    },
+}
+
+
+def _compile_tokens(
+    contract: dict[str, Any],
+    plan: dict[str, str],
+    structure_sources: dict[str, dict[str, str]],
+) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     used: set[int] = set()
     colors: dict[str, str] = {}
     sources: dict[str, dict[str, str]] = {}
@@ -337,6 +366,21 @@ def _compile_tokens(contract: dict[str, Any]) -> tuple[dict[str, str], dict[str,
     gap, gap_source = _spacing_token(
         contract, ("模块间距", "组间距"), "22px", "module gap"
     )
+    rhythm = RHYTHM_BY_DENSITY[plan["density"]]
+    density_source = structure_sources["density"]
+    if density_source["status"] == "fallback":
+        rhythm_source = {
+            "status": "fallback",
+            "source": "compiler-neutral-default",
+            "basis": "Unknown density uses the neutral medium semantic rhythm scale.",
+        }
+    else:
+        density_item = contract["executable_layout"]["density"]
+        rhythm_source = {
+            "status": density_item["status"],
+            "source": "executable_layout.density",
+            "basis": f"{density_item['basis']}；确定性映射为 {plan['density']} 语义排版节奏。",
+        }
     tokens = {
         **colors,
         "display_size": display,
@@ -346,6 +390,7 @@ def _compile_tokens(contract: dict[str, Any]) -> tuple[dict[str, str], dict[str,
         "canvas_x": canvas_x,
         "canvas_y": "46px",
         "gap": gap,
+        **{f"rhythm_{name}": value for name, value in rhythm.items()},
     }
     sources.update(
         {
@@ -364,6 +409,10 @@ def _compile_tokens(contract: dict[str, Any]) -> tuple[dict[str, str], dict[str,
                 "basis": "Vertical safe area is a reversible runtime-fit fallback.",
             },
             "spacing.gap": gap_source,
+            **{
+                f"rhythm.{name}": dict(rhythm_source)
+                for name in rhythm
+            },
         }
     )
     return tokens, sources
@@ -495,7 +544,6 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
     }[plan["image_treatment"]]
     text_align = {"start": "left", "center": "center", "end": "right"}[plan["alignment"]]
     align_items = {"start": "flex-start", "center": "center", "end": "flex-end"}[plan["alignment"]]
-    density_gap = {"low": "46px", "medium": "30px", "high": "18px"}[plan["density"]]
     split_columns = {"7:5": "7fr 5fr", "5:7": "5fr 7fr", "1:1": "1fr 1fr", "none": "1fr"}[plan["cover_split"]]
     aspect_ratio = plan["image_aspect_ratio"].replace(":", " / ")
     focus_width = {"headline-and-image": "100%", "headline-only": "72%", "image-first": "78%", "data-first": "86%", "balanced": "88%"}[plan["visual_focus"]]
@@ -526,7 +574,12 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
   --pt-canvas-x: {tokens['canvas_x']};
   --pt-canvas-y: {tokens['canvas_y']};
   --pt-gap: {tokens['gap']};
-  --pt-section-gap: {density_gap};
+  --pt-rhythm-label-title: {tokens['rhythm_label_title']};
+  --pt-rhythm-title-lede: {tokens['rhythm_title_lede']};
+  --pt-rhythm-heading-content: {tokens['rhythm_heading_content']};
+  --pt-rhythm-card-title-body: {tokens['rhythm_card_title_body']};
+  --pt-rhythm-evidence-source: {tokens['rhythm_evidence_source']};
+  --pt-section-gap: var(--pt-rhythm-heading-content);
   --pt-border: {border};
   --pt-radius: {radius};
   --pt-shadow: {shadow};
@@ -538,127 +591,169 @@ def _css(theme_id: str, tokens: dict[str, str], plan: dict[str, str]) -> str:
 
 {selector} .slide {{ padding: var(--pt-canvas-y) var(--pt-canvas-x) 56px; color: var(--pt-ink); background: var(--pt-canvas); }}
 {selector} .slide::before {{ display: none; }}
-{selector} h1, {selector} h2, {selector} h3, {selector} p {{ margin-top: 0; }}
+{selector} :where(h1, h2, h3, p) {{ margin: 0; }}
 {selector} .fragment {{ transform: translateY(14px); transition: opacity .42s cubic-bezier(.2,.8,.2,1), transform .42s cubic-bezier(.2,.8,.2,1); }}
 {selector} .fragment.visible, {selector}[data-mode="reading"] .fragment {{ transform: none; }}
-.pt-heading-block {{ display:flex;flex-direction:column;align-items:{align_items};text-align:var(--pt-text-align); }}
+.pt-page-layout {{display:grid;gap:var(--pt-rhythm-heading-content)}}
+.pt-heading-block {{display:grid;justify-items:{plan['alignment']};gap:var(--pt-rhythm-label-title);text-align:var(--pt-text-align)}}
+.pt-heading-copy,.pt-cover-title-group {{display:grid;justify-items:{plan['alignment']};gap:var(--pt-rhythm-title-lede)}}
 .pt-kicker {{ display: inline-flex; padding: 7px 11px; color: var(--pt-ink); background: var(--pt-accent); border: var(--pt-border); border-radius:var(--pt-radius); font-size: var(--pt-caption); font-weight: 900; letter-spacing: .08em; }}
-.pt-title {{ margin: 18px 0 12px; max-width: {focus_width}; font-size: var(--pt-heading); line-height: 1.02; font-weight: 950; text-align:var(--pt-text-align); }}
+.pt-title {{ max-width: {focus_width}; font-size: var(--pt-heading); line-height: 1.02; font-weight: 950; text-align:var(--pt-text-align); }}
 .pt-lede {{ max-width: 1040px; font-size: var(--pt-body); line-height: 1.42; text-align:var(--pt-text-align); }}
 .pt-footer {{ position: absolute; left: var(--pt-canvas-x); right: var(--pt-canvas-x); bottom: 28px; padding-top: 10px; border-top: 2px solid var(--pt-ink); font-size: var(--pt-caption); font-weight: 800; }}
 .pt-cover-layout {{ {cover_layout}; height: 100%; }}
-.pt-cover h1 {{ margin: 22px 0 18px; font-size: var(--pt-display); line-height: .98; font-weight: 950; letter-spacing: -.035em; }}
-.pt-cover-copy {{display:flex;flex-direction:column;align-items:{align_items};text-align:{text_align};}}
+.pt-cover h1 {{font-size:var(--pt-display);line-height:.98;font-weight:950;letter-spacing:-.035em}}
+.pt-cover-copy {{display:grid;justify-items:{plan['alignment']};gap:var(--pt-rhythm-label-title);text-align:{text_align}}}
 .pt-cover-art {{ position: relative; width:{focus_width}; max-height:510px; aspect-ratio:{aspect_ratio}; overflow: hidden; background: var(--pt-panel); border: var(--pt-border); border-radius:var(--pt-radius); box-shadow:var(--pt-shadow); }}
 .pt-cover-single-column .pt-cover-art {{width:auto;height:360px;max-width:{focus_width}}}
 .pt-cover-image-left .pt-cover-art {{order:-1}} .pt-cover-image-top .pt-cover-art {{order:-1}}
 .pt-cover-art::before {{ content: ""; position: absolute; width: 78%; height: 38%; left: -8%; top: 18%; background: var(--pt-signal); clip-path: polygon(0 72%, 20% 38%, 42% 62%, 65% 5%, 100% 54%, 100% 100%, 0 100%); }}
 .pt-cover-art::after {{ content: ""; position: absolute; width: 170px; height: 170px; right: 11%; top: 10%; border-radius: 50%; background: var(--pt-accent); }}
-.pt-claim {{ position: absolute; left: 28px; right: 28px; bottom: 28px; padding: 20px 22px; color: var(--pt-canvas); background: var(--pt-ink); border-left: 10px solid var(--pt-signal); font-size: 21px; line-height: 1.32; font-weight: 800; }}
-.pt-card-grid {{ display: grid; grid-template-columns: repeat({content_columns}, minmax(0,1fr)); gap: var(--pt-gap); margin-top: var(--pt-section-gap); }}
-.pt-card {{ min-height: 250px; padding: 25px; background: var(--pt-paper); border: var(--pt-border); border-radius: var(--pt-radius); box-shadow:var(--pt-shadow); }}
-.pt-card h3 {{ margin: 18px 0 12px; font-size: 31px; line-height: 1.05; }}
+.pt-claim {{ position: absolute; left: 28px; right: 28px; bottom: 28px; display:grid; justify-items:start; gap:var(--pt-rhythm-card-title-body); padding: 20px 22px; color: var(--pt-canvas); background: var(--pt-ink); border-left: 10px solid var(--pt-signal); font-size: 21px; line-height: 1.32; font-weight: 800; }}
+.pt-card-grid {{ display: grid; grid-template-columns: repeat({content_columns}, minmax(0,1fr)); gap: var(--pt-gap); }}
+.pt-card {{ display:grid;align-content:start;gap:var(--pt-rhythm-label-title);min-height:250px;padding:25px;background:var(--pt-paper);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
+.pt-card-copy,.pt-item-copy {{display:grid;gap:var(--pt-rhythm-card-title-body)}}
+.pt-card h3 {{font-size:31px;line-height:1.05}}
 .pt-card p {{ font-size: 18px; line-height: 1.45; }}
 .pt-label {{ display: inline-flex; padding: 6px 9px; background: var(--pt-accent); border: 2px solid var(--pt-ink); font-size: 12px; font-weight: 900; }}
-.pt-content-stack,.pt-content-focus {{display:grid;grid-template-columns:repeat({content_columns},minmax(0,1fr));justify-content:center;gap:var(--pt-gap);margin-top:var(--pt-section-gap)}}
-.pt-line-item,.pt-focus-point {{display:grid;grid-template-columns:120px 1fr;gap:24px;align-items:center;padding:20px 24px;background:var(--pt-paper);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
+.pt-content-stack,.pt-content-focus {{display:grid;grid-template-columns:repeat({content_columns},minmax(0,1fr));justify-content:center;gap:var(--pt-gap)}}
+.pt-line-item,.pt-focus-point {{display:grid;grid-template-columns:120px 1fr;gap:var(--pt-rhythm-label-title);align-items:center;padding:20px 24px;background:var(--pt-paper);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
 .pt-focus-lead {{padding:34px;text-align:{text_align};background:var(--pt-panel);color:var(--pt-canvas);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
-.pt-process {{ display:grid; {process_layout}; gap: var(--pt-gap); margin-top:var(--pt-section-gap); }}
-.pt-step {{ min-height:220px; padding:26px; background:var(--pt-paper); border:var(--pt-border); border-radius:var(--pt-radius); box-shadow:var(--pt-shadow); }}
+.pt-process {{ display:grid; {process_layout}; gap: var(--pt-gap); }}
+.pt-step {{display:grid;align-content:start;gap:var(--pt-rhythm-label-title);min-height:220px;padding:26px;background:var(--pt-paper);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
 .pt-process-column {{gap:12px}}
 .pt-process-column .pt-step {{display:grid;grid-template-columns:78px 1fr;min-height:0;align-items:center;padding:14px 22px}}
-.pt-process-column .pt-step strong {{font-size:46px}} .pt-process-column .pt-step h3 {{margin:0 0 6px}} .pt-process-column .pt-step p {{margin-bottom:0}}
+.pt-process-column .pt-step strong {{font-size:46px}}
 .pt-step strong {{ display: block; color: var(--pt-signal); font-size: 62px; line-height: 1; font-weight: 950; }}
-.pt-step h3 {{ margin: 22px 0 12px; font-size: 28px; }}
+.pt-step h3 {{font-size:28px}}
 .pt-step p {{ font-size: 17px; line-height: 1.42; }}
-.pt-evidence-layout {{ display: grid; grid-template-columns: repeat({data_columns},minmax(0,1fr)); gap: var(--pt-gap); margin-top:var(--pt-section-gap); }}
+.pt-evidence-layout {{ display: grid; grid-template-columns: repeat({data_columns},minmax(0,1fr)); gap: var(--pt-gap); }}
 .pt-evidence-layout[data-image-placement="left"] .pt-source-frame {{order:-1}} .pt-evidence-layout[data-image-placement="top"] .pt-source-frame {{order:-1}}
 .pt-source-frame {{ width:100%; aspect-ratio:{aspect_ratio}; margin:0; overflow:hidden; background:var(--pt-panel);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
 .pt-source-frame img {{ width: 100%; height: 100%; object-fit: {plan['image_fit']}; filter: {image_filter}; }}
-.pt-data-panel,.pt-chart-focus,.pt-table-focus-wrap,.pt-metrics-grid {{ padding:24px;color:var(--pt-canvas);background:var(--pt-panel);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
+.pt-data-panel,.pt-chart-focus,.pt-table-focus-wrap,.pt-metrics-grid {{display:grid;gap:var(--pt-rhythm-evidence-source);padding:24px;color:var(--pt-canvas);background:var(--pt-panel);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
 .pt-bars {{ display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 20px; height: 210px; padding: 22px 18px 0; border-bottom: 2px solid var(--pt-canvas); }}
 .pt-bar {{ display: grid; align-content: end; min-height: 40%; padding: 16px 10px; color: var(--pt-ink); background: var(--pt-signal); font-weight: 900; text-align: center; }}
 .pt-bar:nth-child(2) {{ min-height: 68%; background: var(--pt-accent); }} .pt-bar:nth-child(3) {{ min-height: 88%; background: var(--pt-canvas); }}
 .pt-bar strong {{ display: block; font-size: 38px; }} .pt-bar span {{ font-size: 12px; }}
-.pt-table {{ width: 100%; margin-top: 18px; border-collapse: collapse; font-size: 14px; }}
+.pt-table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
 .pt-table th, .pt-table td {{ padding: 9px 10px; border-bottom: 1px solid color-mix(in srgb, var(--pt-canvas), transparent 60%); text-align: left; }}
 .pt-line-chart svg {{width:100%;height:260px}} .pt-line-chart polyline {{fill:none;stroke:var(--pt-accent);stroke-width:16;stroke-linecap:round;stroke-linejoin:round}}
 .pt-line-values {{display:flex;justify-content:space-around;font-size:30px}} .pt-metrics-focus {{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--pt-gap)}}
 .pt-metrics-focus article {{padding:30px;text-align:center;border:var(--pt-border);border-radius:var(--pt-radius)}} .pt-metrics-focus strong {{display:block;font-size:50px}}
-.pt-citation-focus {{display:grid;place-items:center;min-height:300px;padding:42px;text-align:center;border:var(--pt-border);border-radius:var(--pt-radius)}}
-.pt-focus-source {{margin:18px 0 0;text-align:center;font-size:var(--pt-caption);opacity:.72}}
-.pt-actions-grid {{ display: grid; grid-template-columns: repeat({content_columns}, minmax(0,1fr)); gap: var(--pt-gap); margin-top:var(--pt-section-gap); }}
-.pt-action {{ min-height: 230px; padding: 24px; background: var(--pt-paper); border: var(--pt-border); border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
-.pt-action-stack {{display:grid;grid-template-columns:minmax(0,860px);justify-content:center;gap:var(--pt-gap);margin-top:var(--pt-section-gap)}}
-.pt-action-row {{display:grid;grid-template-columns:90px 1fr;gap:24px;align-items:center;padding:20px 28px;border-bottom:1px solid color-mix(in srgb,var(--pt-ink),transparent 75%)}}
-.pt-action strong {{ color: var(--pt-signal); font-size: 54px; line-height: 1; }} .pt-action h3 {{ margin: 20px 0 12px; font-size: 27px; }}
-.pt-final {{ margin-top: 30px; padding: 20px 24px; color: var(--pt-canvas); background: var(--pt-ink); border-left: 12px solid var(--pt-signal); font-size: 24px; font-weight: 900; }}
+.pt-citation-focus {{display:grid;place-items:center;gap:var(--pt-rhythm-title-lede);min-height:300px;padding:42px;text-align:center;border:var(--pt-border);border-radius:var(--pt-radius)}}
+.pt-focus-source {{text-align:center;font-size:var(--pt-caption);opacity:.72}}
+.pt-actions-grid {{ display: grid; grid-template-columns: repeat({content_columns}, minmax(0,1fr)); gap: var(--pt-gap); }}
+.pt-action {{display:grid;align-content:start;gap:var(--pt-rhythm-label-title);min-height:230px;padding:24px;background:var(--pt-paper);border:var(--pt-border);border-radius:var(--pt-radius);box-shadow:var(--pt-shadow)}}
+.pt-action-stack {{display:grid;grid-template-columns:minmax(0,860px);justify-content:center;gap:var(--pt-gap)}}
+.pt-action-row {{display:grid;grid-template-columns:90px 1fr;gap:var(--pt-rhythm-label-title);align-items:center;padding:20px 28px;border-bottom:1px solid color-mix(in srgb,var(--pt-ink),transparent 75%)}}
+.pt-action strong {{color:var(--pt-signal);font-size:54px;line-height:1}} .pt-action h3 {{font-size:27px}}
+.pt-closing-stack {{display:grid;gap:var(--pt-rhythm-heading-content)}}
+.pt-final {{padding:20px 24px;color:var(--pt-canvas);background:var(--pt-ink);border-left:12px solid var(--pt-signal);font-size:24px;font-weight:900}}
 {selector} .source-btn {{ top: 48px; right: var(--pt-canvas-x); background: var(--pt-ink); color: var(--pt-canvas); border-radius: var(--pt-radius); }}
 """
 
 
 def _heading(kicker: str, title: str, lede: str) -> str:
-    return f'<div class="pt-heading-block"><div class="pt-kicker">{{{{{kicker}}}}}</div><h2 class="pt-title">{{{{{title}}}}}</h2><p class="pt-lede">{{{{{lede}}}}}</p></div>'
+    return (
+        '<div class="pt-heading-block" data-rhythm-check="--pt-rhythm-label-title">'
+        f'<div class="pt-kicker" data-rhythm-from>{{{{{kicker}}}}}</div>'
+        '<div class="pt-heading-copy" data-rhythm-to '
+        'data-rhythm-check="--pt-rhythm-title-lede">'
+        f'<h2 class="pt-title" data-rhythm-from>{{{{{title}}}}}</h2>'
+        f'<p class="pt-lede" data-rhythm-to>{{{{{lede}}}}}</p></div></div>'
+    )
+
+
+def _page_layout(heading: str, body: str) -> str:
+    return (
+        '<div class="pt-page-layout" '
+        'data-rhythm-check="--pt-rhythm-heading-content">'
+        f'<div data-rhythm-from>{heading}</div>'
+        f'<div data-rhythm-to>{body}</div></div>'
+    )
 
 
 def _templates(
     plan: dict[str, str], variants: list[dict[str, str]], evidence_sample: str
 ) -> str:
-    cover_copy = '<div class="pt-cover-copy"><div class="pt-kicker">{{S1_KICKER}}</div><h1>{{S1_TITLE_A}}<br>{{S1_TITLE_B}}</h1><p class="pt-lede">{{S1_LEDE}}</p></div>'
-    cover_art = '<div class="pt-cover-art" role="img" aria-label="项目主题几何主视觉"><aside class="pt-claim fragment" data-step="1"><span class="pt-label">{{S1_LABEL}}</span><p>{{S1_CLAIM}}</p></aside></div>'
+    cover_copy = (
+        '<div class="pt-cover-copy" data-rhythm-check="--pt-rhythm-label-title">'
+        '<div class="pt-kicker" data-rhythm-from>{{S1_KICKER}}</div>'
+        '<div class="pt-cover-title-group" data-rhythm-to '
+        'data-rhythm-check="--pt-rhythm-title-lede">'
+        '<h1 data-rhythm-from>{{S1_TITLE_A}}<br>{{S1_TITLE_B}}</h1>'
+        '<p class="pt-lede" data-rhythm-to>{{S1_LEDE}}</p></div></div>'
+    )
+    cover_art = '<div class="pt-cover-art" role="img" aria-label="项目主题几何主视觉"><aside class="pt-claim fragment" data-step="1" data-rhythm-check="--pt-rhythm-card-title-body"><span class="pt-label" data-rhythm-from>{{S1_LABEL}}</span><p data-rhythm-to>{{S1_CLAIM}}</p></aside></div>'
     cover_children = cover_art + cover_copy if plan["image_placement"] in {"left", "top"} else cover_copy + cover_art
     cover = f'<section class="slide active pt-cover" data-title="核心命题" data-layout="{variants[0]["id"]}"><div class="pt-cover-layout pt-cover-{plan["cover_structure"]} pt-cover-image-{plan["image_placement"]}" data-cover-split="{plan["cover_split"]}">{cover_children}</div><div class="pt-footer">{{{{FOOTER}}}}</div></section>'
 
     content_items = [
-        f'<article class="pt-card fragment" data-step="{index}"><span class="pt-label">{{{{S2_{index}_LABEL}}}}</span><h3>{{{{S2_{index}_TITLE}}}}</h3><p>{{{{S2_{index}_BODY}}}}</p></article>'
+        f'<article class="pt-card fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title"><span class="pt-label" data-rhythm-from>{{{{S2_{index}_LABEL}}}}</span><div class="pt-card-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S2_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S2_{index}_BODY}}}}</p></div></article>'
         for index in range(1, 4)
     ]
     if plan["content_structure"] == "card-grid":
         content_body = '<div class="pt-card-grid">' + "".join(content_items) + "</div>"
     elif plan["content_structure"] == "single-focus":
         focus_points = "".join(
-            f'<article class="pt-focus-point fragment" data-step="{index}"><span class="pt-label">{{{{S2_{index}_LABEL}}}}</span><div><h3>{{{{S2_{index}_TITLE}}}}</h3><p>{{{{S2_{index}_BODY}}}}</p></div></article>'
+            f'<article class="pt-focus-point fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title" data-rhythm-axis="inline"><span class="pt-label" data-rhythm-from>{{{{S2_{index}_LABEL}}}}</span><div class="pt-item-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S2_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S2_{index}_BODY}}}}</p></div></article>'
             for index in range(1, 4)
         )
         content_body = '<div class="pt-content-focus"><div class="pt-focus-lead fragment" data-step="1">{{S2_1_BODY}}</div>' + focus_points + "</div>"
     else:
         content_body = '<div class="pt-content-stack">' + "".join(
-            f'<article class="pt-line-item fragment" data-step="{index}"><span class="pt-label">{{{{S2_{index}_LABEL}}}}</span><div><h3>{{{{S2_{index}_TITLE}}}}</h3><p>{{{{S2_{index}_BODY}}}}</p></div></article>'
+            f'<article class="pt-line-item fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title" data-rhythm-axis="inline"><span class="pt-label" data-rhythm-from>{{{{S2_{index}_LABEL}}}}</span><div class="pt-item-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S2_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S2_{index}_BODY}}}}</p></div></article>'
             for index in range(1, 4)
         ) + "</div>"
-    content = f'<section class="slide" data-title="内容诊断" data-layout="{variants[1]["id"]}">{_heading("S2_KICKER", "S2_TITLE", "S2_LEDE")}{content_body}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    content_layout = _page_layout(
+        _heading("S2_KICKER", "S2_TITLE", "S2_LEDE"), content_body
+    )
+    content = f'<section class="slide" data-title="内容诊断" data-layout="{variants[1]["id"]}">{content_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
 
     step_tag = "li" if plan["page_axis"] == "column" else "article"
+    step_axis = ' data-rhythm-axis="inline"' if plan["page_axis"] == "column" else ""
     process_body = "".join(
-        f'<{step_tag} class="pt-step fragment" data-step="{index}"><strong>{{{{S3_{index}_NUM}}}}</strong><div><h3>{{{{S3_{index}_TITLE}}}}</h3><p>{{{{S3_{index}_BODY}}}}</p></div></{step_tag}>'
+        f'<{step_tag} class="pt-step fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title"{step_axis}><strong data-rhythm-from>{{{{S3_{index}_NUM}}}}</strong><div class="pt-item-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S3_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S3_{index}_BODY}}}}</p></div></{step_tag}>'
         for index in range(1, 5)
     )
     process_wrapper = "ol" if step_tag == "li" else "div"
-    process = f'<section class="slide" data-title="内容机制" data-layout="{variants[2]["id"]}">{_heading("S3_KICKER", "S3_TITLE", "S3_LEDE")}<{process_wrapper} class="pt-process pt-process-{plan["page_axis"]}">{process_body}</{process_wrapper}><div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    process_content = f'<{process_wrapper} class="pt-process pt-process-{plan["page_axis"]}">{process_body}</{process_wrapper}>'
+    process_layout = _page_layout(
+        _heading("S3_KICKER", "S3_TITLE", "S3_LEDE"), process_content
+    )
+    process = f'<section class="slide" data-title="内容机制" data-layout="{variants[2]["id"]}">{process_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
 
     chart = _evidence_markup(evidence_sample)
     source_frame = '<figure class="pt-source-frame fragment" data-step="1"><img src="{{SOURCE_URI}}" alt="{{SOURCE_LABEL}}"></figure>'
     if plan["data_structure"] == "source-chart-split":
-        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}">{source_frame}<div class="pt-data-panel">{chart}<table class="pt-table fragment" data-step="3"><thead><tr><th>{{{{S4_TABLE_H1}}}}</th><th>{{{{S4_TABLE_H2}}}}</th><th>{{{{S4_TABLE_H3}}}}</th></tr></thead><tbody><tr><td>{{{{S4_R1_C1}}}}</td><td>{{{{S4_R1_C2}}}}</td><td>{{{{S4_R1_C3}}}}</td></tr><tr><td>{{{{S4_R2_C1}}}}</td><td>{{{{S4_R2_C2}}}}</td><td>{{{{S4_R2_C3}}}}</td></tr><tr><td>{{{{S4_R3_C1}}}}</td><td>{{{{S4_R3_C2}}}}</td><td>{{{{S4_R3_C3}}}}</td></tr></tbody></table></div></div>'
+        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}">{source_frame}<div class="pt-data-panel" data-rhythm-check="--pt-rhythm-evidence-source"><div data-rhythm-from>{chart}</div><table class="pt-table fragment" data-step="3" data-rhythm-to><thead><tr><th>{{{{S4_TABLE_H1}}}}</th><th>{{{{S4_TABLE_H2}}}}</th><th>{{{{S4_TABLE_H3}}}}</th></tr></thead><tbody><tr><td>{{{{S4_R1_C1}}}}</td><td>{{{{S4_R1_C2}}}}</td><td>{{{{S4_R1_C3}}}}</td></tr><tr><td>{{{{S4_R2_C1}}}}</td><td>{{{{S4_R2_C2}}}}</td><td>{{{{S4_R2_C3}}}}</td></tr><tr><td>{{{{S4_R3_C1}}}}</td><td>{{{{S4_R3_C2}}}}</td><td>{{{{S4_R3_C3}}}}</td></tr></tbody></table></div></div>'
     elif plan["data_structure"] == "table-focus":
-        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}"><div class="pt-table-focus-wrap">{_evidence_markup("table")}<p class="pt-focus-source">{{{{S4_SOURCE}}}}</p></div></div>'
+        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}"><div class="pt-table-focus-wrap" data-rhythm-check="--pt-rhythm-evidence-source"><div data-rhythm-from>{_evidence_markup("table")}</div><p class="pt-focus-source" data-rhythm-to>{{{{S4_SOURCE}}}}</p></div></div>'
     elif plan["data_structure"] == "metrics-grid":
-        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}"><div class="pt-metrics-grid">{_evidence_markup("metric")}<p class="pt-focus-source">{{{{S4_SOURCE}}}}</p></div></div>'
+        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}"><div class="pt-metrics-grid" data-rhythm-check="--pt-rhythm-evidence-source"><div data-rhythm-from>{_evidence_markup("metric")}</div><p class="pt-focus-source" data-rhythm-to>{{{{S4_SOURCE}}}}</p></div></div>'
     else:
-        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}"><div class="pt-chart-focus">{chart}<p class="pt-focus-source">{{{{S4_SOURCE}}}}</p></div></div>'
-    data = f'<section class="slide" data-title="证据与数据" data-layout="{variants[3]["id"]}"><button class="source-btn" data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{_heading("S4_KICKER", "S4_TITLE", "S4_LEDE")}{data_body}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+        data_body = f'<div class="pt-evidence-layout" data-image-placement="{plan["image_placement"]}"><div class="pt-chart-focus" data-rhythm-check="--pt-rhythm-evidence-source"><div data-rhythm-from>{chart}</div><p class="pt-focus-source" data-rhythm-to>{{{{S4_SOURCE}}}}</p></div></div>'
+    data_layout = _page_layout(
+        _heading("S4_KICKER", "S4_TITLE", "S4_LEDE"), data_body
+    )
+    data = f'<section class="slide" data-title="证据与数据" data-layout="{variants[3]["id"]}"><button class="source-btn" data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{data_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
 
     if plan["content_structure"] == "card-grid":
         closing_body = '<div class="pt-actions-grid">' + "".join(
-            f'<article class="pt-action fragment" data-step="{index}"><strong>{{{{S5_{index}_NUM}}}}</strong><h3>{{{{S5_{index}_TITLE}}}}</h3><p>{{{{S5_{index}_BODY}}}}</p></article>'
+            f'<article class="pt-action fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title"><strong data-rhythm-from>{{{{S5_{index}_NUM}}}}</strong><div class="pt-item-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S5_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S5_{index}_BODY}}}}</p></div></article>'
             for index in range(1, 4)
         ) + "</div>"
     else:
         closing_body = '<div class="pt-action-stack">' + "".join(
-            f'<article class="pt-action-row fragment" data-step="{index}"><strong>{{{{S5_{index}_NUM}}}}</strong><div><h3>{{{{S5_{index}_TITLE}}}}</h3><p>{{{{S5_{index}_BODY}}}}</p></div></article>'
+            f'<article class="pt-action-row fragment" data-step="{index}" data-rhythm-check="--pt-rhythm-label-title" data-rhythm-axis="inline"><strong data-rhythm-from>{{{{S5_{index}_NUM}}}}</strong><div class="pt-item-copy" data-rhythm-to data-rhythm-check="--pt-rhythm-card-title-body"><h3 data-rhythm-from>{{{{S5_{index}_TITLE}}}}</h3><p data-rhythm-to>{{{{S5_{index}_BODY}}}}</p></div></article>'
             for index in range(1, 4)
         ) + "</div>"
-    closing = f'<section class="slide" data-title="行动收束" data-layout="{variants[4]["id"]}">{_heading("S5_KICKER", "S5_TITLE", "S5_LEDE")}{closing_body}<div class="pt-final fragment" data-step="4"><span class="pt-label">{{{{S5_LABEL}}}}</span> {{{{S5_CLAIM}}}}</div><div class="pt-footer">{{{{FOOTER}}}}</div></section>'
+    closing_content = f'<div class="pt-closing-stack">{closing_body}<div class="pt-final fragment" data-step="4"><span class="pt-label">{{{{S5_LABEL}}}}</span> {{{{S5_CLAIM}}}}</div></div>'
+    closing_layout = _page_layout(
+        _heading("S5_KICKER", "S5_TITLE", "S5_LEDE"), closing_content
+    )
+    closing = f'<section class="slide" data-title="行动收束" data-layout="{variants[4]["id"]}">{closing_layout}<div class="pt-footer">{{{{FOOTER}}}}</div></section>'
     return "\n\n".join((cover, content, process, data, closing))
 
 
@@ -680,13 +775,24 @@ GRAMMAR_USAGE = {
     "data_structure": ["templates.html:data DOM branch", "theme.json:layout_variants[3]"],
     "data_columns": ["theme.css:.pt-evidence-layout grid-template-columns", "theme.json:layout_variants[3]"],
     "module_organization": ["theme.css:--pt-border/--pt-radius/--pt-shadow", "theme.json:identity.module_language"],
-    "density": ["theme.css:--pt-section-gap", "theme.json:layout_variants[2,4]"],
+    "density": [
+        "theme.css:semantic rhythm custom properties",
+        "templates.html:data-rhythm-check contracts",
+        "theme.json:layout_variants[2,4]",
+    ],
     "visual_focus": ["theme.css:.pt-title/.pt-cover-art width", "theme.json:identity.composition"],
 }
 
 
 def _token_targets(source_key: str) -> list[str]:
     token = source_key.split(".", 1)[1]
+    if source_key.startswith("rhythm."):
+        manifest_token = f"rhythm_{token}"
+        css_token = f"--pt-rhythm-{token.replace('_', '-')}"
+        return [
+            f"theme.json:tokens.{manifest_token}",
+            f"theme.css:{css_token}",
+        ]
     css_token = {
         "display_size": "--pt-display",
         "heading_size": "--pt-heading",
@@ -702,8 +808,8 @@ def _token_targets(source_key: str) -> list[str]:
 def compile_theme(request_path: Path, output_theme: Path) -> Path:
     request, contract, vi_path, reference_path = load_handoff(request_path)
     theme_id = f"project-{request['project']['id']}"
-    tokens, token_sources = _compile_tokens(contract)
     plan, structure_sources, structure_fallbacks = _layout_plan(contract)
+    tokens, token_sources = _compile_tokens(contract, plan, structure_sources)
     variants = _layout_variants(plan)
     evidence_sample, evidence_path, evidence_rule = _evidence_choice(contract)
     usage_map: dict[str, list[str]] = {}
@@ -717,7 +823,12 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
         else:
             usage_map.setdefault(source["source"], []).extend(targets)
     for field, source in structure_sources.items():
-        targets = [f"theme.json:executable_layout.{field}", *GRAMMAR_USAGE[field]]
+        targets = [
+            f"theme.json:executable_layout.{field}",
+            *GRAMMAR_USAGE[field],
+            *usage_map.get(source["source"], []),
+        ]
+        targets = sorted(set(targets))
         source["usage"] = targets
         if source["status"] != "fallback":
             usage_map.setdefault(source["source"], []).extend(targets)
