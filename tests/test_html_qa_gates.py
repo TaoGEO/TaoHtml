@@ -130,6 +130,38 @@ class HtmlQAGateTests(unittest.TestCase):
         self.assertEqual(collision["second"]["kind"], "html")
         self.assertIn("text collision between", completed.stdout)
 
+    def test_static_normal_flow_font_metrics_pass_with_auditable_exclusion(self) -> None:
+        for width, height in VIEWPORTS:
+            with self.subTest(viewport=(width, height)):
+                completed, report = self.run_fixture(
+                    "html-block-flow-tight-valid.html", width, height
+                )
+                self.assertEqual(completed.returncode, 0, completed.stdout)
+                page = report["pages"][0]
+                self.assertEqual(page["text_collisions"], [])
+                exclusions = page["normal_flow_text_metric_exclusions"]
+                self.assertTrue(exclusions)
+                self.assertIn("font metrics", exclusions[0]["reason"])
+                self.assertGreater(exclusions[0]["layout_clearance"]["y"], 0)
+                self.assertEqual(exclusions[0]["metric_overlap_limit"], 1.25)
+                self.assertLessEqual(
+                    exclusions[0]["metric_overlap_depth"],
+                    exclusions[0]["metric_overlap_limit"],
+                )
+
+    def test_independently_transformed_html_overlap_still_fails(self) -> None:
+        for width, height in VIEWPORTS:
+            with self.subTest(viewport=(width, height)):
+                completed, report = self.run_fixture(
+                    "html-transform-overlap.html", width, height
+                )
+                self.assertEqual(completed.returncode, 1)
+                collisions = report["pages"][0]["text_collisions"]
+                self.assertTrue(collisions)
+                self.assertEqual(collisions[0]["first"]["kind"], "html")
+                self.assertEqual(collisions[0]["second"]["kind"], "html")
+                self.assertIn("text collision between", completed.stdout)
+
     def test_parent_child_text_flow_is_not_double_counted(self) -> None:
         completed, report = self.run_fixture(
             "html-parent-child-flow.html", 1600, 900

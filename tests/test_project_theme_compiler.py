@@ -20,6 +20,7 @@ SKILL_ROOT = ROOT / "skill" / "taohtml"
 SCRIPTS_ROOT = SKILL_ROOT / "scripts"
 FIXTURES = ROOT / "tests" / "fixtures"
 HANDOFF_FIXTURE = FIXTURES / "reference-theme-handoff.json"
+LEGACY_HANDOFF_FIXTURE = FIXTURES / "reference-theme-handoff-v1.0.json"
 VI_FIXTURE = FIXTURES / "reference-vi-contract.json"
 REFERENCE_FIXTURE = FIXTURES / "reference-vi-source.svg"
 CENTERED_HANDOFF_FIXTURE = FIXTURES / "reference-theme-centered-handoff.json"
@@ -29,6 +30,7 @@ CORPORATE_HANDOFF_FIXTURE = FIXTURES / "corporate-template-handoff.json"
 CORPORATE_VI_FIXTURE = FIXTURES / "corporate-template-vi-contract.json"
 CORPORATE_REFERENCE_FIXTURE = FIXTURES / "corporate-template-reference.png"
 FAMILY_HANDOFF_FIXTURE = FIXTURES / "corporate-family-handoff.json"
+LEGACY_FAMILY_HANDOFF_FIXTURE = FIXTURES / "corporate-family-handoff-v1.1.json"
 FAMILY_VI_FIXTURE = FIXTURES / "corporate-family-vi-contract.json"
 FAMILY_REFERENCE_FIXTURES = [
     FIXTURES / f"corporate-family-{role}.png"
@@ -99,6 +101,10 @@ def write_handoff(path: Path, raw: dict[str, object]) -> None:
 class ProjectThemeHandoffTests(unittest.TestCase):
     def test_fixture_records_exact_confirmation_inputs_mode_and_corrections(self) -> None:
         request, contract, vi_path, reference_path = COMPILER.load_handoff(HANDOFF_FIXTURE)
+        self.assertEqual(request["schema_version"], "2.0")
+        self.assertEqual(
+            request["confirmation"]["confirmation_method"], "conversation_ref"
+        )
         self.assertEqual(
             request["confirmation"]["confirmation_ref"],
             "synthetic-current-turn-vi-approval",
@@ -111,14 +117,80 @@ class ProjectThemeHandoffTests(unittest.TestCase):
         )
         self.assertEqual(contract["schema_version"], "1.1")
 
-    def test_confirmation_uses_current_reference_not_a_fixed_reply_phrase(self) -> None:
-        compiler_source = (SCRIPTS_ROOT / "compile_project_theme.py").read_text(
-            encoding="utf-8"
-        )
-        self.assertNotIn('confirmation["phrase"]', compiler_source)
-        self.assertNotIn("phrase must be", compiler_source)
+    def test_current_schema_uses_reference_not_legacy_phrase_shape(self) -> None:
         request, *_ = COMPILER.load_handoff(HANDOFF_FIXTURE)
         self.assertTrue(request["confirmation"]["confirmation_ref"])
+        raw = json.loads(HANDOFF_FIXTURE.read_text(encoding="utf-8"))
+        self.assertNotIn("phrase", raw["confirmation"])
+        self.assertEqual(
+            set(raw["confirmation"]),
+            {
+                "status",
+                "confirmation_ref",
+                "vi_contract_sha256",
+                "reference_image_sha256",
+            },
+        )
+
+    def test_current_schema_rejects_legacy_confirmation_field(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            handoff, raw = stage_handoff(root)
+            raw["confirmation"]["phrase"] = "legacy-only"
+            write_handoff(handoff, raw)
+            with self.assertRaisesRegex(ValueError, "keys mismatch"):
+                COMPILER.load_handoff(handoff)
+
+    def test_legacy_single_handoff_is_recognized_without_reinterpreting_schema(self) -> None:
+        request, _, _, _ = COMPILER.load_handoff(LEGACY_HANDOFF_FIXTURE)
+        self.assertEqual(request["schema_version"], "1.0")
+        self.assertEqual(request["confirmation"]["confirmation_method"], "legacy_phrase")
+        self.assertIsNone(request["confirmation"]["confirmation_ref"])
+        self.assertEqual(request["confirmation"]["legacy_phrase"], "确认 VI")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                LEGACY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            manifest = json.loads((theme / "theme.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["compilation"]["confirmation_method"], "legacy_phrase")
+        self.assertIsNone(manifest["compilation"]["confirmation_ref"])
+
+    def test_legacy_family_handoff_is_recognized_and_current_family_is_2_1(self) -> None:
+        legacy, *_ = COMPILER.load_handoff(LEGACY_FAMILY_HANDOFF_FIXTURE)
+        current, *_ = COMPILER.load_handoff(FAMILY_HANDOFF_FIXTURE)
+        self.assertEqual(legacy["schema_version"], "1.1")
+        self.assertEqual(legacy["confirmation"]["confirmation_method"], "legacy_phrase")
+        self.assertEqual(current["schema_version"], "2.1")
+        self.assertEqual(current["confirmation"]["confirmation_method"], "conversation_ref")
+        current_raw = json.loads(FAMILY_HANDOFF_FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual(
+            set(current_raw["confirmation"]),
+            {
+                "status",
+                "confirmation_ref",
+                "vi_contract_sha256",
+                "reference_images_sha256",
+            },
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                LEGACY_FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "legacy-family-theme"
+            )
+            manifest = json.loads((theme / "theme.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["compilation"]["confirmation_method"], "legacy_phrase")
+        self.assertIsNone(manifest["compilation"]["confirmation_ref"])
+
+    def test_legacy_schema_rejects_new_confirmation_shape_without_version_bump(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for source in (VI_FIXTURE, REFERENCE_FIXTURE):
+                shutil.copy2(source, root / source.name)
+            raw = json.loads(LEGACY_HANDOFF_FIXTURE.read_text(encoding="utf-8"))
+            raw["confirmation"]["confirmation_ref"] = raw["confirmation"].pop("phrase")
+            handoff = root / "legacy-drift.json"
+            write_handoff(handoff, raw)
+            with self.assertRaisesRegex(ValueError, "keys mismatch"):
+                COMPILER.load_handoff(handoff)
 
     def test_unconfirmed_vi_fails_closed_before_creating_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

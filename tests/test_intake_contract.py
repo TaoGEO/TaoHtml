@@ -78,10 +78,17 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("--action deliver-formal-html", AUTHORIZATION)
         self.assertIn("not formal report HTML", AUTHORIZATION)
         self.assertIn(
-            "scripts/check_production_authorization.py --action formal-html", SKILL
+            "scripts/check_production_authorization.py --artifact-root <current-task-root> --action formal-html",
+            SKILL,
         )
         self.assertIn("never use a fixed authorization phrase", INTAKE)
-        self.assertIn("confirmation_ref", AUTHORIZATION)
+        for marker in (
+            "artifact_path",
+            "artifact_sha256",
+            "confirmation_ref",
+            "does not access or independently",
+        ):
+            self.assertIn(marker, AUTHORIZATION)
 
     def test_clear_idea_can_stop_with_zero_questions(self) -> None:
         self.assertIn("Allow **0 clarification questions**", INTAKE)

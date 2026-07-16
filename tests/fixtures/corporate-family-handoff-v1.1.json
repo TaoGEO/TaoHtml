@@ -1,12 +1,12 @@
 {
-  "schema_version": "2.1",
+  "schema_version": "1.1",
   "project": {
-    "id": "orbital-corporate-family",
-    "display_name": "Orbital 合成企业模板族｜项目专用主题"
+    "id": "legacy-orbital-family",
+    "display_name": "Legacy synthetic corporate family"
   },
   "confirmation": {
     "status": "confirmed",
-    "confirmation_ref": "synthetic-current-turn-family-vi-approval",
+    "phrase": "确认 VI",
     "vi_contract_sha256": "e4d6b9ae2ab9cae973c0829fe6a516a3975d84029f8e532ac26687223fb037a9",
     "reference_images_sha256": [
       "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
@@ -23,7 +23,5 @@
     ]
   },
   "target_mode": "presentation",
-  "customer_corrections": [
-    "确认 cover、toc、section 为 observed；content 与 data 为 proposed extension。"
-  ]
+  "customer_corrections": []
 }

@@ -117,4 +117,4 @@ Before delivery, verify:
 - Controls and fullscreen actions do not advance the report; fullscreen closes the more menu and controls auto-hide again after idle time.
 - Asset, console, and visible-bound checks pass at the target viewport.
 - Every active slide's rendered rectangle covers the deck canvas within the QA tolerance at each target viewport.
-- Independent visible text labels, including HTML text and SVG `<text>`, do not intersect and retain the small QA safety gap. Exempt an intentional overlay only on the exact text owner with `data-qa-ignore-text-collision="reason"`; the report must list every opt-out.
+- Independent visible text labels, including HTML text and SVG `<text>`, do not intersect and retain the small QA safety gap. SVG labels and positioned/transformed HTML labels remain strict; a shallow HTML Range font-metric overlap is excluded only when both static, independently untransformed layout boxes are actually separate, and that exclusion is recorded in QA JSON. Exempt an intentional overlay only on the exact text owner with `data-qa-ignore-text-collision="reason"`; the report must list every opt-out.

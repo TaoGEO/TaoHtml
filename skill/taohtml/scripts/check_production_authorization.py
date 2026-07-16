@@ -4,13 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 ROUTES = {"idea_only", "word_pdf", "existing_ppt_html"}
 VISUAL_ROUTES = {"unresolved", "built_in", "static_reference"}
 ACTIONS = {
@@ -34,7 +36,13 @@ TOP_LEVEL_KEYS = {
     "project_theme_compiled",
     "design_brief",
 }
-GATE_KEYS = {"status", "artifact_id", "confirmation_ref"}
+GATE_KEYS = {
+    "status",
+    "artifact_path",
+    "artifact_sha256",
+    "confirmation_ref",
+}
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _exact_object(raw: object, keys: set[str], label: str) -> dict[str, Any]:
@@ -60,9 +68,54 @@ def _optional_text(value: object, label: str) -> str | None:
     return _short_text(value, label)
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _current_artifact(
+    artifact_root: Path,
+    value: object,
+    expected_sha256: object,
+    label: str,
+) -> tuple[str, str]:
+    relative_text = _short_text(value, f"{label}.artifact_path")
+    relative = Path(relative_text)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(
+            f"{label}.artifact_path must be a safe task-local relative path"
+        )
+    if not isinstance(expected_sha256, str) or not SHA256.fullmatch(expected_sha256):
+        raise ValueError(
+            f"{label}.artifact_sha256 must be a lowercase SHA-256 digest"
+        )
+    try:
+        current = (artifact_root / relative).resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise ValueError(f"{label}.artifact_path does not exist: {relative_text}") from exc
+    try:
+        current.relative_to(artifact_root)
+    except ValueError as exc:
+        raise ValueError(
+            f"{label}.artifact_path escapes the task artifact root: {relative_text}"
+        ) from exc
+    if not current.is_file():
+        raise ValueError(f"{label}.artifact_path is not a file: {relative_text}")
+    current_sha256 = _sha256(current)
+    if current_sha256 != expected_sha256:
+        raise ValueError(
+            f"{label}.artifact_sha256 does not match the current file"
+        )
+    return relative.as_posix(), current_sha256
+
+
 def _confirmation_gate(
     raw: object,
     label: str,
+    artifact_root: Path,
     *,
     allowed_statuses: set[str],
 ) -> dict[str, str | None]:
@@ -72,28 +125,50 @@ def _confirmation_gate(
         raise ValueError(
             f"{label}.status must be one of: {', '.join(sorted(allowed_statuses))}"
         )
-    artifact_id = _optional_text(gate["artifact_id"], f"{label}.artifact_id")
+    artifact_path = _optional_text(gate["artifact_path"], f"{label}.artifact_path")
+    artifact_sha256 = _optional_text(
+        gate["artifact_sha256"], f"{label}.artifact_sha256"
+    )
     confirmation_ref = _optional_text(
         gate["confirmation_ref"], f"{label}.confirmation_ref"
     )
     if status == "confirmed":
-        if artifact_id is None or confirmation_ref is None:
+        if artifact_path is None or artifact_sha256 is None or confirmation_ref is None:
             raise ValueError(
-                f"{label} confirmed state requires artifact_id and confirmation_ref"
+                f"{label} confirmed state requires artifact_path, artifact_sha256, and confirmation_ref"
             )
+        artifact_path, artifact_sha256 = _current_artifact(
+            artifact_root,
+            artifact_path,
+            artifact_sha256,
+            label,
+        )
     elif status == "pending":
-        if confirmation_ref is not None:
-            raise ValueError(f"{label} pending state cannot contain confirmation_ref")
-    elif artifact_id is not None or confirmation_ref is not None:
+        if artifact_sha256 is not None or confirmation_ref is not None:
+            raise ValueError(
+                f"{label} pending state cannot contain artifact_sha256 or confirmation_ref"
+            )
+    elif (
+        artifact_path is not None
+        or artifact_sha256 is not None
+        or confirmation_ref is not None
+    ):
         raise ValueError(f"{label} not_required state cannot bind an artifact or confirmation")
     return {
         "status": status,
-        "artifact_id": artifact_id,
+        "artifact_path": artifact_path,
+        "artifact_sha256": artifact_sha256,
         "confirmation_ref": confirmation_ref,
     }
 
 
-def validate_state(raw: object) -> dict[str, Any]:
+def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
+    try:
+        resolved_artifact_root = artifact_root.expanduser().resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise ValueError(f"artifact_root does not exist: {artifact_root}") from exc
+    if not resolved_artifact_root.is_dir():
+        raise ValueError(f"artifact_root is not a directory: {resolved_artifact_root}")
     state = _exact_object(raw, TOP_LEVEL_KEYS, "state")
     if state["schema_version"] != SCHEMA_VERSION:
         raise ValueError(f"schema_version must be {SCHEMA_VERSION}")
@@ -109,16 +184,19 @@ def validate_state(raw: object) -> dict[str, Any]:
     material = _confirmation_gate(
         state["material_summary"],
         "material_summary",
+        resolved_artifact_root,
         allowed_statuses={"not_required", "pending", "confirmed"},
     )
     reference_vi = _confirmation_gate(
         state["reference_vi"],
         "reference_vi",
+        resolved_artifact_root,
         allowed_statuses={"not_required", "pending", "confirmed"},
     )
     brief = _confirmation_gate(
         state["design_brief"],
         "design_brief",
+        resolved_artifact_root,
         allowed_statuses={"pending", "confirmed"},
     )
     project_theme_compiled = state["project_theme_compiled"]
@@ -178,6 +256,7 @@ def validate_state(raw: object) -> dict[str, Any]:
         "reference_vi": reference_vi,
         "project_theme_compiled": project_theme_compiled,
         "design_brief": brief,
+        "artifact_root": str(resolved_artifact_root),
     }
 
 
@@ -226,6 +305,15 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
             allowed.update({"formal-html", "browser-qa", "deliver-formal-html"})
 
     authorized = not blocking_gates and brief_ready
+    verified_artifacts = [
+        {
+            "gate": name,
+            "artifact_path": state[name]["artifact_path"],
+            "artifact_sha256": state[name]["artifact_sha256"],
+        }
+        for name in ("material_summary", "reference_vi", "design_brief")
+        if state[name]["status"] == "confirmed"
+    ]
     return {
         "schema_version": SCHEMA_VERSION,
         "task_id": state["task_id"],
@@ -233,14 +321,15 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
         "authorized_for_formal_html": authorized,
         "blocking_gates": blocking_gates,
         "allowed_actions": sorted(allowed),
+        "verified_artifacts": verified_artifacts,
         "forbidden_formal_actions": (
             [] if authorized else ["formal-html", "browser-qa", "deliver-formal-html"]
         ),
     }
 
 
-def load_state(path: Path) -> dict[str, Any]:
-    return validate_state(json.loads(path.read_text(encoding="utf-8")))
+def load_state(path: Path, artifact_root: Path) -> dict[str, Any]:
+    return validate_state(json.loads(path.read_text(encoding="utf-8")), artifact_root)
 
 
 def main() -> int:
@@ -248,10 +337,18 @@ def main() -> int:
         description="Check TaoHtml confirmation state before a requested action."
     )
     parser.add_argument("--state", type=Path, required=True)
+    parser.add_argument(
+        "--artifact-root",
+        type=Path,
+        required=True,
+        help="Task-local root containing every bound gate artifact.",
+    )
     parser.add_argument("--action", choices=sorted(ACTIONS), default="status")
     args = parser.parse_args()
     try:
-        result = evaluate_state(load_state(args.state.resolve()))
+        result = evaluate_state(
+            load_state(args.state.resolve(), args.artifact_root)
+        )
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(
             json.dumps(

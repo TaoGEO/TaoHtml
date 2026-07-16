@@ -18,6 +18,7 @@ from pathlib import Path
 CONTROLLED_STEP_CONTRACT = "fragment-v1"
 CONTROLLED_STEP_SELECTOR = ".fragment"
 TEXT_COLLISION_GAP_PX = 1.0
+TEXT_COLLISION_FONT_METRIC_SLACK_PX = 0.25
 CANVAS_TOLERANCE_RATIO = 0.005
 
 
@@ -80,8 +81,9 @@ CANVAS_COVERAGE_CHECK = f"""() => {{
 
 TEXT_COLLISION_CHECK = rf"""() => {{
   const root = document.querySelector('.slide.active');
-  if (!root) return {{ collisions: [], opt_outs: [] }};
+  if (!root) return {{ collisions: [], opt_outs: [], invalid_opt_outs: [], normal_flow_metric_exclusions: [] }};
   const safetyGap = {TEXT_COLLISION_GAP_PX};
+  const fontMetricSlack = {TEXT_COLLISION_FONT_METRIC_SLACK_PX};
   const blockSelector = 'p,h1,h2,h3,h4,h5,h6,li,button,label,figcaption,td,th,caption,dt,dd,summary,legend,[data-qa-text-label]';
   const round = value => Math.round(value * 100) / 100;
 
@@ -166,6 +168,11 @@ TEXT_COLLISION_CHECK = rf"""() => {{
       selector: selectorFor(label.owner),
       kind: label.kind,
       rects: label.rects,
+      layoutRect: (() => {{
+        const rect = label.owner.getBoundingClientRect();
+        return {{ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
+          width: rect.width, height: rect.height }};
+      }})(),
     }};
     if (reason === '__invalid_empty_reason__') {{
       invalidOptOuts.push({{ text: normalized.text, selector: normalized.selector }});
@@ -186,12 +193,52 @@ TEXT_COLLISION_CHECK = rf"""() => {{
       sa.display.startsWith('inline') && sb.display.startsWith('inline');
   }}
 
+  function isStaticUntransformedHtml(label) {{
+    if (label.kind !== 'html') return false;
+    const style = getComputedStyle(label.owner);
+    const noIndependentTransform = style.transform === 'none' &&
+      (!style.translate || style.translate === 'none') &&
+      (!style.scale || style.scale === 'none') &&
+      (!style.rotate || style.rotate === 'none');
+    return style.position === 'static' && style.float === 'none' && noIndependentTransform;
+  }}
+
+  function normalFlowMetricExclusion(
+    first, second, overlapX, overlapY, horizontalGap, verticalGap
+  ) {{
+    if (!isStaticUntransformedHtml(first) || !isStaticUntransformedHtml(second)) return null;
+    const a = first.layoutRect;
+    const b = second.layoutRect;
+    const layoutOverlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+    const layoutOverlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    if (layoutOverlapX > 0 && layoutOverlapY > 0) return null;
+    const intersects = overlapX > 0 && overlapY > 0;
+    const gapDepths = [];
+    if (overlapY > 0 && horizontalGap < safetyGap) gapDepths.push(safetyGap - horizontalGap);
+    if (overlapX > 0 && verticalGap < safetyGap) gapDepths.push(safetyGap - verticalGap);
+    const metricDepth = intersects
+      ? Math.min(overlapX, overlapY)
+      : (gapDepths.length ? Math.min(...gapDepths) : 0);
+    if (metricDepth > safetyGap + fontMetricSlack) return null;
+    return {{
+      layout_clearance: {{
+        x: round(Math.max(b.left - a.right, a.left - b.right, 0)),
+        y: round(Math.max(b.top - a.bottom, a.top - b.bottom, 0)),
+      }},
+      metric_overlap_depth: round(metricDepth),
+      metric_overlap_limit: round(safetyGap + fontMetricSlack),
+      reason: 'static-untransformed HTML layout boxes are separate; shallow Range overlap is font metrics',
+    }};
+  }}
+
   const collisions = [];
+  const normalFlowMetricExclusions = [];
   for (let i = 0; i < active.length; i += 1) {{
     for (let j = i + 1; j < active.length; j += 1) {{
       const first = active[i];
       const second = active[j];
       if (first.owner.contains(second.owner) || second.owner.contains(first.owner)) continue;
+      let pairHandled = false;
       for (const a of first.rects) {{
         for (const b of second.rects) {{
           const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
@@ -203,6 +250,19 @@ TEXT_COLLISION_CHECK = rf"""() => {{
           const closeVertical = overlapX > 0 && verticalGap < safetyGap;
           const unsafeGap = !sameInlineFlow(first, second) && (closeHorizontal || closeVertical);
           if (!intersects && !unsafeGap) continue;
+          const metricExclusion = normalFlowMetricExclusion(
+            first, second, overlapX, overlapY, horizontalGap, verticalGap
+          );
+          if (metricExclusion) {{
+            normalFlowMetricExclusions.push({{
+              first: {{ text: first.text, selector: first.selector, kind: first.kind }},
+              second: {{ text: second.text, selector: second.selector, kind: second.kind }},
+              range_overlap: {{ x: round(Math.max(overlapX, 0)), y: round(Math.max(overlapY, 0)) }},
+              ...metricExclusion,
+            }});
+            pairHandled = true;
+            break;
+          }}
           collisions.push({{
             first: {{ text: first.text, selector: first.selector, kind: first.kind }},
             second: {{ text: second.text, selector: second.selector, kind: second.kind }},
@@ -210,15 +270,15 @@ TEXT_COLLISION_CHECK = rf"""() => {{
             clearance: {{ x: round(horizontalGap), y: round(verticalGap) }},
             safety_gap: safetyGap,
           }});
+          pairHandled = true;
           break;
         }}
-        if (collisions.length &&
-            collisions[collisions.length - 1].first.selector === first.selector &&
-            collisions[collisions.length - 1].second.selector === second.selector) break;
+        if (pairHandled) break;
       }}
     }}
   }}
-  return {{ collisions, opt_outs: optOuts, invalid_opt_outs: invalidOptOuts }};
+  return {{ collisions, opt_outs: optOuts, invalid_opt_outs: invalidOptOuts,
+    normal_flow_metric_exclusions: normalFlowMetricExclusions }};
 }}"""
 
 
@@ -638,6 +698,15 @@ def main() -> int:
                 for state in text_collision_states
                 for item in state["invalid_opt_outs"]
             }
+            normal_flow_metric_exclusions = {
+                (
+                    item["first"]["selector"],
+                    item["second"]["selector"],
+                    item["reason"],
+                ): item
+                for state in text_collision_states
+                for item in state["normal_flow_metric_exclusions"]
+            }
             screenshot = args.output_dir / f"page-{i + 1:02d}.png"
             page.screenshot(path=str(screenshot), full_page=False)
             current_console_errors = console_errors[console_start:]
@@ -663,6 +732,9 @@ def main() -> int:
                 "text_collisions": text_collisions,
                 "text_collision_opt_outs": list(opt_out_records.values()),
                 "invalid_text_collision_opt_outs": list(invalid_opt_outs.values()),
+                "normal_flow_text_metric_exclusions": list(
+                    normal_flow_metric_exclusions.values()
+                ),
                 "console_errors": current_console_errors,
                 "page_errors": current_page_errors,
             }
