@@ -12,6 +12,7 @@ so a missing module, timeout, or native crash can fail quickly and return JSON.
 | `core` | First filesystem work on idea-only, Word, PPT, or HTML routes that use built-in visuals | Python 3.10+ and workspace read/write |
 | `pdf` | Opening, extracting, or summarizing a PDF | Core plus PyMuPDF |
 | `static-reference` | Opening or analyzing any image for `reconstruct` or `corporate_fidelity` | Core plus Pillow, PyYAML, Python Playwright, real Chromium launch, and a minimal PNG screenshot |
+| `profile-reuse` | Binding or loading an already-confirmed corporate-template profile | Core plus Pillow and the TaoHtml project-theme loader; no Playwright or Chromium |
 | `browser` | Browser QA | Core plus Python Playwright, real Chromium launch, and a minimal PNG screenshot |
 
 Do not run `static-reference` or `browser` merely because those dependencies are
@@ -25,6 +26,7 @@ Use the Skill-relative script from the installed skill root:
 python scripts/preflight.py --profile core --workspace /absolute/path/to/workspace
 python scripts/preflight.py --profile pdf --workspace /absolute/path/to/workspace
 python scripts/preflight.py --profile static-reference --workspace /absolute/path/to/workspace
+python scripts/preflight.py --profile profile-reuse --workspace /absolute/path/to/workspace
 python scripts/preflight.py --profile browser --workspace /absolute/path/to/workspace
 ```
 
@@ -33,6 +35,13 @@ customer-readable conclusion and recovery options to stderr, and exits nonzero
 on failure. Preserve the JSON in task evidence when possible. Do not read or
 process the gated customer material until the required profile returns
 `"ok": true`.
+
+Run `profile-reuse` after exact enterprise identity resolution but before writing
+the task binding, loading the archived theme, or showing the Report Design Brief.
+It verifies only the dependencies that live profile validation actually needs.
+Do not rerun `static-reference`, require PyYAML, or launch Playwright/Chromium merely
+to reuse a previously confirmed profile. Browser QA still requires the separate
+`browser` profile later.
 
 The default browser-probe timeout is 20 seconds. Individual dependency imports
 are capped at 10 seconds even when a larger CLI timeout is supplied, keeping a

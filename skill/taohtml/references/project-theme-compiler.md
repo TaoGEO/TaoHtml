@@ -228,9 +228,11 @@ project corrections, verifies structural/CSS/template equivalence, and calls the
 project-theme loader again. It never adds profile output to `assets/visual-systems/`.
 
 For a later project, load the live-validated binding's relative theme path through the
-same renderer `--project-theme` route. Do not copy compiler/loader validation into a
-second profile-specific implementation and do not silently replace a damaged profile
-with a built-in theme.
+same renderer `--project-theme` route and pass the binding's current report mode with
+`--target-mode reading|presentation`. The archived theme's compilation mode is
+provenance, not a corporate-brand boundary; a mode-only change must not create v2.
+Do not copy compiler/loader validation into a second profile-specific implementation
+and do not silently replace a damaged profile with a built-in theme.
 
 ## Verification
 

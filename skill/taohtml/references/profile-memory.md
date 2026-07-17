@@ -60,19 +60,32 @@ ${TAOHTML_HOME:-~/.taohtml}/
 pointer `{version, activated_at, reason, sequence}`, and every immutable version
 manifest path/hash.
 
-Each `version.json` schema v1.0 records:
+Each `version.json` schema v1.1 records:
 
 - profile id, version, display-name/alias snapshot;
 - created and initial-activated state/time;
 - confirmation method/reference and the source handoff hash;
 - VI, ordered reference-image, source-theme, and archived-theme hashes;
-- `corporate_fidelity`, screenshot-visible-only, and target-mode boundaries;
+- `corporate_fidelity` and screenshot-visible-only brand boundaries;
+- the source project's target mode as creation provenance only, never as a reuse boundary;
 - the explicit excluded-content list; and
 - the complete relative asset path/role/hash/size list.
+
+The loader also accepts v1.0 profiles created before cross-mode reuse was corrected.
+For those immutable manifests, the former `boundaries.target_mode` field is interpreted
+only as first-compilation provenance; it does not block a current task in the other mode.
 
 Treat version directories and manifests as immutable. Never update v1 in place. A
 permanent template update creates v2/v3, validates it, then atomically replaces the
 active pointer in `profile.json`. Retain old versions for rollback.
+
+All store commands, including list/show/resolve/bind/validate-binding/export, share
+one cross-process snapshot lock. The lock is an OS advisory file lock, so process
+termination releases ownership even though the harmless lock file remains. A stale
+empty directory left by the earlier lock format is recovered only after a conservative
+age threshold. Version publication uses a recovery journal: an interruption before
+the commit marker rolls back the unregistered version and restores the old profile;
+an interruption after the marker validates and finishes the committed snapshot.
 
 ## Identity Resolution And Interaction
 
@@ -149,6 +162,10 @@ python scripts/profile_store.py validate-binding \
   --binding /absolute/current-task/gates/profile-use.json
 ```
 
+Before `bind`, run the `profile-reuse` profile from `environment-preflight.md`. It
+checks core, Pillow, and the project-theme loader only. It does not reread the
+reference images as new design input and does not require Playwright or Chromium.
+
 The binding records profile id/display name, active version, task mode, theme path
 relative to TaoHtml home, theme fingerprint, VI/reference hashes, profile/version
 manifest hashes, resolution identities/basis, time, customer notice, and
@@ -157,6 +174,20 @@ manifest hashes, resolution identities/basis, time, customer notice, and
 Resolve the relative theme path against the current TaoHtml home and load it only
 through `theme_runtime.load_project_theme()` (normally through the existing renderer's
 `--project-theme`). Never copy a second theme validator into the profile workflow.
+Pass the binding's current task mode to the renderer:
+
+```bash
+python scripts/render_visual_system.py \
+  --content /absolute/current-task/content.json \
+  --project-theme /resolved/profile/project-theme \
+  --target-mode reading \
+  --output /absolute/current-task/index.html
+```
+
+The archived theme keeps its first-compilation mode only as provenance. A presentation
+profile must render a later reading task with `data-mode="reading"`, and a reading
+profile must render a later presentation task with `data-mode="presentation"`.
+Changing only the current report mode never justifies or requires profile v2.
 
 Revalidate immediately before the Report Design Brief gate, formal HTML, browser QA,
 and delivery. Fail closed when any asset, manifest, hash, active version, identity,
@@ -212,7 +243,9 @@ python scripts/profile_store.py import \
 ```
 
 The package manifest enumerates every profile file with relative POSIX path, hash, and
-size. Import rejects duplicate entries, absolute/Windows/UNC paths, traversal,
+size. Export holds the same store snapshot lock from validation through every payload
+read, so a package cannot mix versions during a concurrent update. Import rejects
+duplicate entries, absolute/Windows/UNC paths, traversal,
 backslashes, symlinks, directory entries, missing files, extra files, hash/size drift,
 schema drift, profile-id conflicts, and alias conflicts. It never calls `extractall`.
 

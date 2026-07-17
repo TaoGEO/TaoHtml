@@ -190,6 +190,7 @@ def _render_bundle(
     output: Path,
     source_uri: str,
     source_kind: str,
+    target_mode: str | None = None,
 ) -> Path:
     sections = render_sections(
         bundle.templates,
@@ -221,9 +222,10 @@ def _render_bundle(
         flags=re.DOTALL,
     )
     display_name = html.escape(bundle.display_name, quote=True)
-    mode_attribute = (
-        f' data-mode="{bundle.target_mode}"' if bundle.target_mode is not None else ""
-    )
+    if target_mode is not None and target_mode not in {"reading", "presentation"}:
+        raise ValueError("target_mode must be reading or presentation")
+    runtime_mode = target_mode if target_mode is not None else bundle.target_mode
+    mode_attribute = f' data-mode="{runtime_mode}"' if runtime_mode is not None else ""
     rendered = rendered.replace(
         f'<main class="deck" id="deck" data-taohtml-step-contract="{CONTROLLED_STEP_CONTRACT}">',
         f'<main class="deck" id="deck" data-theme="{bundle.theme_id}" '
@@ -261,8 +263,9 @@ def render_project_theme(
     output: Path,
     source_image: Path | None = None,
     source_kind: str | None = None,
+    target_mode: str | None = None,
 ) -> Path:
-    """Render an explicitly supplied project theme through the shared runtime."""
+    """Render a project theme with an optional current-task Runtime mode."""
     source_uri, resolved_kind = resolve_source(source_image, source_kind)
     return _render_bundle(
         content,
@@ -270,6 +273,7 @@ def render_project_theme(
         output,
         source_uri,
         resolved_kind,
+        target_mode,
     )
 
 
@@ -316,6 +320,11 @@ def main() -> int:
         help="Compiled project theme directory containing theme.json, theme.css, templates.html, and provenance.json.",
     )
     mode.add_argument("--all", action="store_true")
+    parser.add_argument(
+        "--target-mode",
+        choices=("reading", "presentation"),
+        help="Current-task Runtime mode override for --project-theme, including corporate-profile reuse.",
+    )
     parser.add_argument("--output", type=Path, help="Output HTML for --theme.")
     parser.add_argument("--output-root", type=Path, help="Output directory for --all.")
     args = parser.parse_args()
@@ -333,9 +342,12 @@ def main() -> int:
                         args.output.resolve(),
                         args.source_image,
                         args.source_kind,
+                        args.target_mode,
                     )
                 ]
             else:
+                if args.target_mode is not None:
+                    parser.error("--target-mode is supported only with --project-theme")
                 outputs = [
                     render_theme(
                         content,
@@ -346,6 +358,8 @@ def main() -> int:
                     )
                 ]
         else:
+            if args.target_mode is not None:
+                parser.error("--target-mode is supported only with --project-theme")
             if args.output_root is None:
                 parser.error("--output-root is required with --all")
             outputs = render_all(

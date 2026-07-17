@@ -65,6 +65,8 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("blocked by Pillow, Playwright, or Chromium", ENVIRONMENT)
         self.assertIn("before opening or extracting a PDF", SKILL)
         self.assertIn("before opening or analyzing any reference image", SKILL)
+        self.assertIn("minimal `profile-reuse` environment profile", SKILL)
+        self.assertIn("no Playwright or Chromium", ENVIRONMENT)
         self.assertIn("run the `browser` profile before browser QA", SKILL)
         self.assertIn("Do not offer “manual corporate fidelity.”", ENVIRONMENT)
         self.assertIn("Do not call `reconstruct`", ENVIRONMENT)

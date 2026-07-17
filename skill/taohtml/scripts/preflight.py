@@ -24,7 +24,7 @@ SCHEMA_VERSION = "1.0"
 MINIMUM_PYTHON = (3, 10)
 DEFAULT_TIMEOUT_SECONDS = 20.0
 MODULE_TIMEOUT_SECONDS = 10.0
-PROFILES = ("core", "pdf", "static-reference", "browser")
+PROFILES = ("core", "pdf", "static-reference", "profile-reuse", "browser")
 
 PROFILE_MODULES: dict[str, tuple[tuple[str, str, str], ...]] = {
     "core": (),
@@ -35,6 +35,10 @@ PROFILE_MODULES: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("module_pillow", "PIL", "Pillow"),
         ("module_pyyaml", "yaml", "PyYAML"),
         ("module_playwright", "playwright.sync_api", "Playwright"),
+    ),
+    "profile-reuse": (
+        ("module_pillow", "PIL", "Pillow"),
+        ("module_theme_loader", "theme_runtime", "TaoHtml project-theme loader"),
     ),
     "browser": (
         ("module_playwright", "playwright.sync_api", "Playwright"),
@@ -179,12 +183,13 @@ def _trim_process_detail(completed: subprocess.CompletedProcess[str]) -> str:
 def _probe_module(module: str, timeout: float) -> dict[str, str]:
     code = (
         "import importlib,sys; "
+        "sys.path.insert(0, sys.argv[2]); "
         "importlib.import_module(sys.argv[1]); "
         "print(sys.argv[1] + ' import ok')"
     )
     try:
         completed = subprocess.run(
-            [sys.executable, "-c", code, module],
+            [sys.executable, "-c", code, module, str(Path(__file__).resolve().parent)],
             check=False,
             capture_output=True,
             text=True,
@@ -275,6 +280,15 @@ def _customer_message(profile: str, checks: list[dict[str, object]]) -> tuple[st
             "环境预检未通过（pdf）：尚未读取或提取 PDF；请先修复或更换环境。"
             f"失败项：{labels}",
             ["安装 Skill 声明的 PDF 依赖或更换环境，预检通过后再读取材料。"],
+        )
+    if profile == "profile-reuse":
+        return (
+            "环境预检未通过（profile-reuse）：尚未绑定或加载企业模板档案；"
+            f"请先修复最小复用依赖。失败项：{labels}",
+            [
+                "修复 Pillow 或 TaoHtml project-theme loader，或更换环境；"
+                "重新运行 profile-reuse 预检后再绑定档案。"
+            ],
         )
     if profile == "browser":
         return (

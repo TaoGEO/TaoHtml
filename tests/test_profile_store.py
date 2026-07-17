@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import importlib.util
 import json
@@ -9,6 +10,8 @@ from pathlib import Path
 import shutil
 import stat
 import tempfile
+import threading
+import time
 import unittest
 from unittest import mock
 import zipfile
@@ -19,8 +22,12 @@ SCRIPTS = ROOT / "skill" / "taohtml" / "scripts"
 FIXTURES = ROOT / "tests" / "fixtures"
 PROFILE_STORE_PATH = SCRIPTS / "profile_store.py"
 AUTHORIZATION_PATH = SCRIPTS / "check_production_authorization.py"
+RENDERER_PATH = SCRIPTS / "render_visual_system.py"
 FAMILY_HANDOFF = FIXTURES / "corporate-family-handoff.json"
 SINGLE_HANDOFF = FIXTURES / "corporate-template-handoff.json"
+CONTENT_FIXTURE = (
+    ROOT / "evals" / "taohtml-quality-v1" / "fixtures" / "visual-systems-content.json"
+)
 
 
 def load_module(name: str, path: Path):
@@ -33,10 +40,24 @@ def load_module(name: str, path: Path):
 
 PROFILE_STORE = load_module("taohtml_profile_store_tests", PROFILE_STORE_PATH)
 AUTHORIZATION = load_module("taohtml_profile_authorization_tests", AUTHORIZATION_PATH)
+RENDERER = load_module("taohtml_profile_renderer_tests", RENDERER_PATH)
 
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def stage_handoff_mode(root: Path, mode: str, label: str) -> Path:
+    stage = root / label
+    stage.mkdir(parents=True)
+    raw = json.loads(FAMILY_HANDOFF.read_text(encoding="utf-8"))
+    input_names = [raw["inputs"]["vi_contract"], *raw["inputs"]["reference_images"]]
+    for name in input_names:
+        shutil.copyfile(FIXTURES / name, stage / name)
+    raw["target_mode"] = mode
+    handoff = stage / "handoff.json"
+    handoff.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+    return handoff
 
 
 def gate(
@@ -138,6 +159,128 @@ class CorporateProfileStoreTests(unittest.TestCase):
             result["binding"]["customer_notice"],
             "本次沿用【Orbital 公司 企业模板 v1】；如需更换请直接说明。",
         )
+
+    def test_profiles_reuse_both_runtime_modes_and_render_current_data_mode(self) -> None:
+        content = RENDERER.load_content(CONTENT_FIXTURE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            presentation_root = root / "presentation-source"
+            presentation_root.mkdir()
+            presentation_home, _ = self.create(presentation_root)
+            reading_binding = PROFILE_STORE.bind_profile(
+                home=presentation_home,
+                output=presentation_root / "reading-task/profile-use.json",
+                task_id="reading-from-presentation-profile",
+                target_mode="reading",
+                identities=["Orbital"],
+            )["binding"]
+            reading_valid = PROFILE_STORE.validate_binding(
+                presentation_root / "reading-task/profile-use.json",
+                home=presentation_home,
+            )
+            reading_html = RENDERER.render_project_theme(
+                content,
+                reading_valid["theme_path"],
+                presentation_root / "reading-task/index.html",
+                target_mode=reading_binding["target_mode"],
+            ).read_text(encoding="utf-8")
+
+            reading_root = root / "reading-source"
+            reading_root.mkdir()
+            reading_handoff = stage_handoff_mode(
+                reading_root, "reading", "reading-handoff"
+            )
+            reading_home, _ = self.create(reading_root, handoff=reading_handoff)
+            presentation_binding = PROFILE_STORE.bind_profile(
+                home=reading_home,
+                output=reading_root / "presentation-task/profile-use.json",
+                task_id="presentation-from-reading-profile",
+                target_mode="presentation",
+                identities=["Orbital"],
+            )["binding"]
+            presentation_valid = PROFILE_STORE.validate_binding(
+                reading_root / "presentation-task/profile-use.json", home=reading_home
+            )
+            presentation_html = RENDERER.render_project_theme(
+                content,
+                presentation_valid["theme_path"],
+                reading_root / "presentation-task/index.html",
+                target_mode=presentation_binding["target_mode"],
+            ).read_text(encoding="utf-8")
+
+            presentation_manifest = PROFILE_STORE.show_profile(
+                presentation_home, "orbital"
+            )["version_manifests"][0]
+            reading_manifest = PROFILE_STORE.show_profile(reading_home, "orbital")[
+                "version_manifests"
+            ][0]
+
+        self.assertIn('data-mode="reading"', reading_html)
+        self.assertIn('data-mode="presentation"', presentation_html)
+        self.assertEqual(reading_binding["version"], 1)
+        self.assertEqual(presentation_binding["version"], 1)
+        self.assertNotIn("target_mode", presentation_manifest["boundaries"])
+        self.assertEqual(
+            presentation_manifest["creation_context"]["source_target_mode"],
+            "presentation",
+        )
+        self.assertEqual(
+            reading_manifest["creation_context"]["source_target_mode"], "reading"
+        )
+
+    def test_mode_only_change_cannot_create_a_permanent_profile_version(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            home, _ = self.create(root)
+            reading_handoff = stage_handoff_mode(root, "reading", "mode-only-update")
+            reading_theme = self.compile_theme(root, reading_handoff)
+            with self.assertRaisesRegex(
+                ValueError, "must change the confirmed corporate VI or references"
+            ):
+                PROFILE_STORE.update_profile(
+                    home=home,
+                    profile_id="orbital",
+                    handoff=reading_handoff,
+                    theme=reading_theme,
+                )
+            profile = PROFILE_STORE.show_profile(home, "orbital")["profile"]
+        self.assertEqual(profile["active_version"], 1)
+        self.assertEqual([item["version"] for item in profile["versions"]], [1])
+
+    def test_legacy_v1_manifest_treats_stored_mode_as_provenance_for_reuse(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            home, _ = self.create(root)
+            profile_root = home / "profiles/orbital"
+            version_path = profile_root / "versions/v1/version.json"
+            version = json.loads(version_path.read_text(encoding="utf-8"))
+            source_mode = version.pop("creation_context")["source_target_mode"]
+            version["schema_version"] = "1.0"
+            version["boundaries"]["target_mode"] = source_mode
+            version_path.write_text(
+                json.dumps(version, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            profile_path = profile_root / "profile.json"
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+            profile["versions"][0]["manifest_sha256"] = sha256(version_path)
+            profile_path.write_text(
+                json.dumps(profile, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            binding_path = root / "legacy-reading/profile-use.json"
+            binding = PROFILE_STORE.bind_profile(
+                home=home,
+                output=binding_path,
+                task_id="legacy-cross-mode",
+                target_mode="reading",
+                profile_id="orbital",
+            )["binding"]
+            validated = PROFILE_STORE.validate_binding(binding_path, home=home)
+
+        self.assertEqual(binding["target_mode"], "reading")
+        self.assertEqual(validated["status"], "valid_reuse")
 
     def test_profile_contains_only_brand_assets_and_sanitized_theme_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -294,6 +437,172 @@ class CorporateProfileStoreTests(unittest.TestCase):
         self.assertTrue(version_files_exist)
         self.assertEqual(rollback["active_version"], 1)
         self.assertEqual(rolled_back["activation"]["reason"], "rollback")
+
+    def test_pointer_write_failure_rolls_back_published_version_immediately(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            home, _ = self.create(root)
+            updated_theme = self.compile_theme(root, SINGLE_HANDOFF)
+            profile_path = home / "profiles/orbital/profile.json"
+            original_atomic_json = PROFILE_STORE._atomic_json
+
+            def fail_profile_pointer(path: Path, value: object) -> None:
+                if path.resolve() == profile_path.resolve():
+                    raise OSError("simulated pointer write failure")
+                original_atomic_json(path, value)
+
+            with mock.patch.object(
+                PROFILE_STORE, "_atomic_json", side_effect=fail_profile_pointer
+            ):
+                with self.assertRaisesRegex(OSError, "simulated pointer write failure"):
+                    PROFILE_STORE.update_profile(
+                        home=home,
+                        profile_id="orbital",
+                        handoff=SINGLE_HANDOFF,
+                        theme=updated_theme,
+                    )
+
+            shown = PROFILE_STORE.show_profile(home, "orbital")["profile"]
+            binding_path = root / "after-failure/profile-use.json"
+            binding = PROFILE_STORE.bind_profile(
+                home=home,
+                output=binding_path,
+                task_id="after-pointer-failure",
+                target_mode="reading",
+                profile_id="orbital",
+            )["binding"]
+            validated = PROFILE_STORE.validate_binding(binding_path, home=home)
+            version_dirs = sorted(
+                path.name for path in (home / "profiles/orbital/versions").iterdir()
+            )
+            transaction_root_exists = (home / ".profile-store-transactions").exists()
+
+        self.assertEqual(shown["active_version"], 1)
+        self.assertEqual(version_dirs, ["v1"])
+        self.assertEqual(binding["version"], 1)
+        self.assertEqual(validated["status"], "valid_reuse")
+        self.assertFalse(transaction_root_exists)
+
+    def test_next_read_recovers_an_interrupted_update_journal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            home, _ = self.create(root)
+            updated_theme = self.compile_theme(root, SINGLE_HANDOFF)
+            profile_path = home / "profiles/orbital/profile.json"
+            original_atomic_json = PROFILE_STORE._atomic_json
+            original_recover = PROFILE_STORE._recover_update_transactions
+            recovery_calls = 0
+
+            def fail_profile_pointer(path: Path, value: object) -> None:
+                if path.resolve() == profile_path.resolve():
+                    raise OSError("simulated process interruption")
+                original_atomic_json(path, value)
+
+            def interrupt_immediate_recovery(store: Path) -> None:
+                nonlocal recovery_calls
+                recovery_calls += 1
+                if recovery_calls == 1:
+                    original_recover(store)
+                    return
+                raise KeyboardInterrupt("simulated process termination before cleanup")
+
+            with mock.patch.object(
+                PROFILE_STORE, "_atomic_json", side_effect=fail_profile_pointer
+            ), mock.patch.object(
+                PROFILE_STORE,
+                "_recover_update_transactions",
+                side_effect=interrupt_immediate_recovery,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "automatic rollback"):
+                    PROFILE_STORE.update_profile(
+                        home=home,
+                        profile_id="orbital",
+                        handoff=SINGLE_HANDOFF,
+                        theme=updated_theme,
+                    )
+
+            self.assertTrue((home / "profiles/orbital/versions/v2").is_dir())
+            recovered = PROFILE_STORE.show_profile(home, "orbital")["profile"]
+            version_dirs = sorted(
+                path.name for path in (home / "profiles/orbital/versions").iterdir()
+            )
+
+        self.assertEqual(recovered["active_version"], 1)
+        self.assertEqual(version_dirs, ["v1"])
+
+    def test_stale_legacy_lock_directory_is_recovered_without_permanent_busy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            home, _ = self.create(root)
+            lock_path = home / ".profile-store.lock"
+            lock_path.unlink()
+            lock_path.mkdir()
+            stale = time.time() - PROFILE_STORE.LEGACY_LOCK_STALE_SECONDS - 5
+            os.utime(lock_path, (stale, stale))
+            shown = PROFILE_STORE.show_profile(home, "orbital")["profile"]
+            lock_is_regular_file = lock_path.is_file() and not lock_path.is_symlink()
+
+        self.assertEqual(shown["active_version"], 1)
+        self.assertTrue(lock_is_regular_file)
+
+    def test_concurrent_update_bind_and_export_share_one_complete_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            home, _ = self.create(root)
+            updated_theme = self.compile_theme(root, SINGLE_HANDOFF)
+            entered = threading.Event()
+            release = threading.Event()
+            original_build = PROFILE_STORE._build_version
+
+            def paused_build(*args, **kwargs):
+                manifest = original_build(*args, **kwargs)
+                entered.set()
+                if not release.wait(10):
+                    raise AssertionError("test did not release the paused update")
+                return manifest
+
+            binding_path = root / "concurrent/profile-use.json"
+            package = root / "concurrent-export.zip"
+            with mock.patch.object(
+                PROFILE_STORE, "_build_version", side_effect=paused_build
+            ), ThreadPoolExecutor(max_workers=3) as pool:
+                update_future = pool.submit(
+                    PROFILE_STORE.update_profile,
+                    home=home,
+                    profile_id="orbital",
+                    handoff=SINGLE_HANDOFF,
+                    theme=updated_theme,
+                )
+                self.assertTrue(entered.wait(10))
+                bind_future = pool.submit(
+                    PROFILE_STORE.bind_profile,
+                    home=home,
+                    output=binding_path,
+                    task_id="concurrent-reader",
+                    target_mode="reading",
+                    profile_id="orbital",
+                )
+                export_future = pool.submit(
+                    PROFILE_STORE.export_profile, home, "orbital", package
+                )
+                time.sleep(0.15)
+                self.assertFalse(bind_future.done())
+                self.assertFalse(export_future.done())
+                release.set()
+                updated = update_future.result(timeout=20)
+                binding = bind_future.result(timeout=20)["binding"]
+                export_future.result(timeout=20)
+
+            validated = PROFILE_STORE.validate_binding(binding_path, home=home)
+            imported_home = root / "imported-concurrent"
+            PROFILE_STORE.import_profile(imported_home, package)
+            imported = PROFILE_STORE.show_profile(imported_home, "orbital")["profile"]
+
+        self.assertEqual(updated["active_version"], 2)
+        self.assertEqual(binding["version"], 2)
+        self.assertEqual(validated["status"], "valid_reuse")
+        self.assertEqual(imported["active_version"], 2)
+        self.assertEqual([item["version"] for item in imported["versions"]], [1, 2])
 
     def test_two_companies_are_strictly_isolated(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

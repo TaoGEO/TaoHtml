@@ -440,6 +440,7 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertIn("windows-smoke:", workflow)
         self.assertIn("runs-on: windows-latest", workflow)
         self.assertIn("--profile static-reference", workflow)
+        self.assertIn("--profile profile-reuse", workflow)
         self.assertIn("render_reference_vi.py", workflow)
         self.assertIn("compile_project_theme.py", workflow)
 

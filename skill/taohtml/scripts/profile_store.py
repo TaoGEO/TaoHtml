@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
+import errno
 import hashlib
 import json
 import os
@@ -13,6 +14,7 @@ import shutil
 import stat
 import sys
 import tempfile
+import threading
 import time
 import unicodedata
 import uuid
@@ -32,7 +34,8 @@ import theme_runtime
 
 STORE_SCHEMA_VERSION = "1.0"
 PROFILE_SCHEMA_VERSION = "1.0"
-VERSION_SCHEMA_VERSION = "1.0"
+VERSION_SCHEMA_VERSION = "1.1"
+LEGACY_VERSION_SCHEMA_VERSION = "1.0"
 BINDING_SCHEMA_VERSION = "1.0"
 PACKAGE_SCHEMA_VERSION = "1.0"
 PROFILE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -48,6 +51,19 @@ WINDOWS_RESERVED = {
 }
 MAX_PACKAGE_FILES = 2048
 MAX_PACKAGE_BYTES = 512 * 1024 * 1024
+LOCK_TIMEOUT_SECONDS = 30.0
+LEGACY_LOCK_STALE_SECONDS = 300.0
+TRANSACTION_SCHEMA_VERSION = "1.0"
+TRANSACTION_KEYS = {
+    "schema_version",
+    "operation",
+    "profile_id",
+    "version",
+    "old_profile_sha256",
+    "new_profile_sha256",
+}
+_THREAD_LOCKS_GUARD = threading.Lock()
+_THREAD_LOCKS: dict[str, threading.Lock] = {}
 PROFILE_KEYS = {
     "schema_version",
     "profile_id",
@@ -71,9 +87,11 @@ VERSION_KEYS = {
     "lifecycle",
     "confirmation_source",
     "boundaries",
+    "creation_context",
     "hashes",
     "assets",
 }
+LEGACY_VERSION_KEYS = VERSION_KEYS - {"creation_context"}
 LIFECYCLE_KEYS = {
     "created_state",
     "created_at",
@@ -91,9 +109,10 @@ CONFIRMATION_KEYS = {
 BOUNDARY_KEYS = {
     "reference_mode",
     "screenshot_visible_only",
-    "target_mode",
     "excluded_content",
 }
+CREATION_CONTEXT_KEYS = {"source_target_mode"}
+LEGACY_BOUNDARY_KEYS = BOUNDARY_KEYS | {"target_mode"}
 HASH_KEYS = {
     "vi_contract_sha256",
     "reference_images_sha256",
@@ -320,27 +339,213 @@ def resolve_home(home: Path | None = None, *, create: bool = False) -> Path:
     return resolved
 
 
-@contextmanager
-def _store_lock(home: Path, timeout: float = 5.0) -> Iterator[None]:
-    lock = home / ".profile-store.lock"
-    deadline = time.monotonic() + timeout
-    while True:
-        try:
-            lock.mkdir()
-            break
-        except FileExistsError:
-            if lock.is_symlink() or not lock.is_dir():
-                raise ValueError(f"Profile store lock path is unsafe: {lock}")
-            if time.monotonic() >= deadline:
-                raise ValueError("Profile store is busy; retry after the active operation finishes")
-            time.sleep(0.05)
+def _local_store_lock(home: Path) -> threading.Lock:
+    key = str(home)
+    with _THREAD_LOCKS_GUARD:
+        return _THREAD_LOCKS.setdefault(key, threading.Lock())
+
+
+def _recover_legacy_lock_directory(lock_path: Path, deadline: float) -> None:
+    while lock_path.is_dir() and not lock_path.is_symlink():
+        entries = list(lock_path.iterdir())
+        age = max(0.0, time.time() - lock_path.stat().st_mtime)
+        if not entries and age >= LEGACY_LOCK_STALE_SECONDS:
+            try:
+                lock_path.rmdir()
+                return
+            except FileNotFoundError:
+                return
+        if time.monotonic() >= deadline:
+            raise ValueError(
+                "Profile store is busy; a recent or non-empty legacy lock directory "
+                "cannot be recovered safely"
+            )
+        time.sleep(0.05)
+
+
+def _open_lock_file(lock_path: Path) -> int:
+    if lock_path.is_symlink():
+        raise ValueError(f"Profile store lock path is unsafe: {lock_path}")
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0)
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
     try:
+        descriptor = os.open(lock_path, flags, 0o600)
+    except OSError as exc:
+        raise ValueError(f"Profile store lock path is unsafe: {lock_path}") from exc
+    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        os.close(descriptor)
+        raise ValueError(f"Profile store lock must be a regular file: {lock_path}")
+    if os.fstat(descriptor).st_size == 0:
+        os.write(descriptor, b"\0")
+        os.fsync(descriptor)
+    return descriptor
+
+
+def _try_os_lock(descriptor: int) -> bool:
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as exc:
+        if exc.errno in {errno.EACCES, errno.EAGAIN}:
+            return False
+        raise
+    return True
+
+
+def _release_os_lock(descriptor: int) -> None:
+    if os.name == "nt":
+        import msvcrt
+
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+
+
+def _remove_managed_directory(path: Path, label: str) -> None:
+    if path.is_symlink() or not path.is_dir():
+        raise ValueError(f"{label} is unsafe: {path}")
+    shutil.rmtree(path)
+
+
+def _recover_abandoned_stages(home: Path) -> None:
+    profiles_root = home / "profiles"
+    if not profiles_root.is_dir():
+        return
+    for path in list(profiles_root.iterdir()):
+        if path.name.startswith((".stage-create-", ".stage-import-")):
+            _remove_managed_directory(path, "Abandoned profile transaction")
+            continue
+        if path.name.startswith(".") or path.is_symlink() or not path.is_dir():
+            continue
+        versions = path / "versions"
+        if versions.is_symlink() or not versions.is_dir():
+            continue
+        for candidate in list(versions.iterdir()):
+            if candidate.name.startswith(".stage-v"):
+                _remove_managed_directory(candidate, "Abandoned version transaction")
+
+
+def _recover_update_transactions(home: Path) -> None:
+    root = home / ".profile-store-transactions"
+    if not root.exists():
+        return
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError(f"Profile transaction root is unsafe: {root}")
+    for transaction in sorted(root.iterdir()):
+        if transaction.is_symlink() or not transaction.is_dir():
+            raise ValueError(f"Profile transaction entry is unsafe: {transaction}")
+        journal_path = transaction / "journal.json"
+        if not journal_path.exists():
+            _remove_managed_directory(transaction, "Incomplete profile transaction")
+            continue
+        if journal_path.is_symlink() or not journal_path.is_file():
+            raise ValueError("Profile update journal is unsafe")
+        journal = _exact_object(
+            _load_json(journal_path, "Profile update journal"),
+            TRANSACTION_KEYS,
+            "profile update journal",
+        )
+        if (
+            journal["schema_version"] != TRANSACTION_SCHEMA_VERSION
+            or journal["operation"] != "update"
+        ):
+            raise ValueError("Profile update journal schema or operation is invalid")
+        profile_id = _profile_id(journal["profile_id"])
+        version = _integer(journal["version"], "profile update journal.version")
+        old_path = transaction / "old-profile.json"
+        new_path = transaction / "new-profile.json"
+        if any(path.is_symlink() or not path.is_file() for path in (old_path, new_path)):
+            raise ValueError("Profile update journal snapshots are missing or unsafe")
+        old_payload = old_path.read_bytes()
+        new_payload = new_path.read_bytes()
+        if (
+            journal["old_profile_sha256"] != _bytes_sha256(old_payload)
+            or journal["new_profile_sha256"] != _bytes_sha256(new_payload)
+        ):
+            raise ValueError("Profile update journal snapshot hashes drifted")
+        profile_root = home / "profiles" / profile_id
+        profile_path = profile_root / "profile.json"
+        if profile_path.is_symlink() or not profile_path.is_file():
+            raise ValueError("Profile update target is missing or unsafe")
+        current_payload = profile_path.read_bytes()
+        current_hash = _bytes_sha256(current_payload)
+        final_version = profile_root / "versions" / f"v{version}"
+        committed = transaction / "committed"
+        if committed.is_symlink():
+            raise ValueError("Profile update commit marker is unsafe")
+        if committed.exists():
+            if (
+                not committed.is_file()
+                or current_hash != journal["new_profile_sha256"]
+                or final_version.is_symlink()
+                or not final_version.is_dir()
+            ):
+                raise ValueError("Committed profile transaction is incomplete")
+            validate_profile(profile_root)
+            _remove_managed_directory(transaction, "Committed profile transaction")
+            continue
+        if current_hash == journal["new_profile_sha256"]:
+            _atomic_write(profile_path, old_payload)
+        elif current_hash != journal["old_profile_sha256"]:
+            raise ValueError("Profile changed outside an incomplete update transaction")
+        if final_version.exists():
+            _remove_managed_directory(final_version, "Uncommitted profile version")
+        validate_profile(profile_root)
+        _remove_managed_directory(transaction, "Rolled-back profile transaction")
+    try:
+        root.rmdir()
+    except OSError:
+        pass
+
+
+def _recover_store(home: Path) -> None:
+    _recover_abandoned_stages(home)
+    _recover_update_transactions(home)
+
+
+@contextmanager
+def _store_lock(
+    home: Path, timeout: float = LOCK_TIMEOUT_SECONDS
+) -> Iterator[None]:
+    deadline = time.monotonic() + timeout
+    local_lock = _local_store_lock(home)
+    if not local_lock.acquire(timeout=max(0.0, timeout)):
+        raise ValueError("Profile store is busy; retry after the active operation finishes")
+    descriptor: int | None = None
+    locked = False
+    try:
+        lock_path = home / ".profile-store.lock"
+        if lock_path.is_symlink():
+            raise ValueError(f"Profile store lock path is unsafe: {lock_path}")
+        if lock_path.is_dir():
+            _recover_legacy_lock_directory(lock_path, deadline)
+        descriptor = _open_lock_file(lock_path)
+        while not _try_os_lock(descriptor):
+            if time.monotonic() >= deadline:
+                raise ValueError(
+                    "Profile store is busy; retry after the active operation finishes"
+                )
+            time.sleep(0.05)
+        locked = True
+        _recover_store(home)
         yield
     finally:
-        try:
-            lock.rmdir()
-        except FileNotFoundError:
-            pass
+        if descriptor is not None:
+            if locked:
+                _release_os_lock(descriptor)
+            os.close(descriptor)
+        local_lock.release()
 
 
 def _theme_fingerprint(theme_dir: Path) -> str:
@@ -577,8 +782,10 @@ def _build_version(
         "boundaries": {
             "reference_mode": "corporate_fidelity",
             "screenshot_visible_only": True,
-            "target_mode": request["target_mode"],
             "excluded_content": EXCLUDED_CONTENT,
+        },
+        "creation_context": {
+            "source_target_mode": request["target_mode"],
         },
         "hashes": {
             "vi_contract_sha256": vi_hash,
@@ -650,13 +857,16 @@ def validate_version(
 ) -> dict[str, Any]:
     if version_root.is_symlink() or not version_root.is_dir():
         raise ValueError(f"Profile version must be a regular directory: {version_root}")
-    manifest = _exact_object(
-        _load_json(version_root / "version.json", "Profile version manifest"),
-        VERSION_KEYS,
-        "version",
-    )
-    if manifest["schema_version"] != VERSION_SCHEMA_VERSION:
-        raise ValueError(f"version.schema_version must be {VERSION_SCHEMA_VERSION}")
+    raw_manifest = _load_json(version_root / "version.json", "Profile version manifest")
+    schema_version = raw_manifest.get("schema_version")
+    if schema_version == VERSION_SCHEMA_VERSION:
+        manifest = _exact_object(raw_manifest, VERSION_KEYS, "version")
+    elif schema_version == LEGACY_VERSION_SCHEMA_VERSION:
+        manifest = _exact_object(raw_manifest, LEGACY_VERSION_KEYS, "legacy version")
+    else:
+        raise ValueError(
+            "version.schema_version must be 1.1 or the compatible legacy 1.0"
+        )
     profile_id = _profile_id(manifest["profile_id"])
     version = _integer(manifest["version"], "version.version")
     display_name = _text(manifest["display_name"], "version.display_name", 80)
@@ -682,16 +892,36 @@ def validate_version(
     if confirmation["method"] != "conversation_ref":
         raise ValueError("Corporate profile confirmation must be conversation-bound")
     _text(confirmation["reference"], "version.confirmation_source.reference")
-    boundaries = _exact_object(manifest["boundaries"], BOUNDARY_KEYS, "version.boundaries")
-    if boundaries != {
-        "reference_mode": "corporate_fidelity",
-        "screenshot_visible_only": True,
-        "target_mode": boundaries.get("target_mode"),
-        "excluded_content": EXCLUDED_CONTENT,
-    }:
+    if schema_version == LEGACY_VERSION_SCHEMA_VERSION:
+        boundaries = _exact_object(
+            manifest["boundaries"], LEGACY_BOUNDARY_KEYS, "legacy version.boundaries"
+        )
+        source_target_mode = boundaries.get("target_mode")
+        expected_boundaries = {
+            "reference_mode": "corporate_fidelity",
+            "screenshot_visible_only": True,
+            "target_mode": source_target_mode,
+            "excluded_content": EXCLUDED_CONTENT,
+        }
+    else:
+        boundaries = _exact_object(
+            manifest["boundaries"], BOUNDARY_KEYS, "version.boundaries"
+        )
+        creation_context = _exact_object(
+            manifest["creation_context"],
+            CREATION_CONTEXT_KEYS,
+            "version.creation_context",
+        )
+        source_target_mode = creation_context["source_target_mode"]
+        expected_boundaries = {
+            "reference_mode": "corporate_fidelity",
+            "screenshot_visible_only": True,
+            "excluded_content": EXCLUDED_CONTENT,
+        }
+    if boundaries != expected_boundaries:
         raise ValueError("Version boundaries drifted from the corporate profile contract")
-    if boundaries["target_mode"] not in {"reading", "presentation"}:
-        raise ValueError("Version target_mode is invalid")
+    if source_target_mode not in {"reading", "presentation"}:
+        raise ValueError("Version source_target_mode is invalid")
     hashes = _exact_object(manifest["hashes"], HASH_KEYS, "version.hashes")
     _validate_asset_manifest(version_root, manifest)
     vi_path = version_root / "assets" / "vi-contract.json"
@@ -717,8 +947,8 @@ def validate_version(
     compilation = bundle.manifest.get("compilation")
     if not isinstance(project, dict) or project.get("reference_mode") != "corporate_fidelity":
         raise ValueError("Profile theme is not corporate_fidelity")
-    if project.get("target_mode") != boundaries["target_mode"]:
-        raise ValueError("Profile theme target_mode drifted")
+    if project.get("target_mode") != source_target_mode:
+        raise ValueError("Profile theme source target_mode provenance drifted")
     if not isinstance(compilation, dict) or compilation.get("vi_contract_sha256") != vi_hash:
         raise ValueError("Profile theme VI provenance drifted")
     compiled_references = compilation.get("reference_images_sha256")
@@ -950,13 +1180,19 @@ def update_profile(
         profile = validate_profile(profile_root)
         if profile["status"] != "active":
             raise ValueError("Archived profiles cannot receive new versions")
+        old_profile_payload = (profile_root / "profile.json").read_bytes()
         version = max(entry["version"] for entry in profile["versions"]) + 1
         final_version = profile_root / "versions" / f"v{version}"
+        transactions_root = store / ".profile-store-transactions"
+        if transactions_root.is_symlink():
+            raise ValueError("Profile transaction root must not be a symlink")
+        transactions_root.mkdir(exist_ok=True)
         transaction = Path(
-            tempfile.mkdtemp(prefix=f".stage-v{version}-", dir=profile_root / "versions")
+            tempfile.mkdtemp(
+                prefix=f"update-{normalized_id}-v{version}-", dir=transactions_root
+            )
         )
         stage = transaction / f"v{version}"
-        moved = False
         try:
             stage.mkdir()
             timestamp = _now()
@@ -979,8 +1215,6 @@ def update_profile(
                 == active_manifest["hashes"]["vi_contract_sha256"]
                 and manifest["hashes"]["reference_images_sha256"]
                 == active_manifest["hashes"]["reference_images_sha256"]
-                and manifest["boundaries"]["target_mode"]
-                == active_manifest["boundaries"]["target_mode"]
             ):
                 raise ValueError("Permanent update must change the confirmed corporate VI or references")
             validate_version(
@@ -989,10 +1223,7 @@ def update_profile(
                 expected_display_name=profile["display_name"],
                 expected_aliases=profile["aliases"],
             )
-            os.replace(stage, final_version)
-            transaction.rmdir()
-            moved = True
-            profile["versions"].append(_version_entry(final_version, manifest))
+            profile["versions"].append(_version_entry(stage, manifest))
             profile["active_version"] = version
             profile["updated_at"] = timestamp
             profile["activation"] = {
@@ -1001,11 +1232,38 @@ def update_profile(
                 "reason": "updated",
                 "sequence": profile["activation"]["sequence"] + 1,
             }
+            new_profile_payload = _json_bytes(profile)
+            _atomic_write(transaction / "old-profile.json", old_profile_payload)
+            _atomic_write(transaction / "new-profile.json", new_profile_payload)
+            _atomic_json(
+                transaction / "journal.json",
+                {
+                    "schema_version": TRANSACTION_SCHEMA_VERSION,
+                    "operation": "update",
+                    "profile_id": normalized_id,
+                    "version": version,
+                    "old_profile_sha256": _bytes_sha256(old_profile_payload),
+                    "new_profile_sha256": _bytes_sha256(new_profile_payload),
+                },
+            )
+            os.replace(stage, final_version)
             _atomic_json(profile_root / "profile.json", profile)
             validate_profile(profile_root)
-        finally:
-            if transaction.exists():
-                shutil.rmtree(transaction)
+            _atomic_write(transaction / "committed", b"committed\n")
+            _remove_managed_directory(transaction, "Completed profile transaction")
+            try:
+                transactions_root.rmdir()
+            except OSError:
+                pass
+        except BaseException:
+            try:
+                _recover_update_transactions(store)
+            except BaseException as recovery_error:
+                raise RuntimeError(
+                    "Profile update failed and automatic rollback could not complete; "
+                    "the recovery journal was preserved"
+                ) from recovery_error
+            raise
     return {
         "schema_version": STORE_SCHEMA_VERSION,
         "status": "updated",
@@ -1020,32 +1278,37 @@ def list_profiles(home: Path | None = None, *, include_archived: bool = False) -
     if not candidate.exists() or not (candidate / "profiles").exists():
         return {"schema_version": STORE_SCHEMA_VERSION, "status": "ok", "profiles": []}
     store = resolve_home(home)
-    profiles = []
-    for _, profile in _validated_profiles(store):
-        if profile["status"] == "archived" and not include_archived:
-            continue
-        profiles.append(
-            {
-                "profile_id": profile["profile_id"],
-                "display_name": profile["display_name"],
-                "aliases": profile["aliases"],
-                "status": profile["status"],
-                "active_version": profile["active_version"],
-                "versions": [entry["version"] for entry in profile["versions"]],
-            }
-        )
+    with _store_lock(store):
+        profiles = []
+        for _, profile in _validated_profiles(store):
+            if profile["status"] == "archived" and not include_archived:
+                continue
+            profiles.append(
+                {
+                    "profile_id": profile["profile_id"],
+                    "display_name": profile["display_name"],
+                    "aliases": profile["aliases"],
+                    "status": profile["status"],
+                    "active_version": profile["active_version"],
+                    "versions": [entry["version"] for entry in profile["versions"]],
+                }
+            )
     return {"schema_version": STORE_SCHEMA_VERSION, "status": "ok", "profiles": profiles}
 
 
 def show_profile(home: Path | None, profile_id: str) -> dict[str, Any]:
     store = resolve_home(home)
     normalized_id = _profile_id(profile_id)
-    root = store / "profiles" / normalized_id
-    profile = validate_profile(root)
-    versions = [
-        _load_json(root / "versions" / f"v{entry['version']}" / "version.json", "Profile version")
-        for entry in profile["versions"]
-    ]
+    with _store_lock(store):
+        root = store / "profiles" / normalized_id
+        profile = validate_profile(root)
+        versions = [
+            _load_json(
+                root / "versions" / f"v{entry['version']}" / "version.json",
+                "Profile version",
+            )
+            for entry in profile["versions"]
+        ]
     return {
         "schema_version": STORE_SCHEMA_VERSION,
         "status": "ok",
@@ -1054,27 +1317,17 @@ def show_profile(home: Path | None, profile_id: str) -> dict[str, Any]:
     }
 
 
-def resolve_profiles(
-    home: Path | None,
+def _resolve_profiles_unlocked(
+    home: Path,
     identities: list[str],
     *,
     include_archived: bool = False,
 ) -> dict[str, Any]:
     if not identities or len(identities) > 12:
         raise ValueError("resolve requires one to twelve explicit identity candidates")
-    candidate = _home_candidate(home)
-    if not candidate.exists() or not (candidate / "profiles").exists():
-        return {
-            "schema_version": STORE_SCHEMA_VERSION,
-            "status": "not_found",
-            "identities": identities,
-            "candidates": [],
-            "requires_single_selection_question": False,
-        }
-    store = resolve_home(home)
     normalized = [_normalize_identity(_text(value, "identity", 80)) for value in identities]
     matches: dict[str, dict[str, Any]] = {}
-    for _, profile in _validated_profiles(store):
+    for _, profile in _validated_profiles(home):
         if profile["status"] == "archived" and not include_archived:
             continue
         keys = _identity_keys(profile)
@@ -1109,6 +1362,30 @@ def resolve_profiles(
     }
 
 
+def resolve_profiles(
+    home: Path | None,
+    identities: list[str],
+    *,
+    include_archived: bool = False,
+) -> dict[str, Any]:
+    if not identities or len(identities) > 12:
+        raise ValueError("resolve requires one to twelve explicit identity candidates")
+    candidate = _home_candidate(home)
+    if not candidate.exists() or not (candidate / "profiles").exists():
+        return {
+            "schema_version": STORE_SCHEMA_VERSION,
+            "status": "not_found",
+            "identities": identities,
+            "candidates": [],
+            "requires_single_selection_question": False,
+        }
+    store = resolve_home(home)
+    with _store_lock(store):
+        return _resolve_profiles_unlocked(
+            store, identities, include_archived=include_archived
+        )
+
+
 def _selected_profile(
     home: Path,
     *,
@@ -1121,7 +1398,7 @@ def _selected_profile(
         profile = validate_profile(root)
         resolution = {"identities": identities or [], "basis": ["explicit_selection"]}
         return root, profile, resolution
-    result = resolve_profiles(home, identities or [])
+    result = _resolve_profiles_unlocked(home, identities or [])
     if result["status"] != "resolved":
         raise ValueError(
             "Corporate identity did not resolve uniquely; ask one selection question when candidates are ambiguous"
@@ -1150,55 +1427,54 @@ def bind_profile(
     store = resolve_home(home)
     if (identities is None) == (profile_id is None):
         raise ValueError("bind requires exactly one of identities or profile_id")
-    root, profile, resolution = _selected_profile(
-        store, identities=identities, profile_id=profile_id
-    )
-    if profile["status"] != "active":
-        raise ValueError("Archived profiles cannot be bound")
     if target_mode not in {"reading", "presentation"}:
         raise ValueError("target_mode must be reading or presentation")
-    version = profile["active_version"]
-    version_root = root / "versions" / f"v{version}"
-    manifest = validate_version(
-        version_root,
-        expected_profile_id=profile["profile_id"],
-        expected_display_name=profile["display_name"],
-        expected_aliases=profile["aliases"],
-    )
-    if not temporary_override and manifest["boundaries"]["target_mode"] != target_mode:
-        raise ValueError(
-            "Current task mode conflicts with the active profile theme; do not silently reuse it"
-        )
-    customer_notice = (
-        f"本次不沿用【{profile['display_name']} 企业模板 v{version}】；默认档案保持不变。"
-        if temporary_override
-        else f"本次沿用【{profile['display_name']} 企业模板 v{version}】；如需更换请直接说明。"
-    )
-    binding = {
-        "schema_version": BINDING_SCHEMA_VERSION,
-        "task_id": _text(task_id, "task_id", 160),
-        "profile_id": profile["profile_id"],
-        "profile_display_name": profile["display_name"],
-        "version": version,
-        "active_version_at_bind": version,
-        "target_mode": target_mode,
-        "theme_home_path": f"profiles/{profile['profile_id']}/versions/v{version}/assets/project-theme",
-        "theme_fingerprint": manifest["hashes"]["theme_fingerprint"],
-        "vi_contract_sha256": manifest["hashes"]["vi_contract_sha256"],
-        "reference_images_sha256": manifest["hashes"]["reference_images_sha256"],
-        "profile_record_sha256": _sha256(root / "profile.json"),
-        "version_manifest_sha256": _sha256(version_root / "version.json"),
-        "resolution": resolution,
-        "temporary_override": bool(temporary_override),
-        "customer_notice": customer_notice,
-        "bound_at": _now(),
-    }
     destination = output.expanduser()
-    if destination.exists() and not replace:
-        raise ValueError(f"Binding output already exists: {destination}")
-    if destination.is_symlink():
-        raise ValueError(f"Binding output must not be a symlink: {destination}")
-    _atomic_json(destination, binding)
+    if destination.resolve().is_relative_to(store):
+        raise ValueError("Binding output must stay outside TAOHTML_HOME")
+    with _store_lock(store):
+        root, profile, resolution = _selected_profile(
+            store, identities=identities, profile_id=profile_id
+        )
+        if profile["status"] != "active":
+            raise ValueError("Archived profiles cannot be bound")
+        version = profile["active_version"]
+        version_root = root / "versions" / f"v{version}"
+        manifest = validate_version(
+            version_root,
+            expected_profile_id=profile["profile_id"],
+            expected_display_name=profile["display_name"],
+            expected_aliases=profile["aliases"],
+        )
+        customer_notice = (
+            f"本次不沿用【{profile['display_name']} 企业模板 v{version}】；默认档案保持不变。"
+            if temporary_override
+            else f"本次沿用【{profile['display_name']} 企业模板 v{version}】；如需更换请直接说明。"
+        )
+        binding = {
+            "schema_version": BINDING_SCHEMA_VERSION,
+            "task_id": _text(task_id, "task_id", 160),
+            "profile_id": profile["profile_id"],
+            "profile_display_name": profile["display_name"],
+            "version": version,
+            "active_version_at_bind": version,
+            "target_mode": target_mode,
+            "theme_home_path": f"profiles/{profile['profile_id']}/versions/v{version}/assets/project-theme",
+            "theme_fingerprint": manifest["hashes"]["theme_fingerprint"],
+            "vi_contract_sha256": manifest["hashes"]["vi_contract_sha256"],
+            "reference_images_sha256": manifest["hashes"]["reference_images_sha256"],
+            "profile_record_sha256": _sha256(root / "profile.json"),
+            "version_manifest_sha256": _sha256(version_root / "version.json"),
+            "resolution": resolution,
+            "temporary_override": bool(temporary_override),
+            "customer_notice": customer_notice,
+            "bound_at": _now(),
+        }
+        if destination.exists() and not replace:
+            raise ValueError(f"Binding output already exists: {destination}")
+        if destination.is_symlink():
+            raise ValueError(f"Binding output must not be a symlink: {destination}")
+        _atomic_json(destination, binding)
     return {
         "schema_version": STORE_SCHEMA_VERSION,
         "status": "bound",
@@ -1212,58 +1488,93 @@ def validate_binding(
     *,
     home: Path | None = None,
 ) -> dict[str, Any]:
-    path = _regular_file(binding_path, "Profile-use binding")
-    binding = _exact_object(
-        _load_json(path, "Profile-use binding"), BINDING_KEYS, "binding"
-    )
-    if binding["schema_version"] != BINDING_SCHEMA_VERSION:
-        raise ValueError(f"binding.schema_version must be {BINDING_SCHEMA_VERSION}")
     store = resolve_home(home)
-    profile_id = _profile_id(binding["profile_id"])
-    root = store / "profiles" / profile_id
-    profile = validate_profile(root)
-    version = _integer(binding["version"], "binding.version")
-    if profile["status"] != "active":
-        raise ValueError("Bound profile is no longer active")
-    if binding["active_version_at_bind"] != version or profile["active_version"] != version:
-        raise ValueError("Bound profile active version changed after binding")
-    if binding["profile_display_name"] != profile["display_name"]:
-        raise ValueError("Bound corporate identity drifted")
-    if binding["profile_record_sha256"] != _sha256(root / "profile.json"):
-        raise ValueError("Bound profile record changed after binding")
-    version_root = root / "versions" / f"v{version}"
-    manifest = validate_version(
-        version_root,
-        expected_profile_id=profile_id,
-        expected_display_name=profile["display_name"],
-        expected_aliases=profile["aliases"],
-    )
-    if binding["version_manifest_sha256"] != _sha256(version_root / "version.json"):
-        raise ValueError("Bound version manifest changed after binding")
-    if binding["theme_fingerprint"] != manifest["hashes"]["theme_fingerprint"]:
-        raise ValueError("Bound theme fingerprint changed after binding")
-    if binding["vi_contract_sha256"] != manifest["hashes"]["vi_contract_sha256"]:
-        raise ValueError("Bound VI hash changed after binding")
-    if binding["reference_images_sha256"] != manifest["hashes"]["reference_images_sha256"]:
-        raise ValueError("Bound reference hashes changed after binding")
-    expected_home_path = f"profiles/{profile_id}/versions/v{version}/assets/project-theme"
-    if binding["theme_home_path"] != expected_home_path:
-        raise ValueError("Bound theme path drifted")
-    if binding["target_mode"] not in {"reading", "presentation"}:
-        raise ValueError("Binding target_mode is invalid")
-    if not binding["temporary_override"] and binding["target_mode"] != manifest["boundaries"]["target_mode"]:
-        raise ValueError("Binding target_mode no longer matches the profile theme")
-    resolution = _exact_object(binding["resolution"], RESOLUTION_KEYS, "binding.resolution")
-    if not isinstance(resolution["identities"], list) or not isinstance(resolution["basis"], list) or not resolution["basis"]:
-        raise ValueError("Binding resolution basis is incomplete")
-    _text(binding["task_id"], "binding.task_id")
-    _text(binding["customer_notice"], "binding.customer_notice", 240)
-    _text(binding["bound_at"], "binding.bound_at")
+    with _store_lock(store):
+        path = _regular_file(binding_path, "Profile-use binding")
+        binding = _exact_object(
+            _load_json(path, "Profile-use binding"), BINDING_KEYS, "binding"
+        )
+        if binding["schema_version"] != BINDING_SCHEMA_VERSION:
+            raise ValueError(f"binding.schema_version must be {BINDING_SCHEMA_VERSION}")
+        profile_id = _profile_id(binding["profile_id"])
+        root = store / "profiles" / profile_id
+        profile = validate_profile(root)
+        version = _integer(binding["version"], "binding.version")
+        if profile["status"] != "active":
+            raise ValueError("Bound profile is no longer active")
+        if binding["active_version_at_bind"] != version or profile["active_version"] != version:
+            raise ValueError("Bound profile active version changed after binding")
+        if binding["profile_display_name"] != profile["display_name"]:
+            raise ValueError("Bound corporate identity drifted")
+        if binding["profile_record_sha256"] != _sha256(root / "profile.json"):
+            raise ValueError("Bound profile record changed after binding")
+        version_root = root / "versions" / f"v{version}"
+        manifest = validate_version(
+            version_root,
+            expected_profile_id=profile_id,
+            expected_display_name=profile["display_name"],
+            expected_aliases=profile["aliases"],
+        )
+        if binding["version_manifest_sha256"] != _sha256(version_root / "version.json"):
+            raise ValueError("Bound version manifest changed after binding")
+        if binding["theme_fingerprint"] != manifest["hashes"]["theme_fingerprint"]:
+            raise ValueError("Bound theme fingerprint changed after binding")
+        if binding["vi_contract_sha256"] != manifest["hashes"]["vi_contract_sha256"]:
+            raise ValueError("Bound VI hash changed after binding")
+        if binding["reference_images_sha256"] != manifest["hashes"]["reference_images_sha256"]:
+            raise ValueError("Bound reference hashes changed after binding")
+        expected_home_path = f"profiles/{profile_id}/versions/v{version}/assets/project-theme"
+        if binding["theme_home_path"] != expected_home_path:
+            raise ValueError("Bound theme path drifted")
+        if binding["target_mode"] not in {"reading", "presentation"}:
+            raise ValueError("Binding target_mode is invalid")
+        resolution = _exact_object(binding["resolution"], RESOLUTION_KEYS, "binding.resolution")
+        if not isinstance(resolution["identities"], list) or not isinstance(resolution["basis"], list) or not resolution["basis"]:
+            raise ValueError("Binding resolution basis is incomplete")
+        _text(binding["task_id"], "binding.task_id")
+        _text(binding["customer_notice"], "binding.customer_notice", 240)
+        _text(binding["bound_at"], "binding.bound_at")
+        theme_path = root / "versions" / f"v{version}" / "assets" / "project-theme"
     return {
         "schema_version": STORE_SCHEMA_VERSION,
         "status": "valid_override" if binding["temporary_override"] else "valid_reuse",
         "binding": binding,
-        "theme_path": root / "versions" / f"v{version}" / "assets" / "project-theme",
+        "theme_path": theme_path,
+    }
+
+
+def _activate_version_unlocked(
+    store: Path, normalized_id: str, target: int, reason: str
+) -> dict[str, Any]:
+    root = store / "profiles" / normalized_id
+    profile = validate_profile(root)
+    if profile["status"] != "active":
+        raise ValueError("Archived profiles cannot change active version")
+    validate_version(
+        root / "versions" / f"v{target}",
+        expected_profile_id=normalized_id,
+        expected_display_name=profile["display_name"],
+        expected_aliases=profile["aliases"],
+    )
+    previous = profile["active_version"]
+    timestamp = _now()
+    profile["active_version"] = target
+    profile["updated_at"] = timestamp
+    profile["activation"] = {
+        "version": target,
+        "activated_at": timestamp,
+        "reason": reason,
+        "sequence": profile["activation"]["sequence"] + 1,
+    }
+    _atomic_json(root / "profile.json", profile)
+    validate_profile(root)
+    return {
+        "schema_version": STORE_SCHEMA_VERSION,
+        "status": "activated",
+        "profile_id": normalized_id,
+        "previous_version": previous,
+        "active_version": target,
+        "reason": reason,
     }
 
 
@@ -1276,40 +1587,11 @@ def activate_version(
 ) -> dict[str, Any]:
     store = resolve_home(home)
     normalized_id = _profile_id(profile_id)
+    target = _integer(version, "version")
     if reason not in {"manual", "rollback"}:
         raise ValueError("Activation reason must be manual or rollback")
     with _store_lock(store):
-        root = store / "profiles" / normalized_id
-        profile = validate_profile(root)
-        if profile["status"] != "active":
-            raise ValueError("Archived profiles cannot change active version")
-        target = _integer(version, "version")
-        validate_version(
-            root / "versions" / f"v{target}",
-            expected_profile_id=normalized_id,
-            expected_display_name=profile["display_name"],
-            expected_aliases=profile["aliases"],
-        )
-        previous = profile["active_version"]
-        timestamp = _now()
-        profile["active_version"] = target
-        profile["updated_at"] = timestamp
-        profile["activation"] = {
-            "version": target,
-            "activated_at": timestamp,
-            "reason": reason,
-            "sequence": profile["activation"]["sequence"] + 1,
-        }
-        _atomic_json(root / "profile.json", profile)
-        validate_profile(root)
-    return {
-        "schema_version": STORE_SCHEMA_VERSION,
-        "status": "activated",
-        "profile_id": normalized_id,
-        "previous_version": previous,
-        "active_version": target,
-        "reason": reason,
-    }
+        return _activate_version_unlocked(store, normalized_id, target, reason)
 
 
 def rollback_profile(
@@ -1319,19 +1601,21 @@ def rollback_profile(
 ) -> dict[str, Any]:
     store = resolve_home(home)
     normalized_id = _profile_id(profile_id)
-    profile = validate_profile(store / "profiles" / normalized_id)
-    if version is None:
-        candidates = [
-            entry["version"]
-            for entry in profile["versions"]
-            if entry["version"] < profile["active_version"]
-        ]
-        if not candidates:
-            raise ValueError("No earlier corporate profile version is available")
-        version = max(candidates)
-    if version == profile["active_version"]:
-        raise ValueError("Rollback target must differ from the active version")
-    return activate_version(home, normalized_id, version, reason="rollback")
+    with _store_lock(store):
+        profile = validate_profile(store / "profiles" / normalized_id)
+        if version is None:
+            candidates = [
+                entry["version"]
+                for entry in profile["versions"]
+                if entry["version"] < profile["active_version"]
+            ]
+            if not candidates:
+                raise ValueError("No earlier corporate profile version is available")
+            version = max(candidates)
+        target = _integer(version, "version")
+        if target == profile["active_version"]:
+            raise ValueError("Rollback target must differ from the active version")
+        return _activate_version_unlocked(store, normalized_id, target, "rollback")
 
 
 def archive_profile(home: Path | None, profile_id: str) -> dict[str, Any]:
@@ -1385,39 +1669,46 @@ def _zip_info(name: str) -> zipfile.ZipInfo:
 def export_profile(home: Path | None, profile_id: str, output: Path) -> dict[str, Any]:
     store = resolve_home(home)
     normalized_id = _profile_id(profile_id)
-    root = store / "profiles" / normalized_id
-    validate_profile(root)
     destination = output.expanduser()
-    if destination.exists() or destination.is_symlink():
-        raise ValueError(f"Export output already exists: {destination}")
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    records: list[dict[str, object]] = []
-    payloads: dict[str, bytes] = {}
-    for path in sorted(root.rglob("*")):
-        if path.is_symlink():
-            raise ValueError(f"Profile export refuses symlinks: {path}")
-        if not path.is_file():
-            continue
-        name = f"profile/{path.relative_to(root).as_posix()}"
-        payload = path.read_bytes()
-        payloads[name] = payload
-        records.append({"path": name, "sha256": _bytes_sha256(payload), "size": len(payload)})
-    package = {
-        "schema_version": PACKAGE_SCHEMA_VERSION,
-        "profile_id": normalized_id,
-        "exported_at": _now(),
-        "files": records,
-    }
-    temporary = destination.with_name(f".{destination.name}.tmp-{uuid.uuid4().hex}")
-    try:
-        with zipfile.ZipFile(temporary, "x") as archive:
-            archive.writestr(_zip_info("taohtml-profile-package.json"), _json_bytes(package))
-            for name in sorted(payloads):
-                archive.writestr(_zip_info(name), payloads[name])
-        os.replace(temporary, destination)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+    if destination.resolve().is_relative_to(store):
+        raise ValueError("Export output must stay outside TAOHTML_HOME")
+    with _store_lock(store):
+        root = store / "profiles" / normalized_id
+        validate_profile(root)
+        if destination.exists() or destination.is_symlink():
+            raise ValueError(f"Export output already exists: {destination}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        records: list[dict[str, object]] = []
+        payloads: dict[str, bytes] = {}
+        for path in sorted(root.rglob("*")):
+            if path.is_symlink():
+                raise ValueError(f"Profile export refuses symlinks: {path}")
+            if not path.is_file():
+                continue
+            name = f"profile/{path.relative_to(root).as_posix()}"
+            payload = path.read_bytes()
+            payloads[name] = payload
+            records.append(
+                {"path": name, "sha256": _bytes_sha256(payload), "size": len(payload)}
+            )
+        package = {
+            "schema_version": PACKAGE_SCHEMA_VERSION,
+            "profile_id": normalized_id,
+            "exported_at": _now(),
+            "files": records,
+        }
+        temporary = destination.with_name(f".{destination.name}.tmp-{uuid.uuid4().hex}")
+        try:
+            with zipfile.ZipFile(temporary, "x") as archive:
+                archive.writestr(
+                    _zip_info("taohtml-profile-package.json"), _json_bytes(package)
+                )
+                for name in sorted(payloads):
+                    archive.writestr(_zip_info(name), payloads[name])
+            os.replace(temporary, destination)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
     return {
         "schema_version": STORE_SCHEMA_VERSION,
         "status": "exported",
