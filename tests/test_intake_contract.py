@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -23,18 +24,139 @@ ENVIRONMENT = (SKILL_DIR / "references" / "environment-preflight.md").read_text(
 AUTHORIZATION = (
     SKILL_DIR / "references" / "production-authorization.md"
 ).read_text(encoding="utf-8")
+HANDOFF = (SKILL_DIR / "references" / "project-handoff.md").read_text(
+    encoding="utf-8"
+)
+RUNTIME = (SKILL_DIR / "references" / "runtime-contract.md").read_text(
+    encoding="utf-8"
+)
+PROFILE = (SKILL_DIR / "references" / "profile-memory.md").read_text(
+    encoding="utf-8"
+)
+PUBLIC_WORKFLOW = (ROOT / "docs" / "workflow.md").read_text(encoding="utf-8")
 
 
 class IntakeContractTests(unittest.TestCase):
     def test_fresh_placeholder_cannot_bind_stale_workspace_prompt(self) -> None:
         combined = SKILL + INTAKE
-        self.assertIn("Start every new invocation with a route handshake", SKILL)
+        self.assertIn(
+            "Start every invocation that will create or revise HTML with a route handshake",
+            SKILL,
+        )
         self.assertIn("do not scan the workspace for a presumed input", SKILL)
         self.assertIn("`input/prompt.md`", INTAKE)
         self.assertIn("is never a binding", INTAKE)
         self.assertIn("do not scan for candidates at all", INTAKE)
         self.assertIn("show exactly one route choice", INTAKE)
         self.assertIn("Do not inspect the workspace", combined)
+
+    def test_project_intent_overlay_does_not_add_a_fourth_content_route(self) -> None:
+        entry_routes = SKILL.split("## Entry Routes", 1)[1].split(
+            "## Project Handoff Overlay", 1
+        )[0]
+        self.assertEqual(
+            re.findall(r"^\d+\. \*\*", entry_routes, flags=re.MULTILINE),
+            ["1. **", "2. **", "3. **"],
+        )
+        for intent in ("new_build", "review_only", "continue_existing"):
+            self.assertIn(intent, HANDOFF)
+        self.assertIn("it is not a fourth content entry", HANDOFF.replace("\n", " "))
+        self.assertIn("does not add a fourth content entry", SKILL.replace("\n", " "))
+        self.assertIn("references/project-handoff.md", SKILL)
+
+    def test_read_only_handoff_is_zero_question_and_non_producing(self) -> None:
+        self.assertIn("Default a `review_only` handoff to **0 clarification questions**", HANDOFF)
+        self.assertIn("without turning the read-only response into a question", HANDOFF)
+        self.assertIn("Do not restart the full route interview", HANDOFF)
+        self.assertIn("or create/modify\nHTML", HANDOFF)
+        self.assertIn("does not ask an entry-route question", SKILL)
+        self.assertIn("默认 0 个澄清问题", PUBLIC_WORKFLOW)
+        self.assertIn("不生成材料理解摘要、设计简报或 HTML", PUBLIC_WORKFLOW)
+
+    def test_handoff_source_roles_and_availability_are_explicit(self) -> None:
+        for role in (
+            "original_customer_material",
+            "secondary_handoff_summary",
+            "current_artifact",
+            "visual_reference",
+            "agent_generated_material",
+            "described_unavailable_material",
+        ):
+            self.assertIn(role, HANDOFF)
+            self.assertIn(role, MATERIAL)
+            self.assertIn(role, BRIEF)
+        for status in (
+            "workspace_readable",
+            "platform_visible_not_retrieved",
+            "handoff_record_only",
+            "confirmed_missing",
+            "not_yet_verified",
+        ):
+            self.assertIn(status, HANDOFF)
+            self.assertIn(status, MATERIAL)
+            self.assertIn(status, BRIEF)
+        self.assertIn("does not replace the original material", HANDOFF)
+        self.assertIn("not where its claims came from", HANDOFF)
+
+    def test_handoff_candidate_discovery_stays_source_bound_and_narrow(self) -> None:
+        self.assertIn("Apply the existing source-binding rules without exception", HANDOFF)
+        self.assertIn("must not read that candidate\nfirst", HANDOFF)
+        self.assertIn("Do not recursively scan a home directory", HANDOFF)
+        self.assertIn("Do not recursively scan a home directory", INTAKE)
+        self.assertIn("does not prove that the material was\ncleaned", HANDOFF)
+        self.assertIn("without converting it to `confirmed_missing`", HANDOFF)
+
+    def test_continuation_uses_delta_intake_and_protects_meaning(self) -> None:
+        self.assertIn("Perform delta intake", HANDOFF)
+        self.assertIn("ask only that\nsingle largest gap", HANDOFF)
+        self.assertIn("do not replay the full interview", SKILL)
+        for safe_change in (
+            "layout, spacing, typography, color",
+            "Runtime-compatible navigation, technical, portability",
+            "local wording improvements",
+        ):
+            self.assertIn(safe_change, HANDOFF)
+        for protected_change in (
+            "real data, quotations, citations, source attribution",
+            "which evidence supports which claim",
+            "a core viewpoint, main conclusion, scope promise",
+        ):
+            self.assertIn(protected_change, HANDOFF)
+        self.assertIn("Restore the original source or obtain explicit user confirmation", HANDOFF)
+        self.assertIn("Do not turn every unavailable original into a\nblock", HANDOFF)
+        self.assertIn("delivery-time `《待核实内容清单》`", HANDOFF)
+        self.assertIn("display and confirm the complete current brief", HANDOFF)
+        self.assertIn("current-task contract in\n`production-authorization.md`", HANDOFF)
+
+    def test_handoff_readiness_and_operation_claims_require_current_evidence(self) -> None:
+        for marker in (
+            "**found**",
+            "**can be previewed**",
+            "**ready**",
+            "**formally deliverable**",
+            "strict offline asset QA",
+            "browser preflight/HTML QA",
+            "current_artifact_tested",
+            "current_runtime_contract",
+        ):
+            self.assertIn(marker, HANDOFF)
+        self.assertIn("Do not repeat an untested control description", HANDOFF)
+        self.assertIn("current HTML tested in browser QA", SKILL)
+        self.assertIn("不能说“已就绪”“QA 已通过”或“可正式交付”", PUBLIC_WORKFLOW)
+
+    def test_handoff_overlay_preserves_runtime_and_profile_boundaries(self) -> None:
+        self.assertIn("does not add Runtime capabilities", HANDOFF)
+        self.assertIn("create a new\ncorporate Profile data category", HANDOFF)
+        self.assertIn("profile isolation and validation", HANDOFF)
+        self.assertIn("Do not promise dual-screen presenter view", RUNTIME)
+        self.assertIn("Never store report prose, project goals, audience, evidence", PROFILE)
+        self.assertIn("six-\nquestion limits", HANDOFF)
+
+    def test_handoff_contract_is_not_tied_to_one_filename_path_or_company(self) -> None:
+        self.assertNotRegex(HANDOFF, r"[A-Za-z]:\\\\")
+        self.assertIn("Do not use filenames", HANDOFF)
+        self.assertIn("operating-system paths", HANDOFF)
+        self.assertIn("company names, or a fixed keyword list", HANDOFF)
 
     def test_recent_agent_options_can_bind_a_compact_answer(self) -> None:
         self.assertIn("latest_options = decision id", INTAKE)
@@ -47,7 +169,10 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("current_upload_or_user_explicit", INTAKE)
         self.assertIn("task_instruction_explicit", INTAKE)
         self.assertIn("candidate_confirmed", INTAKE)
-        self.assertIn("source identity/path | source_binding | binding reason", INTAKE)
+        self.assertIn(
+            "source identity/path | source_binding | source role | availability status",
+            INTAKE,
+        )
         self.assertIn("conventional filename such as `input/prompt.md`", INTAKE)
         self.assertIn("the user uploads it now or explicitly names it", INTAKE)
         self.assertIn("source_binding", MATERIAL)

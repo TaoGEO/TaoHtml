@@ -1,6 +1,6 @@
 # Intake Workflow
 
-Use this workflow after identifying the available input and before editing or creating HTML. Apply it to every route, with the source gate appropriate to that route.
+Use this workflow after identifying the available input and before editing or creating HTML. Apply it to every route, with the source gate appropriate to that route. For an existing project, first read `project-handoff.md` and set the independent `new_build | review_only | continue_existing` task-intent overlay. That overlay does not add a fourth content route.
 
 ## State Machine
 
@@ -8,6 +8,7 @@ Move through these states in order:
 
 | State | Result | Exit condition |
 |---|---|---|
+| H0 Task intent | New build, read-only review, or continuation is recorded independently from content route | The user's requested action establishes `new_build`, `review_only`, or `continue_existing` |
 | S0 Route handshake | Idea, Word/PDF, or PPT/HTML is bound to this invocation | A specific topic, an eligible bound source, or the user's answer to the latest active route options establishes the route |
 | S0A Startup completion | Reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
@@ -23,6 +24,11 @@ Apply the source gate as follows:
 - **Word/PDF**: show the Material Understanding Summary defined in `material-understanding.md` and wait for confirmation or correction.
 - **PPT/HTML**: show the same source-grounded Material Understanding Summary, preserve its confirmed core viewpoints, and resolve faithful migration versus reorganization only if both remain reasonable.
 
+For `review_only`, stop after the read-only role/availability map in
+`project-handoff.md`; do not enter S0-S6 merely to read the handoff. For
+`continue_existing`, reuse still-supported source interpretations and decisions, then
+apply only the affected source gate and delta intake. Do not replay the full intake.
+
 Never write a Report Design Brief while a minimum hard-boundary gap remains. Never write HTML before the current brief is explicitly confirmed. Ordinary absent facts are not a reason to stop: plan reasonable creative supplements, finish the report, and disclose the generated details at delivery.
 On the static-reference route, never write the brief before the current VI board is confirmed.
 
@@ -34,9 +40,11 @@ task. Do not treat a formal or nearly finished HTML deck as a confirmation previ
 
 ## New Invocation Handshake
 
-Every new explicit TaoHtml invocation starts at S0 even when the platform requires
-the user to attach some text to send the Skill. Establish only the current task entry
-in this first phase.
+Every `new_build` or `continue_existing` TaoHtml invocation that will create or revise
+HTML starts at S0 unless the route is already established by the current bound
+handoff. A `review_only` request records the route when the available handoff proves
+it and otherwise leaves it unresolved without asking the three-route question.
+Establish only the current task entry in this first phase.
 
 Treat the current message as route-bearing only when it contains at least one of:
 
@@ -46,11 +54,12 @@ Treat the current message as route-bearing only when it contains at least one of
   for this task and eligible under `Source Binding` below.
 
 When either is present, infer the matching route and continue to the next genuinely
-missing startup decision without asking for the route again. When neither is present,
-show exactly one route choice with **Idea only / Word or PDF / Existing PPT or HTML**,
-record that option set as `latest_options`, and stop. Do not inspect the workspace,
-read `input/prompt.md`, summarize materials, draft a brief, or create HTML while S0 is
-unresolved.
+missing startup decision without asking for the route again. For a new build or
+continuation, when neither is present, show exactly one route choice with **Idea only
+/ Word or PDF / Existing PPT or HTML**, record that option set as `latest_options`,
+and stop. Do not inspect the workspace, read `input/prompt.md`, summarize materials,
+draft a brief, or create HTML while S0 is unresolved. A read-only handoff is the sole
+exception to the route question, not a fourth route.
 
 Judge semantic binding from the message's task meaning, not from a blacklist or an
 enumeration of tokens. Text that merely enables sending, acknowledges the Skill, or
@@ -93,15 +102,36 @@ route establishment, do not scan for candidates at all. After route establishmen
 candidate discovery is allowed only to present the path for confirmation; do not read
 or process its content before that confirmation.
 
+A read-only handoff whose content route remains unresolved may inspect only the
+task-scoped attachment or directory metadata that the user explicitly bound for the
+handoff audit, as defined in `project-handoff.md`. It may present an exact candidate
+for confirmation but still may not read candidate content or broaden the search.
+
+Candidate discovery must also stay inside task-scoped metadata or a location the
+user explicitly placed in scope. Do not recursively scan a home directory, Desktop,
+Downloads, platform cache, cloud-sync root, unrelated workspace, or other broad user
+location. A shell command that finds no match in one checked location is not evidence
+that the item was cleaned, deleted, or permanently lost. Apply the availability
+states in `project-handoff.md`; keep it `not_yet_verified` or
+`handoff_record_only` unless the user or an authoritative platform/source state
+confirms the exact item is missing.
+
 For every material actually used, record:
 
 ```text
-source identity/path | source_binding | binding reason | bound conversation/task turn
+source identity/path | source_binding | source role | availability status |
+inspection coverage | binding reason | bound conversation/task turn
 ```
 
 Carry these fields into the Material Understanding Summary and the Report Design
 Brief's source records. A customer-bound or independently verified source remains a
 real source and must never be relabeled as a creative supplement.
+
+For handoff work, use the six source roles and five availability states defined in
+`project-handoff.md`. A secondary handoff summary can establish what was previously
+reported, and a current artifact can establish what is presently rendered; neither
+establishes the provenance of underlying claims without the original source or an
+explicit confirmation permitted by that reference.
 
 ## Decision Ledger
 
@@ -117,6 +147,11 @@ known | confirmed | inferred | missing
 - **missing**: an outcome-changing decision or hard-boundary fact that is not yet known and cannot be safely delegated.
 
 Rebuild the ledger after reading each source and update it after every answer. Move information instead of copying it across buckets. Treat a stated route, use mode, audience, desired outcome, content length, real action path, or hard presentation duration as `known`; do not ask for or confirm the same information again. Do not ask about any other `known`, `confirmed`, or safely `inferred` item.
+
+For `continue_existing`, seed the ledger from still-readable verified artifacts and
+the handoff role/availability map. Preserve a distinction between inherited verified
+facts, secondary claims, and currently unavailable material. Ask only about a delta
+that can change the requested result; do not turn takeover into a fresh interview.
 
 The design ledger is not the delivery verification list. During production, maintain a separate creative-supplement ledger with `page/content | supplement type | source status | suggested action`. A missing ordinary scene, number, viewpoint, or expression may enter this ledger directly instead of becoming another intake question. Customer-provided and independently verified facts stay in `known` or `confirmed`; never relabel them as creative supplements.
 
@@ -190,6 +225,14 @@ Before asking, re-read the conversation, available source, ledger, prior attempt
 2. Resolve S0 first, then any missing startup choice according to `Startup Decisions`; after startup, rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
 3. Ask only the largest current gap whose answer would change the report design.
 
+For continuation, remove every unchanged inherited decision before ranking gaps. If
+the requested revision is limited to layout, technical behavior, portability, or
+meaning-preserving local expression, do not ask for unavailable originals merely to
+repeat the prior intake. If the revision changes real data, provenance, evidence
+relationships, identity, achieved outcomes, a core conclusion, scope promise, or
+responsibility boundary, apply the recovery/explicit-confirmation boundary in
+`project-handoff.md`.
+
 Ask exactly one decision question per round. Do not pack independent questionnaire fields together. Offer 2-3 options only when they are real alternatives and state their design impact briefly.
 
 Treat "decide for me", "not important", or equivalent wording as delegation: choose a reasonable low-risk default, move it to `inferred`, and do not ask again.
@@ -199,6 +242,10 @@ For a missing conversion action path, delegation authorizes TaoHtml to locate an
 ## Question Budget And Stop Rules
 
 Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt and the one-time ambiguous reference-mode choice as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
+
+A read-only handoff uses zero clarification questions and does not start an intake
+cycle. A continuation delta uses this same budget and stop policy; it does not receive
+extra questions for previously answered startup or design decisions.
 
 - Allow **0 clarification questions** when the input already passes the source and design-ready gates.
 - Treat **3-5 clarification questions** as the ordinary target, not a quota.
@@ -266,6 +313,7 @@ Treat a project as design-ready when:
 - On the profile-reuse route, the current task binding validates against the active profile/version and existing project-theme loader. It substitutes only the repeated VI step; it does not count as Report Design Brief confirmation.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - Every material in use has an eligible `source_binding` and recorded binding reason; no workspace convention or residue is acting as an implicit source.
+- For handoff or continuation work, every bound item also has an explicit source role, availability status, inspection coverage, support scope, and limitation; secondary summaries and current artifacts are not treated as original evidence.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No minimum hard-boundary item remains in `missing`; ordinary creative supplements may remain pending customer verification.
 
@@ -288,3 +336,8 @@ VI confirmation authorizes only the confirmed-VI handoff to the separate project
 Show one current Report Design Brief and ask the user to confirm or correct that exact artifact. Only a reply that clearly confirms this displayed brief opens production; record its current conversation reference rather than matching a fixed reply phrase. Earlier approval to discuss, use TaoHtml, or begin intake does not count. Brief confirmation is authorization, not clarification, so it remains required even when the clarification counter is already six.
 
 If the user adds source material or changes a core viewpoint after confirmation, invalidate the brief, update it, and ask for confirmation again. During production, resolve non-core omissions with a reasonable default or creative supplement, add the exact item to the delivery verification ledger, and continue instead of repeatedly interrupting the user.
+
+For continuation, rebuild only the affected source interpretation and brief fields,
+then display the complete current brief and use the existing brief-confirmation gate.
+Do not restart clarification about unchanged inherited sections. Previous handoff
+claims do not open the formal HTML gate.

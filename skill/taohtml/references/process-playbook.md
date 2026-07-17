@@ -4,6 +4,12 @@ This playbook generalizes a complete collaborative process for turning loose mat
 
 Use it only after the current Report Design Brief has been confirmed. Intake, material-summary, and confirmation rules live in `intake-workflow.md` and `material-understanding.md`; do not restart those questions here.
 
+For an inherited project, read `project-handoff.md` before using this playbook. A
+`review_only` handoff stops before production and does not use this playbook to create
+HTML. A `continue_existing` task begins from the exact current artifact and the
+delta recorded in the current brief; do not treat the handoff narrative as original
+evidence or replay the full interview.
+
 Before saving the first runnable formal `index.html`, require a successful
 `scripts/check_production_authorization.py --action formal-html` result for the current
 task state in `production-authorization.md`. Before delivery, require
@@ -87,6 +93,27 @@ In this mode:
 - Rewrite the information as scenes, systems, contrasts, process flows, data maps, or case teardowns.
 
 If the redesigned page still looks like "title + three cards + small text", it is probably not roadshow quality.
+
+## 2B. Continue A Handed-Off Project
+
+Before editing, build the source-role and availability map from
+`project-handoff.md`. Record the exact current artifact, what was inspected, what is
+known only from a secondary summary, and what is unavailable or unverified. A current
+HTML is the baseline for rendered behavior and wording; it is not automatic proof of
+the source, evidence relationship, or correctness of its claims.
+
+Continue layout, typography, color, technical behavior, portability, local assets,
+and meaning-preserving local expression when the requested delta stays inside those
+boundaries. Restore the original source or obtain explicit confirmation of the exact
+change before modifying real data, quotation/citation/source attribution, evidence-
+to-claim relationships, real identities or achieved outcomes, or a core conclusion,
+scope promise, or responsibility boundary. Apply the existing high-risk verification
+rules even after user confirmation.
+
+Ordinary missing scenes, examples, projected values, viewpoints, and expression still
+follow output-first production. Track them as creative supplements and deliver them in
+`《待核实内容清单》`; do not block every continuation because some original material is
+unavailable.
 
 ## 3. Use Chapter Grammar
 
@@ -298,7 +325,7 @@ Use this sequence:
 
 1. Write a concise page plan: page role, core claim, evidence, layout family, and staged-state count where relevant.
 2. Lock one design thesis and the recurring visual motifs. Reopen that decision only when implementation exposes a concrete failure.
-3. Instantiate `assets/html-deck-template/` and save a complete runnable `index.html` with every planned page, navigation, and essential content present. A simple but coherent first pass is preferred to a half-built high-detail page.
+3. For a new build, instantiate `assets/html-deck-template/`; for continuation, work from a controlled copy of the exact bound current artifact and preserve its unmodified baseline identity. Then save a complete runnable `index.html` with every planned page, navigation, and essential content present. A simple but coherent first pass is preferred to a half-built high-detail page.
 4. Add evidence, creative supplements, and visual refinement in bounded passes. Embed or render only the source pages needed to support visible source claims; do not package the entire source by default. Add every actual creative supplement to the delivery verification ledger as it is introduced.
 5. Run asset QA as soon as the runnable artifact exists. Run the `browser` preflight before browser QA, and fix objective failures before adding optional polish. A failed or unavailable browser profile is not a passed browser-QA result.
 6. Stop when the confirmed scope, visual direction, runtime contract, and delivery gate are satisfied. Do not add unrequested pages, controls, or runtime features during refinement.
@@ -367,6 +394,16 @@ Before sending or using the deck on another computer:
 - Zip the HTML and its asset folder together.
 - Give the user the zip as the portable artifact.
 
+Do not call an inherited artifact ready merely because it exists or opens. Before
+`ready` or `formally deliverable`, require the current applicable authorization,
+strict asset check, browser preflight and HTML QA, brief-to-output traceability, and
+delivery verification handoff. Until then, use `found`, `can be previewed`, or `not
+yet verified`.
+
+Write operation instructions only after testing the exact current HTML controls, or
+from the generic current `runtime-contract.md`. In the latter case, state explicitly
+that the handed-off artifact has not yet been verified to implement that behavior.
+
 If the output is PPTX or PDF, still preserve the working source and raw assets separately.
 
 ### 11A. Deliver The Verification Handoff
@@ -401,6 +438,8 @@ Content:
 - If the CTA uses a link, command, contact route, price, or QR code, does its rendered value exactly match the verified source, and does the QR decode to the same path?
 - Do compound requirements preserve every required part, such as "SLA, responsibility boundary, and API dictionary" rather than compressing the list into a narrower substitute?
 - Is the offer introduced only after the problem and method are credible?
+- For continuation, are original material, secondary summary, current artifact, visual reference, Agent-generated material, and described-but-unavailable material kept in distinct source roles and availability states?
+- Do meaning-changing revisions to real data, provenance, evidence relationships, or core conclusions have restored sources or exact explicit confirmation?
 
 Design:
 
@@ -426,6 +465,8 @@ Technical:
 - Are hash links and page indicators correct?
 - Are there missing assets?
 - Does the portable zip work on a different path?
+- Are readiness statements limited to checks that passed on the exact current artifact?
+- Do operating instructions cite `current_artifact_tested` or clearly labeled `current_runtime_contract` evidence rather than an untested handoff assertion?
 
 Optional high-design diagnosis when the user requests it:
 
@@ -466,6 +507,20 @@ Fix: convert reveals into the global next-action sequence so a clicker can opera
 ### The HTML Opens But Images Are Missing On Another Computer
 
 Fix: copy all assets into the output folder, rewrite paths to relative paths, and create a zip containing the whole folder.
+
+### The Handoff Summary Became The Source Of Truth
+
+Fix: restore the role/availability map. Treat the summary as secondary orientation,
+the current artifact as rendered state, and original customer material as source
+evidence. For a meaning-changing edit, recover the original source or obtain exact
+confirmation within the boundary in `project-handoff.md`.
+
+### A Found Artifact Was Reported As Ready
+
+Fix: report only `found` or `can be previewed` until current authorization, asset QA,
+browser QA, traceability, and delivery checks pass. Do not repeat control instructions
+from the handoff without testing the artifact or labeling them as generic current
+Runtime-contract behavior.
 
 ### The Speaker Notes Sound Like Written Text
 
