@@ -11,7 +11,7 @@
   const HISTORY_LIMIT = 100;
   const LOCK_SELECTOR = '[data-taohtml-edit-lock], [data-taohtml-edit="off"], [aria-hidden="true"]';
   const DISALLOWED_TEXT_TAGS = new Set([
-    'BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'SCRIPT', 'STYLE',
+    'INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'SCRIPT', 'STYLE',
     'NOSCRIPT', 'TEMPLATE', 'SVG', 'MATH', 'VIDEO', 'AUDIO', 'CANVAS', 'IFRAME',
     'OBJECT', 'EMBED',
   ]);
@@ -26,6 +26,7 @@
   let recoveryAvailable = true;
   let pendingText = null;
   let pendingTextTimer = null;
+  let pendingImageRead = null;
   let selectedImage = null;
   let toastTimer = null;
   let suppressMutations = false;
@@ -43,16 +44,26 @@
     );
   }
 
+  function isHardDisallowedTextTarget(element) {
+    return DISALLOWED_TEXT_TAGS.has(element.localName.toUpperCase());
+  }
+
   function discoverTextTargets() {
     const found = [];
     deck.querySelectorAll('.slide').forEach((slide, slideIndex) => {
       const candidates = [...slide.querySelectorAll('*')].filter(element => {
-        if (isLocked(element) || DISALLOWED_TEXT_TAGS.has(element.tagName)) return false;
+        if (isLocked(element)) return false;
+        if (isHardDisallowedTextTarget(element)) return false;
+        if (element.dataset.taohtmlEdit === 'text') return true;
         if (element.hasAttribute('contenteditable')) return false;
-        return element.dataset.taohtmlEdit === 'text' || hasDirectText(element);
+        return hasDirectText(element);
       });
+      const forced = candidates.filter(element => element.dataset.taohtmlEdit === 'text');
+      const forcedSet = new Set(forced);
       const candidateSet = new Set(candidates);
       const outermost = candidates.filter(element => {
+        if (forcedSet.has(element)) return true;
+        if (forced.some(target => element.contains(target) || target.contains(element))) return false;
         let ancestor = element.parentElement;
         while (ancestor && ancestor !== slide) {
           if (candidateSet.has(ancestor)) return false;
@@ -229,11 +240,16 @@
     persistRecovery();
   }
 
-  function pushCommand(command) {
+  function appendHistoryCommand(command) {
     undoStack.push(command);
     if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
     redoStack.length = 0;
     afterHistoryMutation();
+  }
+
+  function pushCommand(command) {
+    flushPendingText();
+    appendHistoryCommand(command);
   }
 
   function flushPendingText() {
@@ -247,7 +263,7 @@
     const after = element.innerHTML;
     lastTextValues.set(id, after);
     if (before === after) return;
-    pushCommand({
+    appendHistoryCommand({
       label: 'text',
       undo: () => {
         element.innerHTML = before;
@@ -335,8 +351,12 @@
       showToast('请选择 PNG、JPEG、WebP、GIF 或 SVG 图片。');
       return;
     }
+    flushPendingText();
     const reader = new FileReader();
+    pendingImageRead = reader;
     reader.addEventListener('load', () => {
+      if (pendingImageRead !== reader || !active) return;
+      pendingImageRead = null;
       const before = captureImageState(image);
       const rect = image.getBoundingClientRect();
       const after = { ...before };
@@ -354,8 +374,20 @@
       });
       showToast('图片已替换。拖动图片可调整裁切焦点。');
     });
-    reader.addEventListener('error', () => showToast('图片读取失败，原图未修改。'));
+    reader.addEventListener('error', () => {
+      if (pendingImageRead !== reader) return;
+      pendingImageRead = null;
+      showToast('图片读取失败，原图未修改。');
+    });
     reader.readAsDataURL(file);
+  }
+
+  function suppressReportAction(event) {
+    if (!active || !(event.target instanceof Element)) return;
+    const action = event.target.closest('.slide a, .slide button');
+    if (!action) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
   }
 
   function onImagePointerDown(event) {
@@ -454,6 +486,10 @@
 
   function requestExit() {
     flushPendingText();
+    if (pendingImageRead) {
+      showToast('图片仍在读取，请稍候再退出编辑模式。');
+      return;
+    }
     if (!dirty) {
       leave();
       return;
@@ -663,6 +699,8 @@
   discoverImageTargets().forEach(image => {
     image.addEventListener('pointerdown', onImagePointerDown);
   });
+  deck.addEventListener('click', suppressReportAction, true);
+  deck.addEventListener('auxclick', suppressReportAction, true);
   fileInput.addEventListener('change', onImageFileChange);
   editToggle.addEventListener('click', event => {
     event.stopPropagation();

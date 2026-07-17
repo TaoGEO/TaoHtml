@@ -18,6 +18,32 @@ PNG_PAYLOAD = base64.b64decode(
     "4FEAjwJ4FMDjBfV4AiN2V/7hAAAAAElFTkSuQmCC"
 )
 TEXT_MARKER = "TaoHtml 编辑器浏览器 QA 文本"
+ACTION_FIXTURE = """
+<section class="slide" data-title="Editor action fixture" data-taohtml-editor-qa-fixture>
+  <div style="position:absolute;inset:120px;display:grid;gap:24px;align-content:center">
+    <a data-editor-qa="link" href="#999" onclick="window.__taohtmlQaLinkActions=(window.__taohtmlQaLinkActions||0)+1">可编辑报告链接</a>
+    <button type="button" data-editor-qa="button" data-taohtml-edit="text" onclick="window.__taohtmlQaButtonActions=(window.__taohtmlQaButtonActions||0)+1">可编辑行动按钮</button>
+    <button type="button" data-editor-qa="locked" data-taohtml-edit="text" data-taohtml-edit-lock onclick="window.__taohtmlQaLockedActions=(window.__taohtmlQaLockedActions||0)+1">锁定系统按钮</button>
+    <div hidden data-editor-qa="hard-boundaries">
+      <script type="application/json" data-editor-qa-hard data-taohtml-edit="text">{"fixture":true}</script>
+      <style data-editor-qa-hard data-taohtml-edit="text">.taohtml-editor-hard-fixture { display: none; }</style>
+      <noscript data-editor-qa-hard data-taohtml-edit="text">noscript</noscript>
+      <template data-editor-qa-hard data-taohtml-edit="text">template</template>
+      <svg data-editor-qa-hard data-taohtml-edit="text"><text>svg</text></svg>
+      <math data-editor-qa-hard data-taohtml-edit="text"><mi>math</mi></math>
+      <video data-editor-qa-hard data-taohtml-edit="text"></video>
+      <audio data-editor-qa-hard data-taohtml-edit="text"></audio>
+      <canvas data-editor-qa-hard data-taohtml-edit="text"></canvas>
+      <iframe data-editor-qa-hard data-taohtml-edit="text" title="fixture"></iframe>
+      <object data-editor-qa-hard data-taohtml-edit="text"></object>
+      <embed data-editor-qa-hard data-taohtml-edit="text">
+      <input data-editor-qa-hard data-taohtml-edit="text" value="input">
+      <textarea data-editor-qa-hard data-taohtml-edit="text">textarea</textarea>
+      <select data-editor-qa-hard data-taohtml-edit="text"><option data-editor-qa-hard data-taohtml-edit="text">option</option></select>
+    </div>
+  </div>
+</section>
+"""
 
 
 def portable_input(path: Path) -> tuple[bool, list[str]]:
@@ -30,6 +56,16 @@ def portable_input(path: Path) -> tuple[bool, list[str]]:
         and (is_remote(ref) or is_absolute_local(ref) or not ref.startswith("--"))
     )
     return not external, external
+
+
+def build_browser_fixture(source: Path, output: Path) -> Path:
+    text = source.read_text(encoding="utf-8")
+    marker = "<!-- TAOHTML_SLIDES_END -->"
+    if marker not in text:
+        raise RuntimeError("Editor QA requires the standard slide boundary marker.")
+    fixture = output / "editor-browser-fixture.html"
+    fixture.write_text(text.replace(marker, ACTION_FIXTURE + marker, 1), encoding="utf-8")
+    return fixture
 
 
 def main() -> int:
@@ -58,9 +94,11 @@ def main() -> int:
 
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    browser_fixture = build_browser_fixture(html_path, output_dir)
     exported_path = output_dir / "editor-exported.html"
     results: dict[str, object] = {
         "input": str(html_path),
+        "browser_fixture": str(browser_fixture),
         "browser": "chromium",
         "checks": {},
         "exported_html": str(exported_path),
@@ -92,7 +130,14 @@ def main() -> int:
                 else None,
             )
             page.on("pageerror", lambda error: page_errors.append(str(error)))
-            page.goto(html_path.as_uri(), wait_until="load")
+            page.add_init_script(
+                """(() => {
+                  const nativeSetTimeout = window.setTimeout.bind(window);
+                  window.setTimeout = (callback, delay = 0, ...parameters) =>
+                    nativeSetTimeout(callback, delay === 450 ? 5000 : delay, ...parameters);
+                })()"""
+            )
+            page.goto(browser_fixture.as_uri(), wait_until="load")
             page.wait_for_function(
                 "() => Boolean(window.TaoHtmlRuntime && window.TaoHtmlEditor)"
             )
@@ -131,6 +176,10 @@ def main() -> int:
                   page: document.querySelector('#pageIndicator')?.getAttribute('contenteditable'),
                   menu: document.querySelector('#moreMenu')?.getAttribute('contenteditable'),
                   source: document.querySelector('.source-btn')?.getAttribute('contenteditable') ?? null,
+                  navLocked: document.querySelector('.nav')?.hasAttribute('data-taohtml-edit-lock'),
+                  moreLocked: document.querySelector('.more')?.hasAttribute('data-taohtml-edit-lock'),
+                  pageLocked: document.querySelector('#pageIndicator')?.hasAttribute('data-taohtml-edit-lock'),
+                  sourceLocked: document.querySelector('.source-btn')?.hasAttribute('data-taohtml-edit-lock'),
                   lockedTargets: document.querySelectorAll('[data-taohtml-edit-lock] [contenteditable="true"]').length,
                 })"""
             )
@@ -139,6 +188,10 @@ def main() -> int:
                 locked_state["page"] is None
                 and locked_state["menu"] is None
                 and locked_state["source"] is None
+                and locked_state["navLocked"]
+                and locked_state["moreLocked"]
+                and locked_state["pageLocked"]
+                and locked_state["sourceLocked"]
                 and locked_state["lockedTargets"] == 0,
                 locked_state,
             )
@@ -177,27 +230,102 @@ def main() -> int:
                 {"next": after_page_button, "return": after_page_return},
             )
 
-            discard_target = page.locator(
-                '.slide.active [data-taohtml-editor-kind="text"]'
-            ).first
-            discard_original = discard_target.evaluate("element => element.innerHTML")
-            discard_target.evaluate(
-                """element => {
-                  element.focus();
-                  element.textContent = 'discard-me';
-                  element.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText'}));
-                }"""
+            action_fixture = page.locator('[data-taohtml-editor-qa-fixture]')
+            action_fixture.evaluate(
+                "element => window.TaoHtmlRuntime.showPage([...document.querySelectorAll('.slide')].indexOf(element))"
             )
-            page.wait_for_timeout(520)
+            action_contract = page.evaluate(
+                """() => ({
+                  link: document.querySelector('[data-editor-qa="link"]')?.getAttribute('contenteditable'),
+                  button: document.querySelector('[data-editor-qa="button"]')?.getAttribute('contenteditable'),
+                  locked: document.querySelector('[data-editor-qa="locked"]')?.getAttribute('contenteditable'),
+                  lockedTarget: document.querySelector('[data-editor-qa="locked"]')?.hasAttribute('data-taohtml-editor-kind'),
+                  hardBoundaries: [...document.querySelectorAll('[data-editor-qa-hard]')].map(element => ({
+                    tag: element.tagName,
+                    contenteditable: element.getAttribute('contenteditable'),
+                    target: element.hasAttribute('data-taohtml-editor-kind'),
+                  })),
+                })"""
+            )
+            check(
+                "report_actions_editable_and_hard_boundaries_rejected",
+                action_contract["link"] == "true"
+                and action_contract["button"] == "true"
+                and action_contract["locked"] is None
+                and not action_contract["lockedTarget"]
+                and len(action_contract["hardBoundaries"]) == 16
+                and all(
+                    item["contenteditable"] is None and not item["target"]
+                    for item in action_contract["hardBoundaries"]
+                ),
+                action_contract,
+            )
+
+            action_hash = page.evaluate("() => location.hash")
+            page.locator('[data-editor-qa="link"]').click()
+            page.locator('[data-editor-qa="button"]').click()
+            page.locator('[data-editor-qa="locked"]').click()
+            action_results = page.evaluate(
+                """expectedHash => ({
+                  link: window.__taohtmlQaLinkActions || 0,
+                  button: window.__taohtmlQaButtonActions || 0,
+                  locked: window.__taohtmlQaLockedActions || 0,
+                  hashUnchanged: location.hash === expectedHash,
+                })""",
+                action_hash,
+            )
+            source_target = page.locator('.source-btn').first
+            source_target.evaluate(
+                "element => window.TaoHtmlRuntime.showPage([...document.querySelectorAll('.slide')].indexOf(element.closest('.slide')))"
+            )
+            source_target.click()
+            source_suppressed = page.evaluate(
+                "() => !document.querySelector('#modal')?.classList.contains('open')"
+            )
+            check(
+                "report_and_source_actions_suppressed_during_edit",
+                action_results["link"] == 0
+                and action_results["button"] == 0
+                and action_results["locked"] == 0
+                and action_results["hashUnchanged"]
+                and source_suppressed,
+                {"actions": action_results, "source_suppressed": source_suppressed},
+            )
+
+            action_fixture.evaluate(
+                "element => window.TaoHtmlRuntime.showPage([...document.querySelectorAll('.slide')].indexOf(element))"
+            )
+            action_original = page.evaluate(
+                """() => ({
+                  link: document.querySelector('[data-editor-qa="link"]').innerHTML,
+                  button: document.querySelector('[data-editor-qa="button"]').innerHTML,
+                })"""
+            )
+            for selector, marker in (
+                ('[data-editor-qa="link"]', "已修改报告链接"),
+                ('[data-editor-qa="button"]', "已修改行动按钮"),
+            ):
+                page.locator(selector).evaluate(
+                    """(element, value) => {
+                      element.focus();
+                      element.textContent = value;
+                      element.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText'}));
+                    }""",
+                    marker,
+                )
             page.evaluate("() => window.TaoHtmlEditor.requestExit()")
             page.locator('[data-action="discard"]').click()
-            discarded = {
-                "text": discard_target.evaluate("element => element.innerHTML"),
-                "editor": page.evaluate("() => window.TaoHtmlEditor.getState()"),
-            }
+            discarded = page.evaluate(
+                """() => ({
+                  link: document.querySelector('[data-editor-qa="link"]').innerHTML,
+                  button: document.querySelector('[data-editor-qa="button"]').innerHTML,
+                  editor: window.TaoHtmlEditor.getState(),
+                })"""
+            )
             check(
                 "dirty_exit_discard",
-                discarded["text"] == discard_original
+                discarded["link"] == action_original["link"]
+                and discarded["button"] == action_original["button"]
                 and not discarded["editor"]["active"]
                 and not discarded["editor"]["dirty"],
                 discarded,
@@ -223,6 +351,134 @@ def main() -> int:
             original_image = image_target.evaluate(
                 "element => ({state: element.getAttribute('src'), position: element.style.objectPosition, rect: element.getBoundingClientRect().toJSON()})"
             )
+
+            fast_text_marker = TEXT_MARKER + " / fast image"
+            text_target.evaluate(
+                """(element, marker) => {
+                  element.focus();
+                  element.textContent = marker;
+                  element.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: marker}));
+                }""",
+                fast_text_marker,
+            )
+            with page.expect_file_chooser() as fast_chooser_info:
+                image_target.click()
+            fast_chooser_info.value.set_files(
+                {
+                    "name": "taohtml-editor-fast-qa.png",
+                    "mimeType": "image/png",
+                    "buffer": PNG_PAYLOAD,
+                }
+            )
+            page.wait_for_function(
+                """() => document.querySelector(
+                  '.slide.active [data-taohtml-editor-kind="image"]'
+                )?.getAttribute('src')?.startsWith('data:image/png')"""
+            )
+            page.keyboard.press("Control+z")
+            fast_first_undo = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "src": image_target.get_attribute("src"),
+            }
+            page.keyboard.press("Control+z")
+            fast_second_undo = {
+                "text": text_target.evaluate("element => element.innerHTML"),
+                "src": image_target.get_attribute("src"),
+            }
+            page.keyboard.press("Control+Shift+z")
+            fast_first_redo = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "src": image_target.get_attribute("src"),
+            }
+            page.keyboard.press("Control+Shift+z")
+            fast_second_redo = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "src": image_target.get_attribute("src"),
+            }
+            check(
+                "fast_text_then_image_history_order",
+                fast_first_undo["text"] == fast_text_marker
+                and fast_first_undo["src"] == original_image["state"]
+                and fast_second_undo["text"] == original_text
+                and fast_second_undo["src"] == original_image["state"]
+                and fast_first_redo["text"] == fast_text_marker
+                and fast_first_redo["src"] == original_image["state"]
+                and fast_second_redo["text"] == fast_text_marker
+                and str(fast_second_redo["src"]).startswith("data:image/png"),
+                {
+                    "first_undo": fast_first_undo,
+                    "second_undo": fast_second_undo,
+                    "first_redo": fast_first_redo,
+                    "second_redo": fast_second_redo,
+                },
+            )
+            page.keyboard.press("Control+z")
+            page.keyboard.press("Control+z")
+
+            fast_crop_marker = TEXT_MARKER + " / fast crop"
+            text_target.evaluate(
+                """(element, marker) => {
+                  element.focus();
+                  element.textContent = marker;
+                  element.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: marker}));
+                }""",
+                fast_crop_marker,
+            )
+            fast_crop_box = image_target.bounding_box()
+            if fast_crop_box is None:
+                raise RuntimeError("Editable image has no rendered bounding box.")
+            page.mouse.move(
+                fast_crop_box["x"] + fast_crop_box["width"] * 0.5,
+                fast_crop_box["y"] + fast_crop_box["height"] * 0.5,
+            )
+            page.mouse.down()
+            page.mouse.move(
+                fast_crop_box["x"] + fast_crop_box["width"] * 0.75,
+                fast_crop_box["y"] + fast_crop_box["height"] * 0.3,
+            )
+            page.mouse.up()
+            fast_crop_position = image_target.evaluate("element => element.style.objectPosition")
+            page.keyboard.press("Control+z")
+            fast_crop_first_undo = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "position": image_target.evaluate("element => element.style.objectPosition"),
+            }
+            page.keyboard.press("Control+z")
+            fast_crop_second_undo = {
+                "text": text_target.evaluate("element => element.innerHTML"),
+                "position": image_target.evaluate("element => element.style.objectPosition"),
+            }
+            page.keyboard.press("Control+Shift+z")
+            fast_crop_first_redo = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "position": image_target.evaluate("element => element.style.objectPosition"),
+            }
+            page.keyboard.press("Control+Shift+z")
+            fast_crop_second_redo = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "position": image_target.evaluate("element => element.style.objectPosition"),
+            }
+            check(
+                "fast_text_then_crop_history_order",
+                bool(fast_crop_position)
+                and fast_crop_first_undo["text"] == fast_crop_marker
+                and fast_crop_first_undo["position"] == original_image["position"]
+                and fast_crop_second_undo["text"] == original_text
+                and fast_crop_second_undo["position"] == original_image["position"]
+                and fast_crop_first_redo["text"] == fast_crop_marker
+                and fast_crop_first_redo["position"] == original_image["position"]
+                and fast_crop_second_redo["text"] == fast_crop_marker
+                and fast_crop_second_redo["position"] == fast_crop_position,
+                {
+                    "first_undo": fast_crop_first_undo,
+                    "second_undo": fast_crop_second_undo,
+                    "first_redo": fast_crop_first_redo,
+                    "second_redo": fast_crop_second_redo,
+                },
+            )
+            page.keyboard.press("Control+z")
+            page.keyboard.press("Control+z")
+
             text_target.evaluate(
                 """(element, marker) => {
                   element.focus();

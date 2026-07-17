@@ -52,6 +52,51 @@ class ContentEditorAssetTests(unittest.TestCase):
         self.assertIn("new Blob", javascript)
         self.assertIn("编辑器不会生成 ZIP", javascript)
 
+    def test_cross_type_history_commits_pending_text_before_non_text_commands(self) -> None:
+        javascript = EDITOR_JS.read_text(encoding="utf-8")
+        self.assertIn("function appendHistoryCommand(command)", javascript)
+        self.assertRegex(
+            javascript,
+            r"(?s)function pushCommand\(command\) \{\s+flushPendingText\(\);\s+appendHistoryCommand\(command\);",
+        )
+        self.assertRegex(
+            javascript,
+            r"(?s)function flushPendingText\(\).*?appendHistoryCommand\(\{\s+label: 'text'",
+        )
+        self.assertIn("pendingImageRead = reader", javascript)
+
+    def test_report_actions_are_editable_but_system_sources_are_locked(self) -> None:
+        javascript = EDITOR_JS.read_text(encoding="utf-8")
+        disallowed = javascript.split("const DISALLOWED_TEXT_TAGS", 1)[1].split("]);", 1)[0]
+        self.assertNotIn("'BUTTON'", disallowed)
+        self.assertNotIn("'A'", disallowed)
+        self.assertIn(
+            "DISALLOWED_TEXT_TAGS.has(element.localName.toUpperCase())",
+            javascript,
+        )
+        self.assertLess(
+            javascript.index("if (isHardDisallowedTextTarget(element)) return false;"),
+            javascript.index("if (element.dataset.taohtmlEdit === 'text') return true;"),
+        )
+        self.assertIn("function suppressReportAction(event)", javascript)
+        self.assertIn("deck.addEventListener('click', suppressReportAction, true)", javascript)
+
+        for templates in sorted((SKILL_ROOT / "assets" / "visual-systems").glob("*/templates.html")):
+            with self.subTest(theme=templates.parent.name):
+                source = templates.read_text(encoding="utf-8")
+                self.assertRegex(
+                    source,
+                    r'<button class="source-btn" data-taohtml-edit-lock\b',
+                )
+
+        compiler = (SKILL_ROOT / "scripts" / "compile_project_theme.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            '<button class="source-btn" data-taohtml-edit-lock data-source=',
+            compiler,
+        )
+
     def test_core_runtime_adds_editing_state_without_replacing_legacy_state(self) -> None:
         template = (TEMPLATE_ROOT / "index.html").read_text(encoding="utf-8")
         contract = (SKILL_ROOT / "references" / "runtime-contract.md").read_text(

@@ -26,6 +26,7 @@ Leaving edit mode restores normal behavior in the retained reading/presentation 
 The editor discovers content only below `.slide`:
 
 - HTML elements that own visible text are direct-edit targets.
+- Unlocked report links and action buttons are text targets too. While edit mode is active, their navigation, submission, and click actions are suppressed so editing copy cannot activate the CTA.
 - `<img>` elements are image-edit targets.
 - Table-cell text remains editable, but rows, columns, formulas, and table structure do not.
 - Inline SVG/chart internals, CSS background images, pseudo-elements, video, canvas, and embedded documents are not content-edit targets. Put ordinary report copy in HTML and content images in `<img>` when they must be revisable.
@@ -41,11 +42,15 @@ Use these generic hooks instead of sample-specific ids or copy:
 
 - `data-taohtml-edit-lock` excludes the element and all descendants. Apply it to controls, menus, page numbers, modals, source viewers, fixed brand layers, and any other non-report surface.
 - `data-taohtml-edit="off"` is the content-author opt-out alias.
-- `data-taohtml-edit="text"` forces one text owner when automatic direct-text discovery would choose a different ancestor.
+- `data-taohtml-edit="text"` forces that exact unlocked, safe HTML content container to be one text target when automatic direct-text discovery would choose a different ancestor. Overlapping automatic targets yield to the explicit owner.
 - `data-taohtml-edit="image"` documents an intended image target; unlocked report `<img>` elements are discovered automatically.
 - A lock always wins over a force marker. An `aria-hidden="true"` subtree is also excluded because it cannot be report content exposed to the reader.
 
+The force marker never overrides hard non-text boundaries. `input`, `textarea`, `select`, `option`, `script`, `style`, `noscript`, `template`, `svg`, `math`, `video`, `audio`, `canvas`, `iframe`, `object`, and `embed` remain non-editable even when marked `data-taohtml-edit="text"`.
+
 The standard template locks navigation, the More menu, page number, source modal, and editor UI. The corporate-fidelity compiler's existing `aria-hidden="true"` fixed shell remains excluded without changing its strict attribute allowlist, while report content inside the editable region stays discoverable.
+
+Source-evidence buttons inside report pages must also carry `data-taohtml-edit-lock`; their source action is suppressed during editing. Previous/next navigation and the More menu live outside `.slide` and retain the editor-session behavior defined by `runtime-contract.md`.
 
 ## Image Frame And Crop Contract
 
@@ -61,6 +66,9 @@ For deterministic crop behavior, generate content images inside a stable frame a
 ## History And Temporary Recovery
 
 The editor owns one bounded, in-memory history across text, image, and crop commands. Native browser undo is intercepted only while edit mode is active. A refresh-recovery delta is also written to `sessionStorage`:
+
+- a pending text batch is committed before any image replacement or crop command enters history;
+- asynchronous image reads commit any text that was applied before the replacement reaches the DOM, so undo/redo follows actual applied operation order;
 
 - it is scoped to the current tab/page session and survives reload in that tab;
 - normal tab closure ends the browser page session, so it is not durable report storage;

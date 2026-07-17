@@ -1055,7 +1055,7 @@ def _templates(
     data_layout = _page_layout(
         _heading("S4_KICKER", "S4_TITLE", "S4_LEDE"), data_body
     )
-    data_body_with_source = f'<button class="source-btn" data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{data_layout}'
+    data_body_with_source = f'<button class="source-btn" data-taohtml-edit-lock data-source="{{{{SOURCE_URI}}}}" data-source-kind="{{{{SOURCE_KIND}}}}" data-source-label="{{{{SOURCE_LABEL}}}}">{{{{S4_SOURCE}}}}</button>{data_layout}'
     data = f'<section class="slide{page_class}" data-title="证据与数据" data-layout="{variants[3]["id"]}">{_wrap_page_content("data", data_body_with_source, corporate_shell)}</section>'
 
     if plan["content_structure"] == "card-grid":
