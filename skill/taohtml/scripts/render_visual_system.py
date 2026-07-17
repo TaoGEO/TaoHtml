@@ -26,6 +26,8 @@ from theme_runtime import (
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SHELL_PATH = SKILL_ROOT / "assets" / "html-deck-template" / "index.html"
+EDITOR_STYLE_PATH = SHELL_PATH.parent / "assets" / "runtime" / "taohtml-editor.css"
+EDITOR_SCRIPT_PATH = SHELL_PATH.parent / "assets" / "runtime" / "taohtml-editor.js"
 THEME_IDS = BUILT_IN_THEME_IDS
 START_MARKER = "    <!-- TAOHTML_SLIDES_START -->"
 END_MARKER = "    <!-- TAOHTML_SLIDES_END -->"
@@ -49,6 +51,32 @@ ILLUSTRATIVE_MARKER = re.compile(
     r"示意|模拟|待核实|illustrative|simulation|pending verification", re.IGNORECASE
 )
 CONTROLLED_STEP_CONTRACT = "fragment-v1"
+EDITOR_STYLE_TAG = (
+    '<link rel="stylesheet" href="assets/runtime/taohtml-editor.css" '
+    'data-taohtml-editor-bundle="style">'
+)
+EDITOR_SCRIPT_TAG = (
+    '<script src="assets/runtime/taohtml-editor.js" '
+    'data-taohtml-editor-bundle="script"></script>'
+)
+
+
+def inline_editor_assets(shell: str) -> str:
+    """Inline the canonical editor module for portable rendered HTML."""
+    if shell.count(EDITOR_STYLE_TAG) != 1 or shell.count(EDITOR_SCRIPT_TAG) != 1:
+        raise ValueError("Runtime shell is missing unique bundled editor asset hooks.")
+    editor_css = EDITOR_STYLE_PATH.read_text(encoding="utf-8")
+    editor_js = EDITOR_SCRIPT_PATH.read_text(encoding="utf-8")
+    shell = shell.replace(
+        EDITOR_STYLE_TAG,
+        f'<style data-taohtml-editor-bundle="style">\n{editor_css}\n  </style>',
+        1,
+    )
+    return shell.replace(
+        EDITOR_SCRIPT_TAG,
+        f'<script data-taohtml-editor-bundle="script">\n{editor_js}\n  </script>',
+        1,
+    )
 
 
 def load_content(path: Path) -> dict[str, str]:
@@ -199,7 +227,7 @@ def _render_bundle(
         source_kind,
     )
 
-    shell = SHELL_PATH.read_text(encoding="utf-8")
+    shell = inline_editor_assets(SHELL_PATH.read_text(encoding="utf-8"))
     if shell.count(START_MARKER) != 1 or shell.count(END_MARKER) != 1:
         raise ValueError("Runtime shell is missing unique slide markers.")
     prefix, remainder = shell.split(START_MARKER, 1)

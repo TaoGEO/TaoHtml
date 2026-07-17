@@ -1,6 +1,6 @@
 ---
 name: taohtml
-description: TaoHtml turns initial ideas, Word/PDF source material, existing slides, and HTML into polished 16:9 offline HTML reports and presentation-ready decks as a high-design alternative to PPT/PPTX. Use when the user explicitly invokes TaoHtml or asks an agent to structure goals, audiences, evidence, and report design; use four built-in visual systems, a confirmed reference-based project theme, or an explicit reusable corporate-template profile; implement reading or single-screen presentation behavior; and deliver portable HTML with QA and a verification handoff.
+description: TaoHtml turns initial ideas, Word/PDF source material, existing slides, and HTML into polished 16:9 offline HTML reports and presentation-ready decks as a high-design alternative to PPT/PPTX. Use when the user explicitly invokes TaoHtml or asks an agent to structure goals, audiences, evidence, and report design; use four built-in visual systems, a confirmed reference-based project theme, or an explicit reusable corporate-template profile; implement reading or single-screen presentation behavior; revise finished report text and images with the bundled offline content editor; and deliver portable HTML with QA and a verification handoff.
 ---
 
 # TaoHtml
@@ -99,6 +99,7 @@ After brief confirmation, load only what the task needs:
 - `references/profile-memory.md`: explicit TaoHtml home, exact enterprise resolution, immutable corporate-profile versions, automatic binding, override/update/other-company semantics, export/import, and current-task authorization boundary.
 - `references/design-quality-rubric.md`: optional diagnosis when the user asks for a design review or says the result feels ordinary; do not use a fixed aesthetic score as the production authorization gate.
 - `references/runtime-contract.md`: implemented DOM, controls, state, modes, and extension boundary.
+- `references/content-editor.md`: lightweight text/image revision, lock hooks, unified history, session recovery, honest export boundary, and browser QA.
 - `references/environment-preflight.md`: capability profiles, standard-library launcher, timing, JSON contract, dependency declaration boundary, and fail-fast recovery choices.
 - `references/production-authorization.md`: current-task gate state, allowed-action matrix, preview boundary, and machine check before formal HTML or delivery.
 - `assets/html-deck-template/`: dependency-free 16:9 starting shell for paged reading and single-screen presentations.
@@ -119,7 +120,7 @@ Use the bundled scripts where relevant:
 
 ## Current Runtime Boundary
 
-The standard template supports paged reading and single-screen presentation. It does not yet promise dual-screen presenter view, in-browser editing/export, interactive chart authoring, cross-page morphing, or crash recovery. Keep those capabilities out of user promises until they are implemented and tested.
+The standard template supports paged reading, single-screen presentation, and the bundled lightweight content editor documented in `references/content-editor.md`. It does not promise a browser-based PPT editor, free layout changes, chart/table-structure editing, animation editing, dual-screen presenter view, cross-page morphing, durable version history, or browser ZIP export.
 
 ## Delivery Gate
 

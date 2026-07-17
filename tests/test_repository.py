@@ -91,6 +91,7 @@ class RepositoryMetadataTests(unittest.TestCase):
             "nextPage",
             "previousPage",
             "toggleFullscreen",
+            "setEditing",
         ):
             self.assertRegex(template, rf"\b{method}\b")
 

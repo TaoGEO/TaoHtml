@@ -1,0 +1,455 @@
+#!/usr/bin/env python3
+"""Exercise the bundled TaoHtml content editor in Chromium/Chrome."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import json
+import sys
+from pathlib import Path
+
+from check_assets import extract_resource_refs, is_absolute_local, is_remote
+
+
+PNG_PAYLOAD = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yM1QAAAACXBIWXMAAAsSAAALEgHS3X78"
+    "AAAANUlEQVR4nO3OMQ0AAAgDINc/9K3hHFQgE1nS3TMzuwrgUQCPAngUwKMAHgXwKIBHATwK"
+    "4FEAjwJ4FMDjBfV4AiN2V/7hAAAAAElFTkSuQmCC"
+)
+TEXT_MARKER = "TaoHtml 编辑器浏览器 QA 文本"
+
+
+def portable_input(path: Path) -> tuple[bool, list[str]]:
+    text = path.read_text(encoding="utf-8")
+    external = sorted(
+        ref
+        for ref in extract_resource_refs(text)
+        if ref
+        and not ref.startswith(("data:", "blob:", "#"))
+        and (is_remote(ref) or is_absolute_local(ref) or not ref.startswith("--"))
+    )
+    return not external, external
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Run deterministic Chromium QA for the TaoHtml content editor."
+    )
+    parser.add_argument("html", type=Path, help="Self-contained editor-enabled HTML.")
+    parser.add_argument("output_dir", type=Path, help="Directory for JSON, screenshots, and exported HTML.")
+    parser.add_argument("--executable-path", type=Path, help="Optional Chrome/Chromium executable.")
+    args = parser.parse_args()
+
+    html_path = args.html.resolve()
+    if not html_path.is_file():
+        raise SystemExit(f"HTML not found: {html_path}")
+    is_portable, external = portable_input(html_path)
+    if not is_portable:
+        raise SystemExit(
+            "Editor export/reopen QA requires a self-contained HTML; external assets: "
+            + ", ".join(external)
+        )
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise SystemExit("Playwright is required. Install the TaoHtml requirements first.") from exc
+
+    output_dir = args.output_dir.resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    exported_path = output_dir / "editor-exported.html"
+    results: dict[str, object] = {
+        "input": str(html_path),
+        "browser": "chromium",
+        "checks": {},
+        "exported_html": str(exported_path),
+    }
+    checks: dict[str, object] = results["checks"]  # type: ignore[assignment]
+    failures: list[str] = []
+
+    def check(name: str, condition: bool, detail: object | None = None) -> None:
+        checks[name] = {"passed": bool(condition), "detail": detail}
+        if not condition:
+            failures.append(name)
+
+    try:
+        with sync_playwright() as playwright:
+            launch_options: dict[str, object] = {}
+            if args.executable_path:
+                executable = args.executable_path.resolve()
+                if not executable.is_file():
+                    raise RuntimeError(f"Chromium executable not found: {executable}")
+                launch_options["executable_path"] = str(executable)
+            browser = playwright.chromium.launch(**launch_options)
+            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            console_errors: list[str] = []
+            page_errors: list[str] = []
+            page.on(
+                "console",
+                lambda message: console_errors.append(message.text)
+                if message.type == "error"
+                else None,
+            )
+            page.on("pageerror", lambda error: page_errors.append(str(error)))
+            page.goto(html_path.as_uri(), wait_until="load")
+            page.wait_for_function(
+                "() => Boolean(window.TaoHtmlRuntime && window.TaoHtmlEditor)"
+            )
+
+            contract = page.evaluate(
+                """() => ({
+                  runtime: ['getState', 'setEditing', 'setMode', 'nextStep', 'previousStep']
+                    .every(name => typeof window.TaoHtmlRuntime?.[name] === 'function'),
+                  editor: ['getState', 'enter', 'requestExit', 'undo', 'redo', 'exportHtml']
+                    .every(name => typeof window.TaoHtmlEditor?.[name] === 'function'),
+                  editButton: Boolean(document.querySelector('#editToggle')),
+                  textTargets: document.querySelectorAll('[data-taohtml-editor-kind="text"]').length,
+                  imageTargets: document.querySelectorAll('[data-taohtml-editor-kind="image"]').length,
+                  fragments: document.querySelectorAll('.fragment').length,
+                })"""
+            )
+            check(
+                "module_contract",
+                contract["runtime"]
+                and contract["editor"]
+                and contract["editButton"]
+                and contract["textTargets"] > 0
+                and contract["imageTargets"] > 0
+                and contract["fragments"] > 0,
+                contract,
+            )
+
+            page.locator("#moreToggle").click()
+            page.locator("#editToggle").click()
+            page.wait_for_function("() => window.TaoHtmlEditor.getState().active")
+            initial_runtime = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            check("runtime_editing_flag", initial_runtime["editing"] is True, initial_runtime)
+
+            locked_state = page.evaluate(
+                """() => ({
+                  page: document.querySelector('#pageIndicator')?.getAttribute('contenteditable'),
+                  menu: document.querySelector('#moreMenu')?.getAttribute('contenteditable'),
+                  source: document.querySelector('.source-btn')?.getAttribute('contenteditable') ?? null,
+                  lockedTargets: document.querySelectorAll('[data-taohtml-edit-lock] [contenteditable="true"]').length,
+                })"""
+            )
+            check(
+                "system_controls_locked",
+                locked_state["page"] is None
+                and locked_state["menu"] is None
+                and locked_state["source"] is None
+                and locked_state["lockedTargets"] == 0,
+                locked_state,
+            )
+
+            state_before_pause = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.keyboard.press("ArrowRight")
+            page.locator(".slide.active").click(position={"x": 8, "y": 8})
+            state_after_pause = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            fragment_pause = page.locator(".slide.active .fragment").first.evaluate(
+                """element => ({
+                  opacity: getComputedStyle(element).opacity,
+                  transitionDuration: getComputedStyle(element).transitionDuration,
+                  animationPlayState: getComputedStyle(element).animationPlayState,
+                })"""
+            )
+            check(
+                "navigation_and_motion_paused",
+                state_before_pause == state_after_pause
+                and fragment_pause["opacity"] == "1"
+                and fragment_pause["transitionDuration"] == "0s"
+                and fragment_pause["animationPlayState"] == "paused",
+                {"before": state_before_pause, "after": state_after_pause, "fragment": fragment_pause},
+            )
+            page.locator("#next").click()
+            after_page_button = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.locator("#prev").click()
+            after_page_return = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            check(
+                "page_buttons_available_during_edit",
+                after_page_button["index"] == min(
+                    state_before_pause["index"] + 1,
+                    len(state_before_pause["stages"]) - 1,
+                )
+                and after_page_return["index"] == state_before_pause["index"]
+                and after_page_return["stages"] == state_before_pause["stages"],
+                {"next": after_page_button, "return": after_page_return},
+            )
+
+            discard_target = page.locator(
+                '.slide.active [data-taohtml-editor-kind="text"]'
+            ).first
+            discard_original = discard_target.evaluate("element => element.innerHTML")
+            discard_target.evaluate(
+                """element => {
+                  element.focus();
+                  element.textContent = 'discard-me';
+                  element.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText'}));
+                }"""
+            )
+            page.wait_for_timeout(520)
+            page.evaluate("() => window.TaoHtmlEditor.requestExit()")
+            page.locator('[data-action="discard"]').click()
+            discarded = {
+                "text": discard_target.evaluate("element => element.innerHTML"),
+                "editor": page.evaluate("() => window.TaoHtmlEditor.getState()"),
+            }
+            check(
+                "dirty_exit_discard",
+                discarded["text"] == discard_original
+                and not discarded["editor"]["active"]
+                and not discarded["editor"]["dirty"],
+                discarded,
+            )
+            page.evaluate("() => window.TaoHtmlEditor.enter()")
+
+            text_target = page.locator(
+                '.slide.active [data-taohtml-editor-kind="text"]'
+            ).first
+            image_target = page.locator(
+                '.slide.active [data-taohtml-editor-kind="image"]'
+            ).first
+            if image_target.count() == 0:
+                image_target = page.locator('[data-taohtml-editor-kind="image"]').first
+                image_target.evaluate(
+                    "element => window.TaoHtmlRuntime.showPage([...document.querySelectorAll('.slide')].indexOf(element.closest('.slide')))"
+                )
+                text_target = page.locator(
+                    '.slide.active [data-taohtml-editor-kind="text"]'
+                ).first
+
+            original_text = text_target.evaluate("element => element.innerHTML")
+            original_image = image_target.evaluate(
+                "element => ({state: element.getAttribute('src'), position: element.style.objectPosition, rect: element.getBoundingClientRect().toJSON()})"
+            )
+            text_target.evaluate(
+                """(element, marker) => {
+                  element.focus();
+                  element.textContent = marker;
+                  element.dispatchEvent(new InputEvent('input', {bubbles: true, inputType: 'insertText', data: marker}));
+                }""",
+                TEXT_MARKER,
+            )
+            page.wait_for_timeout(520)
+
+            with page.expect_file_chooser() as chooser_info:
+                image_target.click()
+            chooser_info.value.set_files(
+                {
+                    "name": "taohtml-editor-qa.png",
+                    "mimeType": "image/png",
+                    "buffer": PNG_PAYLOAD,
+                }
+            )
+            page.wait_for_function(
+                """() => document.querySelector(
+                  '.slide.active [data-taohtml-editor-kind="image"]'
+                )?.getAttribute('src')?.startsWith('data:image/png')"""
+            )
+            replaced_rect = image_target.evaluate(
+                "element => element.getBoundingClientRect().toJSON()"
+            )
+            frame_preserved = (
+                abs(original_image["rect"]["width"] - replaced_rect["width"]) <= 0.75
+                and abs(original_image["rect"]["height"] - replaced_rect["height"]) <= 0.75
+            )
+
+            box = image_target.bounding_box()
+            if box is None:
+                raise RuntimeError("Editable image has no rendered bounding box.")
+            page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
+            page.mouse.down()
+            page.mouse.move(box["x"] + box["width"] * 0.82, box["y"] + box["height"] * 0.24)
+            page.mouse.up()
+            crop_position = image_target.evaluate("element => element.style.objectPosition")
+            changed = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "src": image_target.get_attribute("src"),
+                "position": crop_position,
+                "frame": replaced_rect,
+            }
+            check(
+                "continuous_text_image_crop_edit",
+                changed["text"] == TEXT_MARKER
+                and str(changed["src"]).startswith("data:image/png")
+                and bool(crop_position)
+                and frame_preserved,
+                changed,
+            )
+
+            for _ in range(3):
+                page.keyboard.press("Control+z")
+            undone = {
+                "text": text_target.evaluate("element => element.innerHTML"),
+                "src": image_target.get_attribute("src"),
+                "position": image_target.evaluate("element => element.style.objectPosition"),
+            }
+            for _ in range(3):
+                page.keyboard.press("Control+Shift+z")
+            redone = {
+                "text": text_target.evaluate("element => element.textContent"),
+                "src": image_target.get_attribute("src"),
+                "position": image_target.evaluate("element => element.style.objectPosition"),
+            }
+            check(
+                "unified_undo_redo",
+                undone["text"] == original_text
+                and undone["src"] == original_image["state"]
+                and undone["position"] == original_image["position"]
+                and redone["text"] == TEXT_MARKER
+                and str(redone["src"]).startswith("data:image/png")
+                and redone["position"] == crop_position,
+                {"undone": undone, "redone": redone},
+            )
+
+            page.evaluate("() => window.TaoHtmlEditor.requestExit()")
+            dialog_visible = page.locator(
+                '.taohtml-editor-dialog:not([hidden])'
+            ).count() == 1
+            page.locator('[data-action="continue"]').click()
+            continued = page.evaluate("() => window.TaoHtmlEditor.getState()")
+            check(
+                "dirty_exit_continue",
+                dialog_visible and continued["active"] and continued["dirty"],
+                {"dialog": dialog_visible, "state": continued},
+            )
+
+            page.reload(wait_until="load")
+            page.wait_for_function("() => Boolean(window.TaoHtmlEditor)")
+            restored = page.evaluate(
+                """marker => ({
+                  editor: window.TaoHtmlEditor.getState(),
+                  text: [...document.querySelectorAll('[data-taohtml-editor-kind="text"]')]
+                    .some(element => element.textContent === marker),
+                  image: [...document.querySelectorAll('[data-taohtml-editor-kind="image"]')]
+                    .some(element => element.getAttribute('src')?.startsWith('data:image/png')),
+                  crop: [...document.querySelectorAll('[data-taohtml-editor-kind="image"]')]
+                    .some(element => element.style.objectPosition),
+                })""",
+                TEXT_MARKER,
+            )
+            check(
+                "refresh_recovery",
+                restored["editor"]["dirty"]
+                and not restored["editor"]["active"]
+                and restored["text"]
+                and restored["image"]
+                and restored["crop"],
+                restored,
+            )
+
+            page.evaluate("() => window.TaoHtmlEditor.enter()")
+            page.evaluate("() => window.TaoHtmlEditor.requestExit()")
+            with page.expect_download() as download_info:
+                page.locator('[data-action="export"]').click()
+            download_info.value.save_as(exported_path)
+            page.wait_for_function(
+                "() => !window.TaoHtmlEditor.getState().active && !window.TaoHtmlEditor.getState().dirty"
+            )
+            post_export = page.evaluate(
+                """() => ({
+                  editor: window.TaoHtmlEditor.getState(),
+                  sessionRecords: Object.keys(sessionStorage)
+                    .filter(key => key.startsWith('taohtml:editor:')).length,
+                })"""
+            )
+            check(
+                "export_clears_temporary_state",
+                exported_path.is_file()
+                and not post_export["editor"]["dirty"]
+                and post_export["sessionRecords"] == 0,
+                post_export,
+            )
+
+            exported_page = browser.new_page(viewport={"width": 1440, "height": 900})
+            exported_errors: list[str] = []
+            exported_page.on("pageerror", lambda error: exported_errors.append(str(error)))
+            exported_page.goto(exported_path.as_uri(), wait_until="load")
+            exported_page.wait_for_function(
+                "() => Boolean(window.TaoHtmlRuntime && window.TaoHtmlEditor)"
+            )
+            reopened = exported_page.evaluate(
+                """marker => {
+                  const runtime = window.TaoHtmlRuntime;
+                  const editor = window.TaoHtmlEditor;
+                  const text = [...document.querySelectorAll('[data-taohtml-editor-kind="text"]')]
+                    .some(element => element.textContent === marker);
+                  const image = [...document.querySelectorAll('[data-taohtml-editor-kind="image"]')]
+                    .find(element => element.getAttribute('src')?.startsWith('data:image/png'));
+                  runtime.setMode('reading');
+                  const reading = runtime.getState();
+                  runtime.setMode('presentation');
+                  const presentation = runtime.getState();
+                  const imageSlide = image?.closest('.slide');
+                  const imageSlideIndex = imageSlide
+                    ? [...document.querySelectorAll('.slide')].indexOf(imageSlide)
+                    : -1;
+                  if (imageSlideIndex >= 0) runtime.showPage(imageSlideIndex);
+                  const imageFragment = image?.closest('.fragment');
+                  const beforeModifiedReveal = runtime.getState();
+                  runtime.nextStep();
+                  const afterModifiedReveal = runtime.getState();
+                  const fragment = imageFragment || document.querySelector('.slide.active .fragment');
+                  const transitionDuration = fragment ? getComputedStyle(fragment).transitionDuration : null;
+                  return {
+                    text,
+                    image: Boolean(image),
+                    crop: image?.style.objectPosition || '',
+                    editor: editor.getState(),
+                    reading,
+                    presentation,
+                    modifiedMotion: {
+                      before: beforeModifiedReveal,
+                      after: afterModifiedReveal,
+                      opacity: fragment ? getComputedStyle(fragment).opacity : null,
+                    },
+                    transitionDuration,
+                  };
+                }""",
+                TEXT_MARKER,
+            )
+            check(
+                "export_reopen_runtime_content_motion",
+                reopened["text"]
+                and reopened["image"]
+                and reopened["crop"] == crop_position
+                and not reopened["editor"]["active"]
+                and not reopened["editor"]["dirty"]
+                and reopened["reading"]["mode"] == "reading"
+                and reopened["presentation"]["mode"] == "presentation"
+                and reopened["modifiedMotion"]["after"]["stages"]
+                != reopened["modifiedMotion"]["before"]["stages"]
+                and reopened["modifiedMotion"]["opacity"] == "1"
+                and reopened["transitionDuration"] != "0s"
+                and not exported_errors,
+                {**reopened, "page_errors": exported_errors},
+            )
+            exported_page.screenshot(path=str(output_dir / "editor-exported.png"), full_page=True)
+            page.screenshot(path=str(output_dir / "editor-source-after-export.png"), full_page=True)
+            check(
+                "console_clean",
+                not console_errors and not page_errors,
+                {"console_errors": console_errors, "page_errors": page_errors},
+            )
+            browser.close()
+    except Exception as exc:  # pragma: no cover - preserves browser evidence on failure
+        failures.append("qa_exception")
+        checks["qa_exception"] = {"passed": False, "detail": f"{type(exc).__name__}: {exc}"}
+
+    results["passed"] = not failures
+    results["failures"] = failures
+    report_path = output_dir / "editor-qa.json"
+    report_path.write_text(
+        json.dumps(results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(report_path)
+    if failures:
+        print("EDITOR_QA_FAILED " + ", ".join(failures), file=sys.stderr)
+        return 1
+    print("EDITOR_QA_OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -57,6 +57,12 @@ jobs:
           python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa-1600 --width 1600 --height 900
           python skill/taohtml/scripts/check_html_deck.py skill/taohtml/assets/html-deck-template/index.html .artifacts/template-qa-1920 --width 1920 --height 1080
 
+      - name: Run content editor browser QA
+        run: |
+          python skill/taohtml/scripts/render_visual_system.py --content evals/taohtml-quality-v1/fixtures/visual-systems-content.json --theme black-white-fluorescent-cards --output .artifacts/editor-fixture.html
+          python skill/taohtml/scripts/check_assets.py .artifacts/editor-fixture.html --strict-offline
+          python skill/taohtml/scripts/check_editor_runtime.py .artifacts/editor-fixture.html .artifacts/editor-qa
+
       - name: Build QA contact sheet
         run: python skill/taohtml/scripts/build_contact_sheet.py .artifacts/template-qa-1600 .artifacts/template-contact-sheet.png
 

@@ -17,9 +17,11 @@ The current core supports:
 - Page number
 - Auto-hiding controls
 - Source evidence modal
+- Lightweight report text/image editing with unified undo/redo
+- Session-scoped refresh recovery and export to a newly named HTML
 - Offline local assets and portable packaging
 
-Do not promise dual-screen presenter view, embedded speaker notes, in-browser content editing/export, interactive chart authoring, cross-page morphing, or crash recovery from this core.
+Do not promise dual-screen presenter view, embedded speaker notes, free element movement, layout rebuilding, interactive chart authoring, animation editing, cross-page morphing, durable version history, or browser ZIP export from this core. Read `content-editor.md` before authoring or testing editable content.
 
 ## DOM Contract
 
@@ -47,6 +49,8 @@ Keep these hooks when generating or redesigning a deck:
 - `#prev` / `#next`: whole-page navigation controls.
 - `#modeToggle`: reading/presentation switch.
 - `#fullscreenToggle`: fullscreen control.
+- `#editToggle`: enter/leave the bundled content editor.
+- `data-taohtml-edit-lock`: exclude a system, fixed-brand, or other non-report subtree from editing.
 
 Page-specific design may add classes and data attributes, but must not remove these hooks.
 
@@ -68,11 +72,19 @@ Page-specific design may add classes and data attributes, but must not remove th
 
 Buttons, links, inputs, and open modals must consume their own events rather than advancing the page.
 
+### Edit mode
+
+- `setEditing(true)` preserves `mode`, page index, and every stored stage while exposing all fragments for editing.
+- Page-step keys, blank-page advance, reveal transitions, and report animations pause. Previous/next page buttons remain available for moving through the same edit session.
+- System controls and locked subtrees never become content targets.
+- `setMode`, `nextStep`, and `previousStep` do nothing until `setEditing(false)` restores normal Runtime behavior.
+
 ### Controls and fullscreen
 
 - Opening the more menu keeps controls visible and suspends the auto-hide timer.
 - Entering or exiting fullscreen closes the more menu, sets its toggle to `aria-expanded="false"`, and restarts the auto-hide timer after `fullscreenchange`.
 - Pointer movement reveals the controls again. Fullscreen and non-fullscreen states must not retain a stale menu overlay.
+- Edit mode keeps controls visible; leaving it rearms the ordinary auto-hide timer.
 
 ## Public API
 
@@ -87,9 +99,12 @@ previousStep()
 nextPage()
 previousPage()
 toggleFullscreen()
+setEditing(true | false)
 ```
 
-`getState()` returns a copy containing `mode`, zero-based `index`, and the per-page `stages` array. Runtime changes dispatch `taohtml:statechange` on `window` with the same state snapshot in `event.detail`.
+`getState()` returns a copy containing `mode`, zero-based `index`, the per-page `stages` array, and boolean `editing`. Runtime changes dispatch `taohtml:statechange` on `window` with the same state snapshot in `event.detail`.
+
+The `editing` field and `setEditing()` method are additive. Existing consumers may continue reading only `mode`, `index`, and `stages`; their meaning and types do not change. Event consumers must ignore unknown future snapshot fields. Editor consumers must not mutate `event.detail` and must use `setEditing()` instead of replacing the core Runtime or synthesizing navigation state.
 
 Optional future modules must use this API and event rather than replacing core navigation.
 
@@ -115,6 +130,8 @@ Before delivery, verify:
 - Returning to a page restores its stage.
 - Hash routes and page numbers match the active page.
 - Controls and fullscreen actions do not advance the report; fullscreen closes the more menu and controls auto-hide again after idle time.
+- Edit mode pauses keyboard/blank-click/reveal advance, keeps page buttons usable, locks system UI, and restores the pre-edit Runtime state on exit.
+- Text, image replacement, and crop focus share Ctrl/Cmd undo and redo; refresh recovery and export/reopen pass `content-editor.md`.
 - Asset, console, and visible-bound checks pass at the target viewport.
 - Every active slide's rendered rectangle covers the deck canvas within the QA tolerance at each target viewport.
 - Independent visible text labels, including HTML text and SVG `<text>`, do not intersect and retain the small QA safety gap. SVG labels and positioned/transformed HTML labels remain strict; a shallow HTML Range font-metric overlap is excluded only when both static, independently untransformed layout boxes are actually separate, and that exclusion is recorded in QA JSON. Exempt an intentional overlay only on the exact text owner with `data-qa-ignore-text-collision="reason"`; the report must list every opt-out.

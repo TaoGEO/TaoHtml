@@ -98,6 +98,19 @@ class CheckAssetsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("REMOTE_ASSETS", result.stdout)
 
+    def test_javascript_url_method_names_are_not_parsed_as_css_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html = Path(temp_dir) / "index.html"
+            html.write_text(
+                "<style>.hero{background:url('data:image/png;base64,AA==')}</style>"
+                "<script>reader.readAsDataURL(file); URL.revokeObjectURL(url);</script>",
+                encoding="utf-8",
+            )
+            result = run_check(html, "--strict-offline")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ASSET_CHECK_OK", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
