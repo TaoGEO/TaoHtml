@@ -1,6 +1,6 @@
 # Report Design Brief Template
 
-Generate this brief only after the route-appropriate source gate and the design-ready gate in `intake-workflow.md` both pass. A bound Word/PDF/PPT/HTML material route requires a confirmed Material Understanding Summary; an idea-only route does not. If a minimum hard-boundary gap remains, use the blocked-intake output instead of this template. Ordinary missing details may be completed after confirmation and disclosed in the delivery verification list.
+Generate this brief only for a new build or meaning-changing continuation after the route-appropriate source gate and the design-ready gate in `intake-workflow.md` both pass. A bound Word/PDF/PPT/HTML material route requires a confirmed Material Understanding Summary; an idea-only route does not. A read-only review and a meaning-preserving local continuation do not generate or reconfirm this brief. If a minimum hard-boundary gap remains, use the blocked-intake output instead of this template. Ordinary missing details may be completed after confirmation and disclosed in the delivery verification list.
 
 Keep it readable by the customer. Include only fields that affect this project. Do not emit a separate JSON configuration and do not pre-design every page.
 
@@ -8,14 +8,14 @@ Keep it readable by the customer. Include only fields that affect this project. 
 # 报告设计简报
 
 ## 项目定义
-- 任务意图：新建 / 续作（只读复审不生成设计简报）
+- 任务意图：新建 / 含义变化续作（只读复审与无含义变化的局部续作不生成设计简报）
 - 输入入口：只有想法 / Word / PDF / 已有 PPT / HTML
 - 使用模式：阅读 / 现场演讲
 - 内容长度：精简 / 标准 / 详细
 - 预计页数：根据当前材料动态估算
 - 交付形式：单 HTML，或 HTML + assets / ZIP
 
-## 续作基线（续作时保留）
+## 续作基线（含义变化续作时保留）
 - 当前成品：精确路径或上传标识、检查覆盖与当前可预览状态
 - 继承状态：仍有直接依据的目标、受众、结构、视觉、来源解释与确认产物
 - 本次变更：请求修改的范围及不改变的边界
@@ -62,10 +62,11 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 阅读与演讲行为：...
 
 ## 来源与证据记录
-- 来源：路径或上传标识
-- source_binding：current_upload_or_user_explicit / task_instruction_explicit / candidate_confirmed
-- source_role：original_customer_material / secondary_handoff_summary / current_artifact / visual_reference / agent_generated_material / described_unavailable_material
-- availability_status：workspace_readable / platform_visible_not_retrieved / handoff_record_only / confirmed_missing / not_yet_verified
+- 来源：路径、上传标识或精确外部定位
+- source_binding：current_upload_or_user_explicit / task_instruction_explicit / candidate_confirmed / agent_retrieved_external
+- source_role：original_customer_material / external_public_evidence / secondary_handoff_summary / current_artifact / visual_reference / agent_generated_material / described_unavailable_material
+- availability_status：workspace_readable / external_retrieved_inspected / platform_visible_not_retrieved / handoff_record_only / confirmed_missing / not_yet_verified
+- evidence_verification：verified / unverified / conflicting / not_applicable
 - 检查覆盖、观察依据与限制：...
 - 来源理由：...
 - 支撑观点：...
@@ -87,8 +88,8 @@ Keep it readable by the customer. Include only fields that affect this project. 
 
 - For a simple report, merge short sections and keep the brief compact.
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
-- For continuation, preserve every still-supported inherited decision, describe only the requested delta in `续作基线`, and avoid replaying the original interview. A read-only handoff never uses this template.
-- Keep the six handoff source roles and five availability states independent from `source_binding`. A secondary summary and a current artifact must state what each can and cannot support; neither becomes original evidence through reuse.
+- For a meaning-changing continuation, preserve every still-supported inherited decision, describe only the requested delta in `续作基线`, rebuild only affected fields, then display and confirm the complete current brief. Avoid replaying the original interview. A read-only handoff and a meaning-preserving local continuation never use this template.
+- Keep the seven source roles, six availability states, and evidence-verification status independent from `source_binding`. A secondary summary and a current artifact must state what each can and cannot support; neither becomes original evidence through reuse. Retrieved public/third-party evidence uses its external role and availability and must never be relabeled as customer material or Agent-generated content.
 - Record only current observed readiness and operation evidence. A found/openable HTML is not formally deliverable; operating instructions must come from the exact artifact tested or be labeled as generic current Runtime-contract behavior.
 - If the user supplied a clear visual reference, record `reference_mode`. Do not reduce `corporate_fidelity` to “closely reproduced”: state the screenshot-visible fidelity boundary, locked elements, editable region, and extension/unknown limits explicitly.
 - For a reused corporate profile, copy the exact live binding's profile id, display name, version, theme fingerprint, identity-resolution basis, and temporary-override state. Do not require or claim a new VI confirmation. Keep the profile binding, current brief confirmation, and production authorization as three separate facts.
@@ -103,7 +104,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - During production, record each actual creative supplement in the delivery verification ledger rather than silently converting it into a source fact. Do not list customer-provided or independently verified facts as creative supplements.
 - Never disguise a minimum hard-boundary decision as an inference. Return to the blocked-intake output in `intake-workflow.md` instead.
 - Keep source records in the brief whether or not the final pages visibly cite them.
-- Copy every used material's source identity, `source_binding`, source role, availability status, inspection coverage, limits, and binding reason from the source ledger. Do not include a merely discovered or conventionally named workspace file, and do not relabel an eligible bound source as a creative supplement.
+- Copy every used material's source identity, `source_binding`, source role, availability status, evidence-verification status, inspection coverage, limits, and binding reason from the source ledger. Do not include a merely discovered or conventionally named workspace file, and do not relabel an eligible bound source as a creative supplement.
 - Do not split content into slide copy, speaker notes, and appendix at this stage; production makes that allocation from the confirmed mode.
 
 ## Authorization

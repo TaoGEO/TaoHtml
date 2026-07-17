@@ -41,13 +41,17 @@ For every bound item in a handoff, record these independent fields:
 
 ```text
 source identity | source_binding | source_role | availability_status |
-inspection coverage | supports | limits | observation basis
+evidence_verification | inspection coverage | supports | limits |
+observation basis
 ```
 
 Use one of these source roles:
 
 - `original_customer_material`: first-party material supplied by the customer,
   such as source documents, real data, screenshots, quotations, or evidence.
+- `external_public_evidence`: a third-party or public source retrieved through the
+  current task and recorded with its exact locator. It is source evidence, not
+  customer material and not Agent-generated material.
 - `secondary_handoff_summary`: an Agent- or human-written account of earlier work.
   It can orient the next Agent but does not replace the original material it
   describes.
@@ -64,12 +68,34 @@ Use one of these availability states:
 
 - `workspace_readable`: the exact bound item can be opened in the current task
   workspace. Record `complete | partial` inspection coverage separately.
+- `external_retrieved_inspected`: the exact external source was retrieved and
+  inspected in the current session or connector, but is not represented as a
+  workspace file. Record its locator, retrieval time, coverage, and claim check.
 - `platform_visible_not_retrieved`: the platform shows the exact item, but its
   bytes have not been retrieved into the current task.
 - `handoff_record_only`: the item exists only as a statement in a handoff record.
 - `confirmed_missing`: the user or an authoritative platform/source state confirms
   that the exact item has been lost, deleted, or is no longer recoverable.
 - `not_yet_verified`: current availability has not been established.
+
+Record `evidence_verification` independently as `verified | unverified | conflicting
+| not_applicable`. Availability proves access, not truth. Use `verified` only after
+checking the exact external locator/content and the specific claim it supports;
+record `conflicting` instead of silently choosing when sources disagree.
+
+### Evidence Provenance Matrix
+
+Treat this table as normative classification behavior:
+
+| source_case | source_binding | source_role | availability_status | evidence_verification |
+|---|---|---|---|---|
+| `agent_retrieved_public_source_verified` | `agent_retrieved_external` | `external_public_evidence` | `external_retrieved_inspected` | `verified` |
+| `agent_retrieved_public_source_unverified` | `agent_retrieved_external` | `external_public_evidence` | `external_retrieved_inspected` | `unverified` |
+
+Use `agent_retrieved_external` only for a network or connector source retrieved
+within the current authorized task. Record the exact URL or stable locator,
+retrieval time, inspection coverage, supported claim, and verification result. This
+binding never applies to a local candidate and never authorizes filesystem discovery.
 
 Do not promote a role or status silently. A secondary summary remains secondary
 even when it is detailed. A current artifact remains an artifact rather than
@@ -80,10 +106,11 @@ cleaned, deleted, or permanently lost. Keep the status `not_yet_verified` or
 
 ## Candidate Discovery Boundary
 
-Apply the existing source-binding rules without exception. Inspect content only
-after the item is a current upload or explicit user selection, is explicitly bound
-by the current task instruction, or is an exact candidate path the user has
-confirmed.
+Apply the existing local/upload source-binding rules without exception. Inspect local
+content only after the item is a current upload or explicit user selection, is
+explicitly bound by the current task instruction, or is an exact candidate path the
+user has confirmed. Keep `agent_retrieved_external` limited to external network or
+connector evidence; never use it to bypass confirmation for a local file.
 
 After the task route or handoff scope exists, candidate discovery may inspect only
 task-scoped metadata or directory locations the user has placed in scope. It may
@@ -128,7 +155,35 @@ If one missing decision would materially change the requested result, ask only t
 single largest gap and apply the existing repetition, information-gain, and six-
 question limits in `intake-workflow.md`.
 
-Continuation without restored original sources is normally safe for:
+### Continuation Decision Matrix
+
+Classify the requested delta before entering any gate. Treat this table as normative
+workflow behavior:
+
+| change_class | intake | material_summary | design_brief | required_current_validation |
+|---|---|---|---|---|
+| `meaning_preserving_local` | `do_not_rerun` | `do_not_rebuild` | `no_reconfirmation` | `exact_artifact_qa_and_delivery` |
+| `meaning_changing` | `delta_only` | `rebuild_affected` | `confirm_complete_current_brief` | `authorization_qa_and_delivery` |
+
+Use `meaning_preserving_local` only for an exact delivered artifact whose requested
+change preserves its claims, real data, provenance, evidence relationships, core
+viewpoint, structure, scope promise, and responsibility boundary. This path does not
+reopen startup, intake, the Material Understanding Summary, or Report Design Brief
+confirmation. Preserve the exact baseline identity, make the bounded change, and run
+the applicable current asset, browser, Runtime/editor, traceability, and delivery
+checks on the resulting artifact.
+
+Use `meaning_changing` when the delta changes or could change source interpretation,
+real data, attribution, evidence-to-claim relationships, real identities or achieved
+outcomes, a core viewpoint or conclusion, chapter structure, scope promise, or
+responsibility boundary. Rebuild only the affected source interpretation and brief
+fields, then display and confirm the complete current brief through the existing gate
+before formal production. If the class itself is genuinely ambiguous, ask only the
+single largest scope-boundary question and count it under the existing six-question
+limit.
+
+Meaning-preserving continuation without restored original sources is normally safe
+for:
 
 - layout, spacing, typography, color, and other reversible visual adjustments;
 - Runtime-compatible navigation, technical, portability, and local asset fixes; and
@@ -151,12 +206,11 @@ delivery-time `《待核实内容清单》`. Do not turn every unavailable origi
 block.
 
 Previous gate artifacts and handoff claims may seed the current ledger, but they do
-not by themselves authorize a new formal artifact. Rebuild only the affected source
-interpretation and brief fields, then display and confirm the complete current brief
-through the existing gate and satisfy the current-task contract in
-`production-authorization.md`. A local copy, layout, color, or motion revision does
-not change the brief's core meaning, but formal HTML, browser QA, and delivery still
-require the current applicable machine gates.
+not by themselves prove current readiness. On `meaning_preserving_local`, do not
+fabricate a new authorization state or force brief reconfirmation; verify the exact
+baseline and resulting artifact through the applicable current QA and delivery
+checks. On `meaning_changing`, satisfy the current-task contract in
+`production-authorization.md` after the complete current brief is confirmed.
 
 ## Readiness And Operation Claims
 
@@ -164,12 +218,13 @@ Before claiming **ready** or **formally deliverable**, verify at least:
 
 - the exact current artifact and every used material have eligible bindings, roles,
   availability states, and inspection coverage;
-- the current production-authorization action succeeds where formal output is in
-  scope;
+- the current production-authorization action succeeds when the selected path
+  reopens formal production;
 - strict offline asset QA and the required browser preflight/HTML QA pass on the
   current artifact;
 - core-viewpoint/evidence traceability and any executable action path still match
-  the current confirmed brief; and
+  the confirmed brief, or on `meaning_preserving_local`, still match the exact
+  delivered baseline without semantic drift; and
 - the delivery verification handoff is current.
 
 If these checks are incomplete, use bounded language such as **found**, **can be

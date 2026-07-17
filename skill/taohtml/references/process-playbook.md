@@ -2,19 +2,28 @@
 
 This playbook generalizes a complete collaborative process for turning loose materials, screenshots, demos, and business intent into a polished PPT-like report or HTML presentation.
 
-Use it only after the current Report Design Brief has been confirmed. Intake, material-summary, and confirmation rules live in `intake-workflow.md` and `material-understanding.md`; do not restart those questions here.
+Use it after the current Report Design Brief has been confirmed for a new build or
+meaning-changing continuation. A meaning-preserving local continuation may use only
+the bounded revision and QA/delivery parts of this playbook without a new Material
+Understanding Summary or Report Design Brief confirmation. Intake, material-summary,
+and confirmation rules live in `intake-workflow.md` and
+`material-understanding.md`; do not restart them here.
 
 For an inherited project, read `project-handoff.md` before using this playbook. A
 `review_only` handoff stops before production and does not use this playbook to create
-HTML. A `continue_existing` task begins from the exact current artifact and the
-delta recorded in the current brief; do not treat the handoff narrative as original
-evidence or replay the full interview.
+HTML. A `continue_existing` task begins from the exact current artifact and follows
+the Continuation Decision Matrix there. Do not treat the handoff narrative as
+original evidence or replay the full interview.
 
-Before saving the first runnable formal `index.html`, require a successful
+For a new build or meaning-changing continuation, require a successful
 `scripts/check_production_authorization.py --action formal-html` result for the current
-task state in `production-authorization.md`. Before delivery, require
-`--action deliver-formal-html`. An existing file or earlier task state is not evidence
-of current authorization.
+task state in `production-authorization.md` before saving the first runnable formal
+`index.html`, and require `--action deliver-formal-html` before delivery. An existing
+file or earlier task state is not evidence of current authorization on that path. A
+meaning-preserving local continuation does not manufacture a new authorization state
+or first-runnable artifact: preserve the exact delivered baseline, keep the revision
+inside its semantic boundary, and run the applicable asset, browser, Runtime/editor,
+traceability, and delivery checks on the exact result.
 
 It is not tied to any single topic. Use it for salon decks, training courseware, sales proposals, consulting reports, diagnostic reports, product presentations, investor-style narratives, internal strategy decks, and other slide-based reports.
 
@@ -96,19 +105,27 @@ If the redesigned page still looks like "title + three cards + small text", it i
 
 ## 2B. Continue A Handed-Off Project
 
-Before editing, build the source-role and availability map from
+Before editing, build or reuse the source-role and availability map from
 `project-handoff.md`. Record the exact current artifact, what was inspected, what is
-known only from a secondary summary, and what is unavailable or unverified. A current
-HTML is the baseline for rendered behavior and wording; it is not automatic proof of
-the source, evidence relationship, or correctness of its claims.
+known only from a secondary summary, what came from retrieved public/third-party
+evidence, and what is unavailable or unverified. A current HTML is the baseline for
+rendered behavior and wording; it is not automatic proof of the source, evidence
+relationship, or correctness of its claims.
 
 Continue layout, typography, color, technical behavior, portability, local assets,
 and meaning-preserving local expression when the requested delta stays inside those
-boundaries. Restore the original source or obtain explicit confirmation of the exact
-change before modifying real data, quotation/citation/source attribution, evidence-
-to-claim relationships, real identities or achieved outcomes, or a core conclusion,
-scope promise, or responsibility boundary. Apply the existing high-risk verification
-rules even after user confirmation.
+boundaries. This `meaning_preserving_local` path does not rerun intake, rebuild a
+Material Understanding Summary, or generate/reconfirm a Report Design Brief. Preserve
+the exact delivered baseline and run current artifact QA and delivery verification
+after the change.
+
+Use the `meaning_changing` path before modifying real data,
+quotation/citation/source attribution, evidence-to-claim relationships, real
+identities or achieved outcomes, a core conclusion, chapter structure, scope promise,
+or responsibility boundary. Restore the original source or obtain explicit
+confirmation of the exact change, rebuild only affected source/brief fields, display
+and confirm the complete current brief, then apply the current authorization and QA
+gates. Apply the existing high-risk verification rules even after user confirmation.
 
 Ordinary missing scenes, examples, projected values, viewpoints, and expression still
 follow output-first production. Track them as creative supplements and deliver them in
@@ -319,7 +336,10 @@ Recommended local tool flow:
 
 ### 8A. Land The First Runnable Artifact Early
 
-After the brief is confirmed, production should become visible quickly. Do not spend a long uninterrupted phase repeatedly reconsidering layouts, assets, or optional features before any runnable file exists.
+After the brief is confirmed, or after a meaning-preserving local revision is
+classified against an exact delivered baseline, production should become visible
+quickly. Do not spend a long uninterrupted phase repeatedly reconsidering layouts,
+assets, or optional features before any runnable file exists.
 
 Use this sequence:
 
@@ -432,14 +452,16 @@ Content:
 - Are ordinary creative supplements separated from source facts and covered by `《待核实内容清单》`?
 - Are simulated charts, fictional cases, generated evidence-like artifacts, and easily mistaken data labeled `示意 / 模拟 / 待核实` next to the content?
 - Are customer-provided and verified facts preserved with their real provenance rather than listed as creative supplements?
+- Is retrieved public/third-party evidence recorded as `external_public_evidence` with `external_retrieved_inspected` and an independent verification result, rather than as customer material or Agent-generated content?
 - Does a brief-to-output traceability check map every confirmed core viewpoint, correction, evidence gap, and decision boundary to a visible output location?
 - For conversion reports, does executable-action traceability map the desired action, exact path, source and verification status, and final display location from the brief to the output?
 - Is the rendered action channel visible, usable, and aligned with the confirmed objective rather than reduced to CTA wording alone?
 - If the CTA uses a link, command, contact route, price, or QR code, does its rendered value exactly match the verified source, and does the QR decode to the same path?
 - Do compound requirements preserve every required part, such as "SLA, responsibility boundary, and API dictionary" rather than compressing the list into a narrower substitute?
 - Is the offer introduced only after the problem and method are credible?
-- For continuation, are original material, secondary summary, current artifact, visual reference, Agent-generated material, and described-but-unavailable material kept in distinct source roles and availability states?
+- For continuation, are original material, external public evidence, secondary summary, current artifact, visual reference, Agent-generated material, and described-but-unavailable material kept in distinct source roles and availability states?
 - Do meaning-changing revisions to real data, provenance, evidence relationships, or core conclusions have restored sources or exact explicit confirmation?
+- Did a meaning-preserving local revision avoid reopening intake/material-summary/brief confirmation while still running applicable checks on the exact resulting artifact?
 
 Design:
 

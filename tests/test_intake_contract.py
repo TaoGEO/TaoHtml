@@ -36,10 +36,37 @@ PROFILE = (SKILL_DIR / "references" / "profile-memory.md").read_text(
 PUBLIC_WORKFLOW = (ROOT / "docs" / "workflow.md").read_text(encoding="utf-8")
 
 
+def contract_table(text: str, heading: str) -> dict[str, dict[str, str]]:
+    section = text.split(f"### {heading}", 1)[1]
+    lines = section.splitlines()
+    start = next(index for index, line in enumerate(lines) if line.startswith("|"))
+    table_lines = []
+    for line in lines[start:]:
+        if not line.startswith("|"):
+            break
+        table_lines.append(line)
+
+    def cells(line: str) -> list[str]:
+        return [cell.strip().strip("`") for cell in line.strip("|").split("|")]
+
+    headers = cells(table_lines[0])
+    rows: dict[str, dict[str, str]] = {}
+    for line in table_lines[2:]:
+        values = cells(line)
+        row = dict(zip(headers, values, strict=True))
+        rows[values[0]] = row
+    return rows
+
+
 class IntakeContractTests(unittest.TestCase):
     def test_fresh_placeholder_cannot_bind_stale_workspace_prompt(self) -> None:
         combined = SKILL + INTAKE
         self.assertIn(
+            "Start every new build or meaning-changing continuation that will create or revise\nHTML with a route handshake",
+            SKILL,
+        )
+        self.assertIn("bypasses this handshake", SKILL)
+        self.assertNotIn(
             "Start every invocation that will create or revise HTML with a route handshake",
             SKILL,
         )
@@ -76,6 +103,7 @@ class IntakeContractTests(unittest.TestCase):
     def test_handoff_source_roles_and_availability_are_explicit(self) -> None:
         for role in (
             "original_customer_material",
+            "external_public_evidence",
             "secondary_handoff_summary",
             "current_artifact",
             "visual_reference",
@@ -87,6 +115,7 @@ class IntakeContractTests(unittest.TestCase):
             self.assertIn(role, BRIEF)
         for status in (
             "workspace_readable",
+            "external_retrieved_inspected",
             "platform_visible_not_retrieved",
             "handoff_record_only",
             "confirmed_missing",
@@ -98,8 +127,35 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("does not replace the original material", HANDOFF)
         self.assertIn("not where its claims came from", HANDOFF)
 
+    def test_retrieved_public_evidence_has_real_provenance_semantics(self) -> None:
+        matrix = contract_table(HANDOFF, "Evidence Provenance Matrix")
+        verified = matrix["agent_retrieved_public_source_verified"]
+        self.assertEqual(verified["source_binding"], "agent_retrieved_external")
+        self.assertEqual(verified["source_role"], "external_public_evidence")
+        self.assertEqual(
+            verified["availability_status"], "external_retrieved_inspected"
+        )
+        self.assertEqual(verified["evidence_verification"], "verified")
+        self.assertNotIn(
+            verified["source_role"],
+            {"original_customer_material", "agent_generated_material"},
+        )
+        self.assertNotEqual(verified["availability_status"], "workspace_readable")
+
+        unverified = matrix["agent_retrieved_public_source_unverified"]
+        self.assertEqual(unverified["source_role"], verified["source_role"])
+        self.assertEqual(
+            unverified["availability_status"], verified["availability_status"]
+        )
+        self.assertEqual(unverified["evidence_verification"], "unverified")
+        self.assertIn("外部公开证据", PUBLIC_WORKFLOW)
+        self.assertIn("agent_retrieved_external", PUBLIC_WORKFLOW)
+
     def test_handoff_candidate_discovery_stays_source_bound_and_narrow(self) -> None:
-        self.assertIn("Apply the existing source-binding rules without exception", HANDOFF)
+        self.assertIn(
+            "Apply the existing local/upload source-binding rules without exception",
+            HANDOFF,
+        )
         self.assertIn("must not read that candidate\nfirst", HANDOFF)
         self.assertIn("Do not recursively scan a home directory", HANDOFF)
         self.assertIn("Do not recursively scan a home directory", INTAKE)
@@ -127,6 +183,29 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("delivery-time `《待核实内容清单》`", HANDOFF)
         self.assertIn("display and confirm the complete current brief", HANDOFF)
         self.assertIn("current-task contract in\n`production-authorization.md`", HANDOFF)
+
+    def test_continuation_matrix_skips_brief_only_for_local_semantic_noop(self) -> None:
+        matrix = contract_table(HANDOFF, "Continuation Decision Matrix")
+        local = matrix["meaning_preserving_local"]
+        self.assertEqual(local["intake"], "do_not_rerun")
+        self.assertEqual(local["material_summary"], "do_not_rebuild")
+        self.assertEqual(local["design_brief"], "no_reconfirmation")
+        self.assertEqual(
+            local["required_current_validation"], "exact_artifact_qa_and_delivery"
+        )
+
+        meaning_change = matrix["meaning_changing"]
+        self.assertEqual(meaning_change["intake"], "delta_only")
+        self.assertEqual(meaning_change["material_summary"], "rebuild_affected")
+        self.assertEqual(
+            meaning_change["design_brief"], "confirm_complete_current_brief"
+        )
+        self.assertEqual(
+            meaning_change["required_current_validation"],
+            "authorization_qa_and_delivery",
+        )
+        self.assertNotEqual(local["design_brief"], meaning_change["design_brief"])
+        self.assertIn("不重跑 intake、材料摘要或设计简报确认", PUBLIC_WORKFLOW)
 
     def test_handoff_readiness_and_operation_claims_require_current_evidence(self) -> None:
         for marker in (

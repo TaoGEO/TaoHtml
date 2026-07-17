@@ -26,25 +26,38 @@ Apply the source gate as follows:
 
 For `review_only`, stop after the read-only role/availability map in
 `project-handoff.md`; do not enter S0-S6 merely to read the handoff. For
-`continue_existing`, reuse still-supported source interpretations and decisions, then
-apply only the affected source gate and delta intake. Do not replay the full intake.
+`continue_existing`, apply the Continuation Decision Matrix there before S0. A clear
+`meaning_preserving_local` revision skips S0-S4 and enters only bounded revision,
+applicable current QA in S5, and delivery verification in S6. A `meaning_changing`
+revision reuses still-supported interpretations and decisions, then applies only the
+affected source gate and delta intake. Do not replay the full intake.
 
-Never write a Report Design Brief while a minimum hard-boundary gap remains. Never write HTML before the current brief is explicitly confirmed. Ordinary absent facts are not a reason to stop: plan reasonable creative supplements, finish the report, and disclose the generated details at delivery.
+Never write a Report Design Brief while a minimum hard-boundary gap remains. On a new
+build or meaning-changing continuation, never write HTML before the current brief is
+explicitly confirmed. A meaning-preserving local continuation is the explicit matrix
+exception: it does not create or reconfirm a brief and may revise only the exact
+delivered artifact inside its semantic boundary. Ordinary absent facts are not a
+reason to stop: plan reasonable creative supplements, finish the report, and disclose
+the generated details at delivery.
 On the static-reference route, never write the brief before the current VI board is confirmed.
 
-Maintain the exact current-task state and allowed actions in
-`production-authorization.md`. A Material Understanding Summary, VI standards board,
-and Report Design Brief are confirmation artifacts. Formal report HTML, browser QA,
-and delivery remain forbidden until the machine gate authorizes them for the current
-task. Do not treat a formal or nearly finished HTML deck as a confirmation preview.
+For a new build or meaning-changing continuation, maintain the exact current-task
+state and allowed actions in `production-authorization.md`. A Material Understanding
+Summary, VI standards board, and Report Design Brief are confirmation artifacts.
+Formal report HTML, browser QA, and delivery on that path remain forbidden until the
+machine gate authorizes them for the current task. A meaning-preserving local
+continuation does not fabricate a new authorization state; it preserves the exact
+delivered baseline and still runs every applicable current artifact QA and delivery
+check. Do not treat a formal or nearly finished HTML deck as a confirmation preview.
 
 ## New Invocation Handshake
 
-Every `new_build` or `continue_existing` TaoHtml invocation that will create or revise
-HTML starts at S0 unless the route is already established by the current bound
-handoff. A `review_only` request records the route when the available handoff proves
-it and otherwise leaves it unresolved without asking the three-route question.
-Establish only the current task entry in this first phase.
+Every `new_build` or `meaning_changing` continuation that will create or revise HTML
+starts at S0 unless the route is already established by the current bound handoff. A
+`meaning_preserving_local` continuation does not reopen S0. A `review_only` request
+records the route when the available handoff proves it and otherwise leaves it
+unresolved without asking the three-route question. Establish only the current task
+entry in this first phase.
 
 Treat the current message as route-bearing only when it contains at least one of:
 
@@ -95,6 +108,13 @@ A local or uploaded material is eligible only through one of these bindings:
 3. `candidate_confirmed`: after the route exists, the Agent discovers a candidate,
    states its exact path, and receives user confirmation to use it.
 
+An external network or connector source retrieved by the Agent uses
+`agent_retrieved_external` only when the current task authorizes browsing/evidence
+retrieval and the Agent records the exact URL or stable locator, retrieval time,
+inspection coverage, supported claim, and verification result. This is not a fourth
+local-file binding: never apply it to a workspace candidate or use it to broaden
+filesystem discovery.
+
 Mere workspace presence, a conventional filename such as `input/prompt.md`, a
 directory convention, or residue from a previous task is never a binding. Do not
 silently promote such a file to `known`, even when its content looks relevant. Before
@@ -120,18 +140,22 @@ For every material actually used, record:
 
 ```text
 source identity/path | source_binding | source role | availability status |
-inspection coverage | binding reason | bound conversation/task turn
+evidence verification | inspection coverage | binding reason |
+bound conversation/task turn
 ```
 
 Carry these fields into the Material Understanding Summary and the Report Design
 Brief's source records. A customer-bound or independently verified source remains a
 real source and must never be relabeled as a creative supplement.
 
-For handoff work, use the six source roles and five availability states defined in
-`project-handoff.md`. A secondary handoff summary can establish what was previously
-reported, and a current artifact can establish what is presently rendered; neither
-establishes the provenance of underlying claims without the original source or an
-explicit confirmation permitted by that reference.
+For handoff work, use the seven source roles, six availability states, and independent
+evidence-verification field defined in `project-handoff.md`. A secondary handoff
+summary can establish what was previously reported, and a current artifact can
+establish what is presently rendered; neither establishes the provenance of
+underlying claims without the original source or an explicit confirmation permitted
+by that reference. A retrieved third-party/public source uses
+`external_public_evidence | external_retrieved_inspected`; never relabel it as
+customer material or Agent-generated content.
 
 ## Decision Ledger
 
@@ -152,6 +176,9 @@ For `continue_existing`, seed the ledger from still-readable verified artifacts 
 the handoff role/availability map. Preserve a distinction between inherited verified
 facts, secondary claims, and currently unavailable material. Ask only about a delta
 that can change the requested result; do not turn takeover into a fresh interview.
+When the requested delta is clearly `meaning_preserving_local`, do not rebuild this
+ledger as a new intake; retain it only as the semantic baseline for post-change
+traceability.
 
 The design ledger is not the delivery verification list. During production, maintain a separate creative-supplement ledger with `page/content | supplement type | source status | suggested action`. A missing ordinary scene, number, viewpoint, or expression may enter this ledger directly instead of becoming another intake question. Customer-provided and independently verified facts stay in `known` or `confirmed`; never relabel them as creative supplements.
 
@@ -225,13 +252,15 @@ Before asking, re-read the conversation, available source, ledger, prior attempt
 2. Resolve S0 first, then any missing startup choice according to `Startup Decisions`; after startup, rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
 3. Ask only the largest current gap whose answer would change the report design.
 
-For continuation, remove every unchanged inherited decision before ranking gaps. If
-the requested revision is limited to layout, technical behavior, portability, or
-meaning-preserving local expression, do not ask for unavailable originals merely to
-repeat the prior intake. If the revision changes real data, provenance, evidence
-relationships, identity, achieved outcomes, a core conclusion, scope promise, or
-responsibility boundary, apply the recovery/explicit-confirmation boundary in
-`project-handoff.md`.
+For continuation, classify the delta before ranking gaps. A clear
+`meaning_preserving_local` revision asks no intake question and does not reopen a
+Material Understanding Summary or Report Design Brief. If the class is ambiguous,
+ask only the single largest scope-boundary question. A `meaning_changing` revision
+removes every unchanged inherited decision, then asks only its largest remaining
+gap. Apply the recovery/explicit-confirmation boundary in `project-handoff.md` when
+the revision changes real data, provenance, evidence relationships, identity,
+achieved outcomes, a core conclusion, structure, scope promise, or responsibility
+boundary.
 
 Ask exactly one decision question per round. Do not pack independent questionnaire fields together. Offer 2-3 options only when they are real alternatives and state their design impact briefly.
 
@@ -244,8 +273,9 @@ For a missing conversion action path, delegation authorizes TaoHtml to locate an
 Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt and the one-time ambiguous reference-mode choice as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
 
 A read-only handoff uses zero clarification questions and does not start an intake
-cycle. A continuation delta uses this same budget and stop policy; it does not receive
-extra questions for previously answered startup or design decisions.
+cycle. A clear meaning-preserving local continuation also uses zero intake questions.
+A meaning-changing continuation delta uses this same budget and stop policy; it does
+not receive extra questions for previously answered startup or design decisions.
 
 - Allow **0 clarification questions** when the input already passes the source and design-ready gates.
 - Treat **3-5 clarification questions** as the ordinary target, not a quota.
@@ -300,7 +330,7 @@ Ask for the smallest specific item that would unlock the decision. Resume the sa
 
 ## Design-Ready Gate
 
-Treat a project as design-ready when:
+Treat a new build or meaning-changing continuation as design-ready when:
 
 - The audience outcome is clear enough to choose a narrative.
 - The core viewpoint or core question and scope are clear.
@@ -313,7 +343,7 @@ Treat a project as design-ready when:
 - On the profile-reuse route, the current task binding validates against the active profile/version and existing project-theme loader. It substitutes only the repeated VI step; it does not count as Report Design Brief confirmation.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - Every material in use has an eligible `source_binding` and recorded binding reason; no workspace convention or residue is acting as an implicit source.
-- For handoff or continuation work, every bound item also has an explicit source role, availability status, inspection coverage, support scope, and limitation; secondary summaries and current artifacts are not treated as original evidence.
+- For handoff or meaning-changing continuation work, every bound item also has an explicit source role, availability status, evidence-verification status, inspection coverage, support scope, and limitation; secondary summaries and current artifacts are not treated as original evidence, while retrieved public/third-party evidence has its own external role and availability.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No minimum hard-boundary item remains in `missing`; ordinary creative supplements may remain pending customer verification.
 
@@ -337,7 +367,10 @@ Show one current Report Design Brief and ask the user to confirm or correct that
 
 If the user adds source material or changes a core viewpoint after confirmation, invalidate the brief, update it, and ask for confirmation again. During production, resolve non-core omissions with a reasonable default or creative supplement, add the exact item to the delivery verification ledger, and continue instead of repeatedly interrupting the user.
 
-For continuation, rebuild only the affected source interpretation and brief fields,
-then display the complete current brief and use the existing brief-confirmation gate.
-Do not restart clarification about unchanged inherited sections. Previous handoff
-claims do not open the formal HTML gate.
+For a meaning-preserving local continuation, do not rebuild the source interpretation
+or Report Design Brief and do not request brief reconfirmation. Preserve the exact
+delivered baseline and run applicable current QA and delivery validation after the
+bounded change. For a meaning-changing continuation, rebuild only the affected source
+interpretation and brief fields, then display the complete current brief and use the
+existing brief-confirmation gate. Do not restart clarification about unchanged
+inherited sections. Previous handoff claims do not open the formal HTML gate.
