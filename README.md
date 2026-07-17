@@ -12,7 +12,7 @@
 
 > English brief: TaoHtml turns ideas and source material into polished, offline HTML reports and presentation-ready decks, with confirmed design decisions, reusable visual systems, and delivery QA.
 
-当前版本：[`0.3.3`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.3) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
+当前版本：[`0.4.0`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.4.0) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
 
 ## 核心能力
 
@@ -131,7 +131,7 @@ cp -R "$source" "$target"
 
 ### Release ZIP：离线 / 手动安装
 
-[`taohtml-marketplace-v0.3.3.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.3.3/taohtml-marketplace-v0.3.3.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.3.3`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。这个链接只会在未来单独执行 GitHub Release 后生效；本次版号更新不会自动创建 Release 或发布 Skill Hub。
+[`taohtml-marketplace-v0.4.0.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.4.0/taohtml-marketplace-v0.4.0.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.4.0`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。GitHub Release、Skill Hub 与 ClawHub 是独立分发渠道；请以各渠道公开详情页显示的版本为准。
 
 ## 版本更新
 
@@ -139,6 +139,7 @@ README 只保留每版最重要的用户变化；完整逐条历史见 [CHANGELO
 
 | 版本 | 最重要的变化 | 版本页与完整记录 |
 |---|---|---|
+| **v0.4.0** | 新增轻量离线内容编辑器：可修改报告文字、替换图片、调整裁切焦点、撤销/重做、刷新恢复并导出新的 HTML；版式、图表数据和动效仍由 Agent 处理 | [GitHub Release](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.4.0) · [CHANGELOG](CHANGELOG.md#040---2026-07-17) |
 | **v0.3.3** | 企业模板在首次 VI 确认后可存为显式版本档案；后续项目精确匹配时自动沿用，并支持临时更换、永久升级、回退和完整迁移 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.3) · [CHANGELOG](CHANGELOG.md#033---2026-07-17) |
 | **v0.3.2** | 新调用入口握手与材料来源绑定；按能力运行的快速环境预检；技能包自带依赖声明与 Windows 冒烟验证 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.2) · [CHANGELOG](CHANGELOG.md#032---2026-07-16) |
 | **v0.3.1** | Skill Hub 概述改为与 GitHub README 同源的中文纯文字客户介绍；Agent 执行规则改由同包 reference 承载，能力边界不变 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.1) · [CHANGELOG](CHANGELOG.md#031---2026-07-16) |

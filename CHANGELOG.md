@@ -4,6 +4,27 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-17
+
+### Added
+
+- Add a lightweight offline content editor to the shared TaoHtml Runtime. Customers can enter editing mode from the More menu, revise report text, replace images, adjust crop focus, and export a newly named HTML without overwriting the source ([#18](https://github.com/TaoGEO/TaoHtml/pull/18)).
+- Add one unified undo/redo history for text, image replacement, crop changes, and automatic text fitting; restore unsaved edits after an accidental refresh within the same browser session ([#18](https://github.com/TaoGEO/TaoHtml/pull/18)).
+- Add dedicated editor documentation, reusable runtime assets, deterministic unit coverage, and Chromium QA that reopens the exported HTML and verifies the edited result ([#18](https://github.com/TaoGEO/TaoHtml/pull/18)).
+
+### Changed
+
+- Pause page-click advancement, presentation shortcuts, and animation progression while editing, while keeping navigation available through explicit controls; exit restores the normal Runtime state ([#18](https://github.com/TaoGEO/TaoHtml/pull/18)).
+- Keep the editor intentionally lightweight: it edits report copy and images but does not become a PPT-style layout, chart-data, table-structure, or animation authoring tool ([#18](https://github.com/TaoGEO/TaoHtml/pull/18)).
+
+### Fixed
+
+- Preserve exact undo/redo ordering when text edits, image replacement, and crop changes happen in rapid succession, and prevent system controls, locked source content, SVG/MathML internals, and other unsafe elements from entering the editable-content boundary ([#18](https://github.com/TaoGEO/TaoHtml/pull/18)).
+
+### Delivery boundaries
+
+- Self-contained reports export as one new HTML. Reports that use relative assets export revised HTML only and must keep the original assets directory; browser-side ZIP creation is not claimed. Chromium/Chrome is the automated primary path, while Safari remains best-effort with a documented Save As fallback.
+
 ## [0.3.3] - 2026-07-17
 
 ### Added
