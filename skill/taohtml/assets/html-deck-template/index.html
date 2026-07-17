@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HTML Deck Template</title>
   <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/runtime/taohtml-editor.css" data-taohtml-editor-bundle="style">
   <style>
     :root {
       --bg: #f5f5ee;
@@ -395,7 +396,7 @@
     </section>
 
     <section class="slide dark" data-title="Evidence">
-      <button class="source-btn" data-source="assets/source-pages/page-01.svg" data-source-label="Example source page">Source</button>
+      <button class="source-btn" data-taohtml-edit-lock data-source="assets/source-pages/page-01.svg" data-source-label="Example source page">Source</button>
       <div class="kicker">EVIDENCE</div>
       <h1>Evidence Should<br>Carry The Page</h1>
       <div class="grid-2">
@@ -414,22 +415,23 @@
     </section>
     <!-- TAOHTML_SLIDES_END -->
 
-    <div class="nav controls">
+    <div class="nav controls" data-taohtml-edit-lock>
       <button id="prev" aria-label="Previous page">&lsaquo;</button>
       <button id="next" aria-label="Next page">&rsaquo;</button>
     </div>
 
-    <div class="more controls">
+    <div class="more controls" data-taohtml-edit-lock>
       <button id="moreToggle" aria-label="More options" aria-expanded="false">&hellip;</button>
       <div class="more-menu" id="moreMenu" hidden>
+        <button id="editToggle">编辑模式</button>
         <button id="modeToggle">Switch to reading mode</button>
         <button id="fullscreenToggle">Enter fullscreen</button>
       </div>
     </div>
 
-    <div class="page-indicator" id="pageIndicator" aria-live="polite"></div>
+    <div class="page-indicator" id="pageIndicator" data-taohtml-edit-lock aria-live="polite"></div>
 
-    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Source evidence" aria-hidden="true">
+    <div class="modal" id="modal" data-taohtml-edit-lock role="dialog" aria-modal="true" aria-label="Source evidence" aria-hidden="true">
       <div class="modal-card">
         <button id="modalClose">Close</button>
         <div id="modalBody"></div>
@@ -473,6 +475,7 @@
       mode: deck.dataset.mode === 'reading' ? 'reading' : 'presentation',
       index: 0,
       stages: slides.map(() => 0),
+      editing: false,
     };
     let controlsTimer;
 
@@ -488,6 +491,7 @@
         mode: state.mode,
         index: state.index,
         stages: [...state.stages],
+        editing: state.editing,
       };
     }
 
@@ -534,6 +538,7 @@
     }
 
     function nextStep() {
+      if (state.editing) return;
       if (state.mode === 'reading') return nextPage();
       const count = stepCount(slides[state.index]);
       if (state.stages[state.index] < count) {
@@ -545,6 +550,7 @@
     }
 
     function previousStep() {
+      if (state.editing) return;
       if (state.mode === 'reading') return previousPage();
       if (state.stages[state.index] > 0) {
         setStage(state.index, state.stages[state.index] - 1);
@@ -560,9 +566,20 @@
     }
 
     function setMode(mode) {
-      if (!['reading', 'presentation'].includes(mode) || mode === state.mode) return;
+      if (state.editing || !['reading', 'presentation'].includes(mode) || mode === state.mode) return;
       state.mode = mode;
       if (mode === 'presentation') state.stages[state.index] = 0;
+      closeMoreMenu();
+      render();
+      wakeControls();
+    }
+
+    function setEditing(editing) {
+      const nextEditing = Boolean(editing);
+      if (nextEditing === state.editing) return;
+      state.editing = nextEditing;
+      deck.dataset.taohtmlEditing = String(nextEditing);
+      closeModal();
       closeMoreMenu();
       render();
       wakeControls();
@@ -581,7 +598,7 @@
     function wakeControls() {
       deck.classList.remove('controls-hidden');
       clearTimeout(controlsTimer);
-      if (moreMenu.hidden) {
+      if (moreMenu.hidden && !state.editing) {
         controlsTimer = setTimeout(() => deck.classList.add('controls-hidden'), 3000);
       }
     }
@@ -642,6 +659,7 @@
       });
     });
     document.addEventListener('click', event => {
+      if (state.editing) return;
       if (
         event.target.closest('button, a, input, textarea, select, [contenteditable="true"], .controls') ||
         modal.classList.contains('open')
@@ -651,6 +669,7 @@
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && modal.classList.contains('open')) return closeModal();
       if (modal.classList.contains('open')) return;
+      if (state.editing) return;
       if (event.target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
       const handledKeys = ['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', ' ', 'Home', 'End'];
       if (handledKeys.includes(event.key)) event.preventDefault();
@@ -677,6 +696,7 @@
       nextPage,
       previousPage,
       toggleFullscreen,
+      setEditing,
     });
 
     ['mousemove', 'pointerdown'].forEach(eventName => {
@@ -687,5 +707,6 @@
     render();
     wakeControls();
   </script>
+  <script src="assets/runtime/taohtml-editor.js" data-taohtml-editor-bundle="script"></script>
 </body>
 </html>

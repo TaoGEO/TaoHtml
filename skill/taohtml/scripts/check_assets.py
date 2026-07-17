@@ -34,6 +34,8 @@ class ReferenceParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.refs: set[str] = set()
         self.resource_refs: set[str] = set()
+        self.css_fragments: list[str] = []
+        self._style_depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
@@ -52,6 +54,19 @@ class ReferenceParser(HTMLParser):
                 candidates = parse_srcset(value)
                 self.refs.update(candidates)
                 self.resource_refs.update(candidates)
+            elif attribute == "style":
+                self.css_fragments.append(value)
+
+        if tag == "style":
+            self._style_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() == "style" and self._style_depth:
+            self._style_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self._style_depth:
+            self.css_fragments.append(data)
 
     handle_startendtag = handle_starttag
 
@@ -79,14 +94,16 @@ def is_absolute_local(value: str) -> bool:
 def extract_refs(text: str) -> set[str]:
     parser = ReferenceParser()
     parser.feed(text)
-    refs = parser.refs | set(CSS_URL_RE.findall(text)) | set(CSS_IMPORT_RE.findall(text))
+    css = "\n".join(parser.css_fragments)
+    refs = parser.refs | set(CSS_URL_RE.findall(css)) | set(CSS_IMPORT_RE.findall(css))
     return refs
 
 
 def extract_resource_refs(text: str) -> set[str]:
     parser = ReferenceParser()
     parser.feed(text)
-    refs = parser.resource_refs | set(CSS_URL_RE.findall(text)) | set(CSS_IMPORT_RE.findall(text))
+    css = "\n".join(parser.css_fragments)
+    refs = parser.resource_refs | set(CSS_URL_RE.findall(css)) | set(CSS_IMPORT_RE.findall(css))
     return refs
 
 

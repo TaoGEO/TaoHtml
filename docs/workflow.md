@@ -141,6 +141,8 @@ TaoHtml 还要维护当前任务的机器可检查授权状态：Word/PDF/PPT/HT
 - 动效步进与整页翻页分离
 - 返回页面后恢复动效状态
 - 全屏、页码和自动隐藏控制
+- “更多 → 编辑模式”内直接修订报告文字、替换图片和拖动裁切焦点
+- 统一撤销/重做、标签页会话级刷新恢复，以及不覆盖原文件的新 HTML 导出
 
 TaoHtml 可以优化结构和表达，但不得遗漏或改变确认过的核心观点。
 
@@ -152,9 +154,10 @@ TaoHtml 可以优化结构和表达，但不得遗漏或改变确认过的核心
 python skill/taohtml/scripts/check_assets.py path/to/index.html --strict-offline
 python skill/taohtml/scripts/preflight.py --profile browser --workspace /path/to/workspace
 python skill/taohtml/scripts/check_html_deck.py path/to/index.html path/to/qa
+python skill/taohtml/scripts/check_editor_runtime.py path/to/index.html path/to/editor-qa
 python skill/taohtml/scripts/build_contact_sheet.py path/to/qa path/to/qa/contact-sheet.png
 ```
 
 浏览器预检通过后才能开始浏览器 QA；失败或未运行不能写成“浏览器 QA 通过”。QA 需要检查阅读状态、演讲初始状态、逐步前进与后退、整页跳转、返回状态、hash、素材、控制台错误和页面边界。初始为演讲模式的整份报告必须至少有一个 `fragment-v1` 受控讲解步骤；阅读模式可以为零。每页 active slide 的实际渲染矩形必须在小容差内覆盖 deck/canvas。每页需要检查的呈现状态还要检测独立可见 HTML 文字与 SVG `<text>` 的真实矩形碰撞，并保留 1px 安全间距。SVG 文字、绝对定位/自身变换的 HTML 文字以及布局盒本身相交的 HTML 文字保持严格失败；只有两个静态、无自身变换的 HTML 正常流布局盒已分离，且 Range 仅有不超过 1.25px 的浅层字体度量交叠时，才记为可审计的度量排除而非失败。只有具体文字 owner 上带理由的 `data-qa-ignore-text-collision` 才能局部豁免，所有豁免和正常流度量排除都会进入 QA JSON。转化型报告还要从简报追踪到最终页面，确认真实行动入口可见、可用、与目标一致；链接、命令、联系方式、价格和二维码必须与已验证来源一致，不能只检查 CTA 文案里是否有动词。
 
-优先交付单 HTML；素材、字体或附件使单文件明显变慢时，交付 `index.html + assets` 并打包 ZIP。成品完成后自动附《待核实内容清单》，逐条给出页面/内容、补充类型、来源状态和建议动作。普通推演集中在交付说明；模拟图表、虚构案例和容易被误认成真实证据的数据还必须在 HTML 相邻位置标“示意 / 模拟 / 待核实”。
+优先交付单 HTML；素材、字体或附件使单文件明显变慢时，由 Agent 交付 `index.html + assets` 并使用仓库脚本打包 ZIP。浏览器内编辑器本身只导出新 HTML：含相对 assets 时必须保留原目录结构，不宣称浏览器会生成 ZIP。成品完成后自动附《待核实内容清单》，逐条给出页面/内容、补充类型、来源状态和建议动作。普通推演集中在交付说明；模拟图表、虚构案例和容易被误认成真实证据的数据还必须在 HTML 相邻位置标“示意 / 模拟 / 待核实”。
