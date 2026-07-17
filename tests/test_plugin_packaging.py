@@ -175,6 +175,7 @@ class PluginPackagingTests(unittest.TestCase):
 
     def test_readme_exposes_safe_installation_and_version_entries(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        current_version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
         self.assertIn("$HOME/.agents/skills/taohtml", readme)
         self.assertIn('test ! -e "$target"', readme)
         self.assertNotIn(
@@ -185,9 +186,17 @@ class PluginPackagingTests(unittest.TestCase):
             "Copy-Item -Recurse -Force .\\skill\\taohtml $env:USERPROFILE\\.codex\\skills\\taohtml",
             readme,
         )
-        self.assertIn("taohtml-marketplace-v0.3.2.zip", readme)
-        for version in ("v0.3.2", "v0.3.1", "v0.3.0", "v0.2.0", "v0.1.0"):
+        self.assertIn(f"taohtml-marketplace-v{current_version}.zip", readme)
+        for version in (
+            f"v{current_version}",
+            "v0.3.2",
+            "v0.3.1",
+            "v0.3.0",
+            "v0.2.0",
+            "v0.1.0",
+        ):
             self.assertIn(version, readme)
+        self.assertIn("CHANGELOG.md#033---2026-07-17", readme)
         self.assertIn("CHANGELOG.md#032---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#031---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#030---2026-07-16", readme)
