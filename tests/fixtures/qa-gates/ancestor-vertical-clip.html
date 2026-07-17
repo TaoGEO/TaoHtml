@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Vertical ancestor clipping</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .clip-window {
+      position: absolute;
+      left: 340px;
+      top: 250px;
+      width: 620px;
+      height: 92px;
+      overflow: hidden;
+      border: 2px solid #214f7a;
+    }
+    .tall-report-copy {
+      margin: 0;
+      font-size: 30px;
+      line-height: 42px;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Vertical clipping">
+      <h1>Capacity failure</h1>
+      <div class="clip-window">
+        <p class="tall-report-copy">First readable line.<br>Second readable line.<br>Third line must not disappear.</p>
+      </div>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Horizontal ancestor clipping</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .clip-window {
+      position: absolute;
+      left: 360px;
+      top: 280px;
+      width: 300px;
+      height: 76px;
+      overflow-x: hidden;
+      overflow-y: visible;
+      border: 2px solid #214f7a;
+    }
+    .wide-report-copy {
+      margin: 12px;
+      white-space: nowrap;
+      font-size: 30px;
+      line-height: 46px;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Horizontal clipping">
+      <h1>Width failure</h1>
+      <div class="clip-window">
+        <p class="wide-report-copy">This complete decision sentence must remain readable.</p>
+      </div>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

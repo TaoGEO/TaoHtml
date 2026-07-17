@@ -305,6 +305,21 @@ Use this sequence:
 
 The first runnable artifact is not the final quality bar. It is the production checkpoint that keeps the work inspectable, testable, and recoverable while design quality is improved.
 
+### 8B. Budget Corporate Editable-Region Capacity Before Generation
+
+In `corporate_fidelity`, preserve the fixed layer and editable-region boundary exactly. Treat each shell's editable bbox as a hard capacity contract rather than a container that can hide excess content.
+
+Before writing a page:
+
+1. Convert the editable bbox to usable 1600×900 dimensions and subtract its real padding.
+2. Budget the chosen type sizes, line heights, semantic gaps, modules, tables, and the largest visible combination at every reveal state.
+3. Use the shell only when that content fits at readable type sizes.
+4. If it does not fit, reflow first, then choose a semantically suitable shell with more capacity, then split the page or reduce its load while preserving confirmed meaning.
+
+Do not set the editable region to `overflow:visible`, move report content over locked brand pixels, or shrink type below the report's readable scale. `overflow:hidden`, `clip`, `auto`, or `scroll` is a boundary behavior, never proof of fit. A corporate page is complete only when both the fixed layer and all editable content pass.
+
+After generation, run `check_html_deck.py` at all required viewports. Its ancestor-clipping gate measures real text rectangles against every clipping ancestor in the initial and controlled reveal states, and every run repeats editable-region states on the canonical 1600×900 design canvas so a larger responsive viewport cannot hide insufficient shell capacity. Treat any failure as a delivery blocker; do not report zero overflow or completion while it remains.
+
 ## 9. Write Speaker Notes After Structure Stabilizes
 
 Speaker notes should follow the slide, not replace it.
@@ -422,6 +437,8 @@ Technical:
 
 - Did the required environment profile pass before each gated material/QA path, with its JSON result preserved when possible?
 - Does the deck render at 1366x768, 1600x900, and 1920x1080?
+- Does every readable text rectangle remain inside every clipping ancestor at the initial and all controlled reveal states?
+- For each corporate page, did the selected shell have enough editable-region capacity without weakening fixed layers, crossing locked regions, or reducing type below readable size?
 - Is the page count correct?
 - Are hash links and page indicators correct?
 - Are there missing assets?

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Intermediate reveal ancestor clipping</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .reveal-window {
+      position: absolute;
+      left: 340px;
+      top: 250px;
+      width: 500px;
+      height: 82px;
+      overflow: hidden;
+      border: 2px solid #214f7a;
+    }
+    .moving-conclusion {
+      margin: 16px;
+      white-space: nowrap;
+      font-size: 30px;
+      line-height: 48px;
+      transition: none;
+    }
+    .slide[data-step-index="1"] .moving-conclusion {
+      transform: translateX(330px);
+    }
+    .settled-note {
+      position: absolute;
+      left: 340px;
+      top: 380px;
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="presentation" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Intermediate reveal clipping">
+      <h1>Every reveal state matters</h1>
+      <div class="reveal-window">
+        <p class="moving-conclusion fragment" data-step="1">Conclusion stays readable.</p>
+      </div>
+      <p class="settled-note fragment" data-step="2">The final state is valid.</p>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

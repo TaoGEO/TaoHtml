@@ -31,7 +31,7 @@ If any hard gate fails, the deck is not ready.
 - **Handoff gate**: creative supplements are not covered by a structured `《待核实内容清单》`. This makes the full workflow conditional, while an otherwise usable HTML artifact may still pass its design and technical gates.
 - **Operation gate**: live presentation flow depends on hover, tiny mouse targets, or interactions a clicker cannot operate.
 - **Portability gate**: the HTML references absolute local files, temp files, WeChat cache files, or missing assets.
-- **Overflow gate**: text overlaps, spills out of containers, or leaves the 16:9 canvas at 1600x900.
+- **Overflow gate**: text overlaps, spills out of containers, leaves the 16:9 canvas, or is partly hidden by any clipping ancestor at any controlled reveal state. A corporate safe area with `overflow:hidden` fails when readable content exceeds it; fixed-layer fidelity and editable-content completeness must both pass.
 
 ## 100-Point Score
 

@@ -190,6 +190,123 @@ class HtmlQAGateTests(unittest.TestCase):
             len(report["pages"][0]["invalid_text_collision_opt_outs"]), 1
         )
 
+    def test_vertical_and_horizontal_ancestor_clipping_fail_all_viewports(self) -> None:
+        cases = (
+            ("ancestor-vertical-clip.html", "bottom"),
+            ("ancestor-horizontal-clip.html", "right"),
+        )
+        for fixture, direction in cases:
+            for width, height in VIEWPORTS:
+                with self.subTest(fixture=fixture, viewport=(width, height)):
+                    completed, report = self.run_fixture(fixture, width, height)
+                    self.assertEqual(completed.returncode, 1)
+                    self.assertIn("readable content", completed.stdout)
+                    self.assertIn("is clipped by ancestor", completed.stdout)
+                    clipping = report["pages"][0]["ancestor_clipping"][0]
+                    self.assertEqual(clipping["page"], 1)
+                    self.assertEqual(clipping["state"], "reading-initial")
+                    self.assertIn(direction, clipping["directions"])
+                    self.assertGreater(clipping["clipped_pixels"][direction], 1)
+                    self.assertTrue(clipping["content"]["selector"])
+                    self.assertTrue(clipping["content"]["text"])
+                    self.assertTrue(
+                        clipping["clipping_ancestor"]["selector"]
+                    )
+                    self.assertIn(
+                        clipping["clipping_ancestor"][f"overflow_{'x' if direction == 'right' else 'y'}"],
+                        {"hidden", "clip", "auto", "scroll"},
+                    )
+                    self.assertTrue(clipping["content"]["rect"])
+                    self.assertTrue(
+                        clipping["clipping_ancestor"]["content_box"]
+                    )
+
+    def test_transformed_content_clipped_by_ancestor_fails(self) -> None:
+        completed, report = self.run_fixture(
+            "ancestor-transform-clip.html", 1600, 900
+        )
+        self.assertEqual(completed.returncode, 1)
+        clipping = report["pages"][0]["ancestor_clipping"][0]
+        self.assertIn("right", clipping["directions"])
+        self.assertEqual(
+            clipping["clipping_ancestor"]["overflow_x"], "clip"
+        )
+        self.assertIn("shifted-report-copy", clipping["content"]["selector"])
+        self.assertIn("clip-window", clipping["clipping_ancestor"]["selector"])
+
+    def test_tight_normal_flow_at_clip_boundary_passes_all_viewports(self) -> None:
+        for width, height in VIEWPORTS:
+            with self.subTest(viewport=(width, height)):
+                completed, report = self.run_fixture(
+                    "ancestor-tight-valid.html", width, height
+                )
+                self.assertEqual(completed.returncode, 0, completed.stdout)
+                page = report["pages"][0]
+                self.assertEqual(page["ancestor_clipping"], [])
+                state = page["ancestor_clipping_states"][0]
+                self.assertGreater(state["candidate_count"], 0)
+                self.assertGreater(state["clipping_ancestor_checks"], 0)
+
+    def test_object_fit_crop_and_aria_hidden_fixed_decoration_do_not_report(self) -> None:
+        for width, height in VIEWPORTS:
+            with self.subTest(viewport=(width, height)):
+                completed, report = self.run_fixture(
+                    "ancestor-noncontent-crop-valid.html", width, height
+                )
+                self.assertEqual(completed.returncode, 0, completed.stdout)
+                page = report["pages"][0]
+                self.assertEqual(page["ancestor_clipping"], [])
+                state = page["ancestor_clipping_states"][0]
+                self.assertEqual(state["candidate_count"], 1)
+
+    def test_intermediate_reveal_ancestor_clipping_fails_even_when_final_state_fits(self) -> None:
+        completed, report = self.run_fixture(
+            "ancestor-reveal-intermediate-clip.html", 1600, 900
+        )
+        self.assertEqual(completed.returncode, 1)
+        states = report["pages"][0]["ancestor_clipping_states"]
+        self.assertEqual(
+            [state["state"] for state in states],
+            ["presentation-initial", "presentation-step-1", "presentation-step-2"],
+        )
+        self.assertEqual(states[0]["clips"], [])
+        self.assertTrue(states[1]["clips"])
+        self.assertEqual(states[2]["clips"], [])
+        self.assertIn("state presentation-step-1", completed.stdout)
+        performance = report["ancestor_clipping_performance"]
+        self.assertEqual(performance["pages_checked"], 1)
+        self.assertEqual(performance["states_checked"], 3)
+        self.assertGreater(performance["candidate_evaluations"], 0)
+        self.assertGreater(performance["clipping_ancestor_checks"], 0)
+        self.assertGreaterEqual(performance["browser_evaluation_ms"], 0)
+
+    def test_responsive_editable_region_still_honors_canonical_capacity(self) -> None:
+        completed, report = self.run_fixture(
+            "editable-capacity-responsive-fail.html", 1920, 1080
+        )
+        self.assertEqual(completed.returncode, 1)
+        page = report["pages"][0]
+        self.assertEqual(page["ancestor_clipping"], [])
+        self.assertEqual(len(page["editable_region_capacity_failures"]), 1)
+        failure = page["editable_region_capacity_failures"][0]
+        self.assertEqual(failure["page"], 1)
+        self.assertEqual(failure["state"], "reading-initial")
+        self.assertEqual(failure["editable_region"]["id"], "generic-safe-area")
+        self.assertIn("vertical", failure["axes"])
+        self.assertIn("top", failure["directions"])
+        self.assertIn("bottom", failure["directions"])
+        self.assertGreater(failure["clipped_pixels"]["top"], 1)
+        self.assertEqual(
+            failure["probe_viewport"],
+            {"width": 1600, "height": 900},
+        )
+        self.assertTrue(failure["clipped_content"]["samples"])
+        self.assertIn("canonical 1600x900 editable-region capacity", completed.stdout)
+        self.assertFalse(report["passed"])
+        self.assertTrue(
+            any("editable-region capacity" in item for item in report["failures"])
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1286,6 +1286,41 @@ class ProjectThemeWorkflowTests(unittest.TestCase):
         self.assertIn("Corporate Template-Family Shell Boundary", reference)
         self.assertIn("Never embed the complete screenshot", reference)
 
+    def test_corporate_capacity_rules_preserve_fixed_layers_and_fail_closed(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        runtime = (SKILL_ROOT / "references" / "runtime-contract.md").read_text(
+            encoding="utf-8"
+        )
+        playbook = (SKILL_ROOT / "references" / "process-playbook.md").read_text(
+            encoding="utf-8"
+        )
+        compiler = (SKILL_ROOT / "references" / "project-theme-compiler.md").read_text(
+            encoding="utf-8"
+        )
+        rubric = (SKILL_ROOT / "references" / "design-quality-rubric.md").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "editable-region capacity",
+            "reflow first",
+            "split the page or reduce its load",
+            "Never use overflow clipping as evidence that content fits",
+            "Do not claim zero overflow or completion while browser QA fails",
+        ):
+            self.assertIn(marker, skill)
+        for marker in (
+            "hard capacity contract",
+            "overflow:visible",
+            "every reveal state",
+            "delivery blocker",
+        ):
+            self.assertIn(marker, playbook)
+        self.assertIn("explicit capacity contract", compiler)
+        self.assertIn("The compiler preserves shell geometry", compiler)
+        self.assertIn("fixed layer remains faithful", runtime)
+        self.assertIn("canonical 1600×900 design canvas", runtime)
+        self.assertIn("any controlled reveal state", rubric)
+
 
 if __name__ == "__main__":
     unittest.main()
