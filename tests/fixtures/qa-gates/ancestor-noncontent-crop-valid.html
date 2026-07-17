@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Intentional non-content crop</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .image-frame {
+      position: absolute;
+      left: 320px;
+      top: 230px;
+      width: 360px;
+      height: 180px;
+      margin: 0;
+      overflow: hidden;
+    }
+    .image-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .fixed-decoration {
+      position: absolute;
+      left: 980px;
+      top: 140px;
+      width: 120px;
+      height: 56px;
+      overflow: hidden;
+      color: #7199c8;
+      font-size: 28px;
+      white-space: nowrap;
+    }
+    .fixed-decoration span {
+      display: block;
+      transform: translateX(70px);
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Intentional visual crop">
+      <h1>Content remains complete</h1>
+      <figure class="image-frame">
+        <img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='200'%3E%3Crect width='800' height='200' fill='%23214f7a'/%3E%3Ccircle cx='400' cy='100' r='82' fill='%238db4e2'/%3E%3C/svg%3E">
+      </figure>
+      <div class="fixed-decoration" aria-hidden="true"><span>DECORATIVE BRAND STRIP</span></div>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

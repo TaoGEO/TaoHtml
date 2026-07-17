@@ -188,6 +188,14 @@ For v1.3 `corporate_fidelity`, compile a role-routed shell family from the exact
 
 The shell family promises screenshot-visible pixels and confirmed positions only. It does not reconstruct a source master, vectors, fonts, hidden page types, or movement. Roles absent from all supplied screenshots remain `extension/proposed` even after VI confirmation; confirmation accepts the proposal, not a false claim that it was observed.
 
+Treat each compiled editable bbox as an explicit capacity contract, not only a placement coordinate. Before generating report DOM, calculate the usable width and height at the 1600×900 theme canvas, including the shell's actual padding, type sizes, line heights, semantic gaps, modules, and each reveal state. Select a role-compatible shell only when this planned content fits without clipping or unreadable type reduction. If it does not fit, apply this order:
+
+1. Reflow the content inside the same editable region without weakening its boundary.
+2. Route the page to a semantically suitable shell with greater usable capacity.
+3. Split the page or reduce its content load while preserving confirmed meaning.
+
+Keep fixed crops and the editable-region boundary unchanged. Do not switch `overflow` to `visible`, move content into a locked brand area, or count silently clipped content as fitted. The compiler preserves shell geometry; the report producer owns capacity selection, and `check_html_deck.py` is the final fail-closed measurement of the rendered result.
+
 ## Render Through The Shared Runtime
 
 Render a report explicitly with the compiled directory:
@@ -223,7 +231,7 @@ For the compiled theme and at least one full sample deck:
 3. Parameterize every allowed compatibility-matrix pair and every remaining scalar enum. Require an expected DOM order/branch or structural CSS value for each legal case, and a clear validation error for every illegal pair.
 4. Inspect `provenance.json` for distinct observed, extension, unknown, and fallback records, concrete usage targets, and at least one eligible-but-unused record that remains `compiled: false`.
 5. Run `check_assets.py --strict-offline` on the HTML.
-6. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080; require empty overflow and semantic-rhythm failure lists on every page.
+6. Run `check_html_deck.py` at 1366×768, 1600×900, and 1920×1080; require empty slide-overflow, ancestor-clipping, text-collision, and semantic-rhythm failure lists at every controlled reveal state on every page.
 7. Build a contact sheet from the 1600×900 screenshots.
 8. Compare all original references, the unified VI board, and the final themed sample. Confirm role routing, fixed crops, safe regions, composition, hierarchy, components, image treatment, and evidence language—not only colors—carry through.
 9. Tamper one compiled copy at a time: fixed crop bytes, placement style, shell role, and source-page mapping. Require the project-theme loader to fail closed in every case.

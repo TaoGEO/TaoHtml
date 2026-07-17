@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Transformed content ancestor clipping</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .clip-window {
+      position: absolute;
+      left: 340px;
+      top: 260px;
+      width: 440px;
+      height: 100px;
+      overflow: clip;
+      border: 2px solid #214f7a;
+    }
+    .shifted-report-copy {
+      margin: 20px;
+      white-space: nowrap;
+      font-size: 30px;
+      line-height: 50px;
+      transform: translateX(310px);
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Transform clipping">
+      <h1>Transformed content</h1>
+      <div class="clip-window">
+        <p class="shifted-report-copy">Translated report conclusion</p>
+      </div>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

@@ -19,6 +19,9 @@ CONTROLLED_STEP_CONTRACT = "fragment-v1"
 CONTROLLED_STEP_SELECTOR = ".fragment"
 TEXT_COLLISION_GAP_PX = 1.0
 TEXT_COLLISION_FONT_METRIC_SLACK_PX = 0.25
+ANCESTOR_CLIP_TOLERANCE_PX = 0.5
+DESIGN_CANVAS_WIDTH = 1600
+DESIGN_CANVAS_HEIGHT = 900
 CANVAS_TOLERANCE_RATIO = 0.005
 
 
@@ -282,6 +285,262 @@ TEXT_COLLISION_CHECK = rf"""() => {{
 }}"""
 
 
+ANCESTOR_CLIPPING_CHECK = rf"""() => {{
+  const root = document.querySelector('.slide.active');
+  if (!root) return {{
+    candidate_count: 0,
+    text_rect_count: 0,
+    clipping_ancestor_checks: 0,
+    editable_region_capacity_checks: 0,
+    duration_ms: 0,
+    clips: [],
+  }};
+  const started = performance.now();
+  const tolerance = {ANCESTOR_CLIP_TOLERANCE_PX};
+  const clippingValues = new Set(['hidden', 'clip', 'auto', 'scroll']);
+  const contentOwnerSelector = [
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'button', 'label',
+    'figcaption', 'td', 'th', 'caption', 'dt', 'dd', 'summary', 'legend',
+    '[data-qa-text-label]', '[data-qa-readable-content]',
+  ].join(',');
+  const round = value => Math.round(value * 100) / 100;
+
+  function selectorFor(element) {{
+    if (element === root) return '.slide.active';
+    if (element.id) return `#${{CSS.escape(element.id)}}`;
+    const insideSlide = root.contains(element);
+    const boundary = insideSlide ? root : document.documentElement;
+    const parts = [];
+    let current = element;
+    while (current && current !== boundary && parts.length < 6) {{
+      let part = current.localName || current.tagName.toLowerCase();
+      if (current.classList?.length) {{
+        part += '.' + [...current.classList].slice(0, 2)
+          .map(value => CSS.escape(value)).join('.');
+      }}
+      const parent = current.parentElement;
+      if (parent) {{
+        const siblings = [...parent.children]
+          .filter(item => item.localName === current.localName);
+        if (siblings.length > 1) {{
+          part += `:nth-of-type(${{siblings.indexOf(current) + 1}})`;
+        }}
+      }}
+      parts.unshift(part);
+      current = parent;
+    }}
+    return (insideSlide ? '.slide.active' : 'html') +
+      (parts.length ? ' > ' + parts.join(' > ') : '');
+  }}
+
+  function rendered(element) {{
+    if (!(element instanceof Element) || !element.isConnected) return false;
+    if (element.closest('script,style,noscript,template,[hidden],[aria-hidden="true"]')) return false;
+    if (typeof element.checkVisibility === 'function' &&
+        !element.checkVisibility({{ checkOpacity: true, checkVisibilityCSS: true }})) return false;
+    let current = element;
+    while (current) {{
+      const style = getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden' ||
+          style.visibility === 'collapse' || Number.parseFloat(style.opacity || '1') <= 0) {{
+        return false;
+      }}
+      current = current.parentElement;
+    }}
+    return true;
+  }}
+
+  function normalizeRect(rect) {{
+    return {{
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    }};
+  }}
+
+  function roundedRect(rect) {{
+    if (!rect) return null;
+    return Object.fromEntries(
+      Object.entries(rect).map(([key, value]) => [key, round(value)])
+    );
+  }}
+
+  function unionRect(rects) {{
+    if (!rects.length) return null;
+    const left = Math.min(...rects.map(rect => rect.left));
+    const top = Math.min(...rects.map(rect => rect.top));
+    const right = Math.max(...rects.map(rect => rect.right));
+    const bottom = Math.max(...rects.map(rect => rect.bottom));
+    return {{ left, top, right, bottom, width: right - left, height: bottom - top }};
+  }}
+
+  function clippingAxes(element) {{
+    const style = getComputedStyle(element);
+    return {{
+      x: clippingValues.has(style.overflowX),
+      y: clippingValues.has(style.overflowY),
+      overflowX: style.overflowX,
+      overflowY: style.overflowY,
+    }};
+  }}
+
+  function clippingBox(element) {{
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const offsetWidth = Number(element.offsetWidth) || rect.width;
+    const offsetHeight = Number(element.offsetHeight) || rect.height;
+    const scaleX = offsetWidth ? rect.width / offsetWidth : 1;
+    const scaleY = offsetHeight ? rect.height / offsetHeight : 1;
+    const clientLeft = Number(element.clientLeft) || 0;
+    const clientTop = Number(element.clientTop) || 0;
+    const clientWidth = Number(element.clientWidth) || offsetWidth;
+    const clientHeight = Number(element.clientHeight) || offsetHeight;
+    const left = rect.left + clientLeft * scaleX;
+    const top = rect.top + clientTop * scaleY;
+    const right = left + clientWidth * scaleX;
+    const bottom = top + clientHeight * scaleY;
+    return {{ left, top, right, bottom, width: right - left, height: bottom - top }};
+  }}
+
+  function clipRect(rect, box, axes) {{
+    const pixels = {{
+      left: axes.x ? Math.min(rect.width, Math.max(0, box.left - rect.left)) : 0,
+      right: axes.x ? Math.min(rect.width, Math.max(0, rect.right - box.right)) : 0,
+      top: axes.y ? Math.min(rect.height, Math.max(0, box.top - rect.top)) : 0,
+      bottom: axes.y ? Math.min(rect.height, Math.max(0, rect.bottom - box.bottom)) : 0,
+    }};
+    let left = axes.x ? Math.max(rect.left, box.left) : rect.left;
+    let right = axes.x ? Math.min(rect.right, box.right) : rect.right;
+    let top = axes.y ? Math.max(rect.top, box.top) : rect.top;
+    let bottom = axes.y ? Math.min(rect.bottom, box.bottom) : rect.bottom;
+    if (right <= left || bottom <= top) {{
+      return {{ pixels, visible: null }};
+    }}
+    return {{
+      pixels,
+      visible: {{ left, top, right, bottom, width: right - left, height: bottom - top }},
+    }};
+  }}
+
+  const candidates = new Map();
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let textNode;
+  while ((textNode = walker.nextNode())) {{
+    const text = textNode.textContent?.replace(/\s+/g, ' ').trim();
+    const parent = textNode.parentElement;
+    if (!text || !parent || parent.closest('svg text') || !rendered(parent)) continue;
+    const semantic = parent.closest(contentOwnerSelector);
+    const owner = semantic && root.contains(semantic) ? semantic : parent;
+    if (!rendered(owner)) continue;
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    const rects = [...range.getClientRects()]
+      .filter(rect => rect.width > 0 && rect.height > 0)
+      .map(normalizeRect);
+    if (!rects.length) continue;
+    if (!candidates.has(owner)) {{
+      candidates.set(owner, {{ owner, text: [], rects: [], kind: 'html' }});
+    }}
+    candidates.get(owner).text.push(text);
+    candidates.get(owner).rects.push(...rects);
+  }}
+
+  for (const owner of root.querySelectorAll('svg text')) {{
+    const text = owner.textContent?.replace(/\s+/g, ' ').trim();
+    const rect = owner.getBoundingClientRect();
+    if (!text || !rendered(owner) || rect.width <= 0 || rect.height <= 0) continue;
+    candidates.set(owner, {{
+      owner,
+      text: [text],
+      rects: [normalizeRect(rect)],
+      kind: 'svg-text',
+    }});
+  }}
+
+  let clippingAncestorChecks = 0;
+  const clips = [];
+  for (const candidate of candidates.values()) {{
+    const contentRect = unionRect(candidate.rects);
+    const editableRegion = candidate.owner.closest('[data-editable-region]');
+    let visibleRects = candidate.rects.map(rect => ({{ ...rect }}));
+    let ancestor = candidate.owner;
+    while (ancestor && visibleRects.length) {{
+      const axes = clippingAxes(ancestor);
+      if (axes.x || axes.y) {{
+        const box = clippingBox(ancestor);
+        if (box) {{
+          clippingAncestorChecks += 1;
+          const clippedPixels = {{ left: 0, right: 0, top: 0, bottom: 0 }};
+          const nextRects = [];
+          let affectedRects = 0;
+          for (const rect of visibleRects) {{
+            const result = clipRect(rect, box, axes);
+            const affected = Object.values(result.pixels).some(value => value > tolerance);
+            if (affected) affectedRects += 1;
+            for (const direction of Object.keys(clippedPixels)) {{
+              clippedPixels[direction] = Math.max(
+                clippedPixels[direction], result.pixels[direction]
+              );
+            }}
+            if (result.visible) nextRects.push(result.visible);
+          }}
+          const directions = Object.entries(clippedPixels)
+            .filter(([, value]) => value > tolerance)
+            .map(([direction]) => direction);
+          if (directions.length) {{
+            clips.push({{
+              content: {{
+                selector: selectorFor(candidate.owner),
+                text: candidate.text.join(' ').replace(/\s+/g, ' ').trim().slice(0, 120),
+                kind: candidate.kind,
+                rect: roundedRect(contentRect),
+              }},
+              editable_region_context: editableRegion ? {{
+                id: editableRegion.getAttribute('data-editable-region') || '',
+                selector: selectorFor(editableRegion),
+                content_box: roundedRect(clippingBox(editableRegion)),
+              }} : null,
+              clipping_ancestor: {{
+                selector: selectorFor(ancestor),
+                overflow_x: axes.overflowX,
+                overflow_y: axes.overflowY,
+                content_box: roundedRect(box),
+              }},
+              directions,
+              clipped_pixels: Object.fromEntries(
+                Object.entries(clippedPixels).map(([key, value]) => [key, round(value)])
+              ),
+              visible_content_rect: roundedRect(unionRect(nextRects)),
+              affected_text_rects: affectedRects,
+              fully_clipped: nextRects.length === 0,
+              tolerance_px: tolerance,
+            }});
+          }}
+          visibleRects = nextRects;
+        }}
+      }}
+      ancestor = ancestor.parentElement;
+    }}
+  }}
+  const editableRegionCapacityChecks = [
+    ...(root.matches('[data-editable-region]') ? [root] : []),
+    ...root.querySelectorAll('[data-editable-region]'),
+  ].filter(rendered).length;
+  return {{
+    candidate_count: candidates.size,
+    text_rect_count: [...candidates.values()]
+      .reduce((total, candidate) => total + candidate.rects.length, 0),
+    clipping_ancestor_checks: clippingAncestorChecks,
+    editable_region_capacity_checks: editableRegionCapacityChecks,
+    duration_ms: round(performance.now() - started),
+    clips,
+  }};
+}}"""
+
+
 OVERFLOW_CHECK = """() => {
   const root = document.querySelector('.slide.active');
   if (!root) return [];
@@ -341,6 +600,75 @@ RHYTHM_CHECK = """() => {
     .filter(Boolean)
     .slice(0, 20);
 }"""
+
+
+def aggregate_editable_region_capacity_failures(
+    page_number: int,
+    states: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Aggregate canonical-canvas clips into auditable editable-region failures."""
+    failures: list[dict[str, object]] = []
+    for state in states:
+        groups: dict[str, list[dict[str, object]]] = {}
+        for clip in state["clips"]:
+            region = clip.get("editable_region_context")
+            if not region:
+                continue
+            groups.setdefault(region["selector"], []).append(clip)
+        for clips in groups.values():
+            region = clips[0]["editable_region_context"]
+            directions = sorted(
+                {
+                    direction
+                    for clip in clips
+                    for direction in clip["directions"]
+                }
+            )
+            clipped_pixels = {
+                direction: max(
+                    clip["clipped_pixels"][direction]
+                    for clip in clips
+                    if direction in clip["clipped_pixels"]
+                )
+                for direction in directions
+            }
+            axes = []
+            if any(direction in {"left", "right"} for direction in directions):
+                axes.append("horizontal")
+            if any(direction in {"top", "bottom"} for direction in directions):
+                axes.append("vertical")
+            samples = []
+            seen_samples: set[tuple[str, str]] = set()
+            for clip in clips:
+                key = (clip["content"]["selector"], clip["content"]["text"])
+                if key in seen_samples:
+                    continue
+                seen_samples.add(key)
+                samples.append(clip["content"])
+            failures.append(
+                {
+                    "page": page_number,
+                    "state": state["state"],
+                    "basis": "canonical_design_canvas_render",
+                    "probe_viewport": {
+                        "width": DESIGN_CANVAS_WIDTH,
+                        "height": DESIGN_CANVAS_HEIGHT,
+                    },
+                    "editable_region": region,
+                    "clipping_ancestors": [
+                        clip["clipping_ancestor"] for clip in clips
+                    ],
+                    "directions": directions,
+                    "axes": axes,
+                    "clipped_pixels": clipped_pixels,
+                    "clipped_content": {
+                        "candidate_count": len(samples),
+                        "samples": samples[:4],
+                    },
+                    "tolerance_px": ANCESTOR_CLIP_TOLERANCE_PX,
+                }
+            )
+    return failures
 
 
 def main() -> int:
@@ -611,21 +939,26 @@ def main() -> int:
                 "(document.querySelector('.deck')?.dataset.mode === 'reading' ? 'reading' : 'presentation')"
             )
             text_collision_states: list[dict[str, object]] = []
+            ancestor_clipping_states: list[dict[str, object]] = []
 
-            def capture_text_state(label: str) -> None:
-                state_result = page.evaluate(TEXT_COLLISION_CHECK)
-                text_collision_states.append({"state": label, **state_result})
+            def capture_layout_state(label: str) -> None:
+                text_state_result = page.evaluate(TEXT_COLLISION_CHECK)
+                clipping_state_result = page.evaluate(ANCESTOR_CLIPPING_CHECK)
+                text_collision_states.append({"state": label, **text_state_result})
+                ancestor_clipping_states.append(
+                    {"state": label, **clipping_state_result}
+                )
 
-            capture_text_state(f"{initial_mode}-initial")
+            capture_layout_state(f"{initial_mode}-initial")
             if initial_mode == "reading" and fragment_count and runtime_contract["available"]:
                 page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
                 page.wait_for_timeout(40)
-                capture_text_state("presentation-step-0")
+                capture_layout_state("presentation-step-0")
 
             for step_index in range(step_count):
                 page.keyboard.press("ArrowRight")
                 page.wait_for_timeout(40)
-                capture_text_state(f"presentation-step-{step_index + 1}")
+                capture_layout_state(f"presentation-step-{step_index + 1}")
             visible_fragments = (
                 active.locator(f"{CONTROLLED_STEP_SELECTOR}.visible").count()
                 if active_count == 1
@@ -707,6 +1040,15 @@ def main() -> int:
                 for state in text_collision_states
                 for item in state["normal_flow_metric_exclusions"]
             }
+            ancestor_clipping = [
+                {
+                    "page": i + 1,
+                    "state": state["state"],
+                    **clipping,
+                }
+                for state in ancestor_clipping_states
+                for clipping in state["clips"]
+            ]
             screenshot = args.output_dir / f"page-{i + 1:02d}.png"
             page.screenshot(path=str(screenshot), full_page=False)
             current_console_errors = console_errors[console_start:]
@@ -735,6 +1077,10 @@ def main() -> int:
                 "normal_flow_text_metric_exclusions": list(
                     normal_flow_metric_exclusions.values()
                 ),
+                "ancestor_clipping_states": ancestor_clipping_states,
+                "ancestor_clipping": ancestor_clipping,
+                "editable_region_capacity_states": [],
+                "editable_region_capacity_failures": [],
                 "console_errors": current_console_errors,
                 "page_errors": current_page_errors,
             }
@@ -780,12 +1126,148 @@ def main() -> int:
                     f"clearance={collision['clearance']['x']}px x {collision['clearance']['y']}px; "
                     f"required_gap={collision['safety_gap']}px."
                 )
+            for clipping in ancestor_clipping:
+                clipped = ", ".join(
+                    f"{direction}={clipping['clipped_pixels'][direction]}px"
+                    for direction in clipping["directions"]
+                )
+                failures.append(
+                    f"Page {i + 1} state {clipping['state']}: readable content "
+                    f"{clipping['content']['text']!r} ({clipping['content']['selector']}) "
+                    f"is clipped by ancestor {clipping['clipping_ancestor']['selector']} "
+                    f"on {', '.join(clipping['directions'])}: {clipped}; "
+                    f"overflow-x={clipping['clipping_ancestor']['overflow_x']}, "
+                    f"overflow-y={clipping['clipping_ancestor']['overflow_y']}."
+                )
             if current_console_errors:
                 failures.append(f"Page {i + 1}: console errors: {current_console_errors}")
             if current_page_errors:
                 failures.append(f"Page {i + 1}: page errors: {current_page_errors}")
+
+        capacity_viewport = {
+            "width": DESIGN_CANVAS_WIDTH,
+            "height": DESIGN_CANVAS_HEIGHT,
+        }
+        results["canonical_capacity_probe"] = {
+            "basis": "canonical_design_canvas_render",
+            "viewport": capacity_viewport,
+            "pages_checked": slide_count,
+        }
+        if runtime_contract["available"]:
+            page.set_viewport_size(capacity_viewport)
+            page.wait_for_timeout(150)
+            for i, page_result in enumerate(results["pages"]):
+                page.evaluate("index => window.TaoHtmlRuntime.showPage(index)", i)
+                page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+                page.wait_for_timeout(40)
+                active = page.locator(".slide.active")
+                fragment_count = active.locator(CONTROLLED_STEP_SELECTOR).count()
+                step_count = active.locator(CONTROLLED_STEP_SELECTOR).evaluate_all(
+                    "els => Math.max(0, ...els.map(el => "
+                    "Number.parseInt(el.dataset.taohtmlStep || '0', 10)))"
+                )
+                capacity_states: list[dict[str, object]] = []
+
+                def capture_capacity_state(label: str) -> None:
+                    capacity_states.append(
+                        {
+                            "state": label,
+                            "probe_viewport": capacity_viewport,
+                            **page.evaluate(ANCESTOR_CLIPPING_CHECK),
+                        }
+                    )
+
+                capture_capacity_state("reading-initial")
+                if fragment_count:
+                    page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
+                    page.wait_for_timeout(40)
+                    capture_capacity_state("presentation-step-0")
+                    for step_index in range(step_count):
+                        page.evaluate("() => window.TaoHtmlRuntime.nextStep()")
+                        page.wait_for_timeout(40)
+                        capture_capacity_state(
+                            f"presentation-step-{step_index + 1}"
+                        )
+
+                capacity_failures = aggregate_editable_region_capacity_failures(
+                    i + 1,
+                    capacity_states,
+                )
+                page_result["editable_region_capacity_states"] = capacity_states
+                page_result["editable_region_capacity_failures"] = capacity_failures
+                for capacity_failure in capacity_failures:
+                    samples = capacity_failure["clipped_content"]["samples"]
+                    sample = samples[0]
+                    clipped = ", ".join(
+                        f"{direction}="
+                        f"{capacity_failure['clipped_pixels'][direction]}px"
+                        for direction in capacity_failure["directions"]
+                    )
+                    failures.append(
+                        f"Page {i + 1} state {capacity_failure['state']}: "
+                        f"canonical {DESIGN_CANVAS_WIDTH}x{DESIGN_CANVAS_HEIGHT} "
+                        f"editable-region capacity clips readable content "
+                        f"{sample['text']!r} ({sample['selector']}) inside "
+                        f"{capacity_failure['editable_region']['selector']} on "
+                        f"{', '.join(capacity_failure['directions'])}: {clipped}. "
+                        "Reflow, choose a suitable shell, split, or reduce load."
+                    )
         browser.close()
 
+    clipping_states = [
+        state
+        for page_result in results["pages"]
+        for state in page_result["ancestor_clipping_states"]
+    ]
+    capacity_states = [
+        state
+        for page_result in results["pages"]
+        for state in page_result["editable_region_capacity_states"]
+    ]
+    results["ancestor_clipping_performance"] = {
+        "pages_checked": len(results["pages"]),
+        "states_checked": len(clipping_states),
+        "candidate_evaluations": sum(
+            state["candidate_count"] for state in clipping_states
+        ),
+        "text_rect_evaluations": sum(
+            state["text_rect_count"] for state in clipping_states
+        ),
+        "clipping_ancestor_checks": sum(
+            state["clipping_ancestor_checks"] for state in clipping_states
+        ),
+        "editable_region_capacity_checks": sum(
+            state["editable_region_capacity_checks"] for state in clipping_states
+        ),
+        "browser_evaluation_ms": round(
+            sum(state["duration_ms"] for state in clipping_states), 2
+        ),
+        "clipping_records": sum(
+            len(page_result["ancestor_clipping"])
+            for page_result in results["pages"]
+        ),
+        "editable_region_capacity_failures": sum(
+            len(page_result["editable_region_capacity_failures"])
+            for page_result in results["pages"]
+        ),
+        "canonical_capacity_probe": {
+            "states_checked": len(capacity_states),
+            "candidate_evaluations": sum(
+                state["candidate_count"] for state in capacity_states
+            ),
+            "text_rect_evaluations": sum(
+                state["text_rect_count"] for state in capacity_states
+            ),
+            "clipping_ancestor_checks": sum(
+                state["clipping_ancestor_checks"] for state in capacity_states
+            ),
+            "browser_evaluation_ms": round(
+                sum(state["duration_ms"] for state in capacity_states), 2
+            ),
+        },
+    }
+    results["passed"] = not failures
+    results["failures"] = failures
     report = args.output_dir / "qa-report.json"
     report.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
     if failures:

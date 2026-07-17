@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Responsive editable capacity failure</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .deck {
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: auto;
+      aspect-ratio: 16 / 9;
+    }
+    .editable-region {
+      position: absolute;
+      left: 12%;
+      top: 18%;
+      width: 80%;
+      height: 65%;
+      padding: 0;
+      display: grid;
+      align-content: center;
+      overflow: hidden;
+      border: 2px solid #214f7a;
+    }
+    .fixed-size-report {
+      height: 650px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .fixed-size-report p {
+      margin: 0 40px;
+      font-size: 30px;
+      line-height: 40px;
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" data-responsive="true" data-mode="reading" data-taohtml-step-contract="fragment-v1">
+    <section class="slide active" data-title="Canonical capacity failure">
+      <div class="editable-region" data-editable-region="generic-safe-area">
+        <div class="fixed-size-report">
+          <p class="first-line">Readable opening line</p>
+          <p class="last-line">Readable closing line</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="runtime.js"></script>
+</body>
+</html>

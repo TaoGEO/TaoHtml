@@ -33,6 +33,7 @@ function stepCount(slide) {
 function setStage(index, next) {
   const count = stepCount(slides[index]);
   state.stages[index] = Math.max(0, Math.min(count, next));
+  slides[index].dataset.stepIndex = String(state.stages[index]);
   for (const node of controlledNodes(slides[index])) {
     node.classList.toggle(
       "visible",
@@ -112,6 +113,10 @@ window.addEventListener("keydown", event => {
 });
 
 function fitDeck() {
+  if (deck.dataset.responsive === "true") {
+    deck.style.transform = "none";
+    return;
+  }
   const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
   deck.style.transform = `scale(${scale})`;
 }
