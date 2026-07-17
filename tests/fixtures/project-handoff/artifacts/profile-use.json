@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "task_id": "portable-task-001",
+  "profile_id": "portable-profile",
+  "profile_display_name": "Portable Profile Fixture",
+  "version": 3,
+  "active_version_at_bind": 3,
+  "target_mode": "presentation",
+  "theme_home_path": "profiles/portable-profile/versions/v3/assets/project-theme",
+  "theme_fingerprint": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "vi_contract_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "reference_images_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "profile_record_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "version_manifest_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "resolution": {
+    "identities": ["portable-profile"],
+    "basis": ["explicit_profile_id"]
+  },
+  "temporary_override": false,
+  "customer_notice": "This fixture binds one portable profile version without copying its assets.",
+  "bound_at": "2026-07-17T12:00:00Z"
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "workspace_ref": {
+    "kind": "unavailable",
+    "portable_ref": null,
+    "observation": {"local_absolute_path": null, "observed_at": null}
+  },
+  "project_identity": {
+    "project_id": "project-secondary-substitution",
+    "identity_version": "1",
+    "project_ref": "project://generic/project-secondary-substitution"
+  },
+  "handoff_snapshot": {
+    "handoff_id": "handoff-invalid-secondary-substitution",
+    "created_at": "2026-07-17T09:00:00Z",
+    "exporter_version": "taohtml-handoff-1.0"
+  },
+  "task": {
+    "task_intent": "review_only",
+    "content_route": "word_pdf",
+    "change_class": "not_applicable",
+    "requested_delta": {
+      "summary": "Review a summary that incorrectly claims primary source support.",
+      "affected_source_refs": [],
+      "affected_decision_ids": [],
+      "preserves_meaning": null,
+      "interpretation_basis": "not_applicable",
+      "confirmation_ref": null
+    }
+  },
+  "source_ledger": [
+    {
+      "source_id": "source-secondary-summary",
+      "identity": {
+        "kind": "description_only",
+        "value": "Secondary account of unavailable earlier work.",
+        "sha256": null
+      },
+      "source_binding": "task_instruction_explicit",
+      "source_role": "secondary_handoff_summary",
+      "availability_status": "handoff_record_only",
+      "evidence_verification": "not_applicable",
+      "inspection": {
+        "coverage": "partial",
+        "observed_at": "2026-07-17T09:00:00Z",
+        "observation_basis": "The summary text itself was inspected."
+      },
+      "supports": [
+        {"claim_id": "claim-original-source-fact", "support_kind": "source_fact"}
+      ],
+      "limits": ["The original customer material is not available."]
+    }
+  ],
+  "decisions": {"still_valid": [], "inferred": [], "unresolved": []},
+  "confirmations": {
+    "vi": {"status": "not_required", "scope": "not_applicable", "artifact_ref": null, "artifact_sha256": null, "confirmation_ref": null},
+    "design_brief": {"status": "not_required", "scope": "not_applicable", "artifact_ref": null, "artifact_sha256": null, "confirmation_ref": null},
+    "production_authorization": {
+      "status": "not_required",
+      "scope": "not_applicable",
+      "record_artifact_ref": null,
+      "record_sha256": null,
+      "target_artifact_ref": null,
+      "target_artifact_sha256": null,
+      "design_brief_sha256": null,
+      "authorized_actions": []
+    }
+  },
+  "design_binding": {"kind": "unresolved", "built_in_theme": null, "project_theme": null, "enterprise_profile": null},
+  "artifacts": [],
+  "qa_records": [],
+  "lineage": {
+    "parent_handoff_sha256": null,
+    "baseline_artifact_ref": null,
+    "baseline_artifact_sha256": null,
+    "previous_artifact_refs": [],
+    "current_delta_summary": "Invalid fixture: secondary summary attempts to replace original evidence."
+  },
+  "audit_metadata": {"platform": null, "model": null, "cost": null, "notes": []}
+}

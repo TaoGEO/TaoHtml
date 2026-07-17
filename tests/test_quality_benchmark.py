@@ -217,7 +217,8 @@ class PrepareRunTests(unittest.TestCase):
                         "corporate-annual-report",
                         "editorial-collage",
                     )
-                },
+                }
+                | {"skill/taohtml/references/project-handoff.schema.json"},
             )
 
     def test_pdf_is_generated_as_small_three_page_material(self) -> None:

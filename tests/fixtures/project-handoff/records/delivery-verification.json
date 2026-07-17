@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "record_id": "qa-delivery-current",
+  "check_type": "delivery_verification",
+  "status": "passed",
+  "artifact_ref": "current-html",
+  "artifact_sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+  "executed_at": "2026-07-17T10:04:00Z",
+  "tool": "taohtml-delivery-verification"
+}

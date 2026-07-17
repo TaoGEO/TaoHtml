@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "workspace_ref": {
+    "kind": "unavailable",
+    "portable_ref": null,
+    "observation": {"local_absolute_path": null, "observed_at": null}
+  },
+  "project_identity": {
+    "project_id": "project-review-only-001",
+    "identity_version": "1",
+    "project_ref": "project://generic/project-review-only-001"
+  },
+  "handoff_snapshot": {
+    "handoff_id": "handoff-review-only-missing-source",
+    "created_at": "2026-07-17T09:00:00Z",
+    "exporter_version": "taohtml-handoff-1.0"
+  },
+  "task": {
+    "task_intent": "review_only",
+    "content_route": null,
+    "change_class": "not_applicable",
+    "requested_delta": {
+      "summary": "Map the handed-off state without production or delivery claims.",
+      "affected_source_refs": [],
+      "affected_decision_ids": [],
+      "preserves_meaning": null,
+      "interpretation_basis": "not_applicable",
+      "confirmation_ref": null
+    }
+  },
+  "source_ledger": [
+    {
+      "source_id": "source-described-unavailable",
+      "identity": {
+        "kind": "description_only",
+        "value": "An original source was described by the handoff but was not retrieved.",
+        "sha256": null
+      },
+      "source_binding": "task_instruction_explicit",
+      "source_role": "described_unavailable_material",
+      "availability_status": "handoff_record_only",
+      "evidence_verification": "unverified",
+      "inspection": {
+        "coverage": "not_retrieved",
+        "observed_at": null,
+        "observation_basis": "Only the portable handoff statement is available."
+      },
+      "supports": [
+        {
+          "claim_id": "claim-material-was-described",
+          "support_kind": "availability_description"
+        }
+      ],
+      "limits": [
+        "This record cannot establish the original material, its loss, or any source fact."
+      ]
+    }
+  ],
+  "decisions": {
+    "still_valid": [],
+    "inferred": [],
+    "unresolved": [
+      {
+        "decision_id": "decision-route-unresolved",
+        "category": "content_route",
+        "impact": "The content route cannot be established from record-only material.",
+        "required_input": "Retrieve an eligible original or current artifact before production.",
+        "blocks_continuation": false,
+        "blocks_delivery": true
+      }
+    ]
+  },
+  "confirmations": {
+    "vi": {"status": "not_required", "scope": "not_applicable", "artifact_ref": null, "artifact_sha256": null, "confirmation_ref": null},
+    "design_brief": {"status": "not_required", "scope": "not_applicable", "artifact_ref": null, "artifact_sha256": null, "confirmation_ref": null},
+    "production_authorization": {
+      "status": "not_required",
+      "scope": "not_applicable",
+      "record_artifact_ref": null,
+      "record_sha256": null,
+      "target_artifact_ref": null,
+      "target_artifact_sha256": null,
+      "design_brief_sha256": null,
+      "authorized_actions": []
+    }
+  },
+  "design_binding": {
+    "kind": "unresolved",
+    "built_in_theme": null,
+    "project_theme": null,
+    "enterprise_profile": null
+  },
+  "artifacts": [],
+  "qa_records": [],
+  "lineage": {
+    "parent_handoff_sha256": null,
+    "baseline_artifact_ref": null,
+    "baseline_artifact_sha256": null,
+    "previous_artifact_refs": [],
+    "current_delta_summary": "Read-only state map; no artifact mutation occurred."
+  },
+  "audit_metadata": {"platform": null, "model": null, "cost": null, "notes": []}
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "record_type": "production_authorization",
+  "status": "authorized",
+  "target_artifact_ref": "current-html",
+  "target_artifact_sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+  "design_brief_sha256": "2d95483a895ce0b7c0976a7f56d746c1523f2df505803aae90c05fbe22d71d48",
+  "authorized_actions": ["formal-html", "browser-qa", "deliver-formal-html"]
+}

@@ -9,6 +9,7 @@ content entry.
 
 - [Task Intent Overlay](#task-intent-overlay)
 - [Source Role And Availability Map](#source-role-and-availability-map)
+- [Structured Portable Handoff](#structured-portable-handoff)
 - [Candidate Discovery Boundary](#candidate-discovery-boundary)
 - [Read-Only Handoff](#read-only-handoff)
 - [Continue Existing Work](#continue-existing-work)
@@ -103,6 +104,27 @@ original evidence. A local file lookup that returns no match proves only that th
 checked location did not produce the item; it does not prove that the material was
 cleaned, deleted, or permanently lost. Keep the status `not_yet_verified` or
 `handoff_record_only` until stronger evidence exists.
+
+## Structured Portable Handoff
+
+When the state must move across Agents or environments, read
+`project-handoff-schema.md` and serialize it with
+`project-handoff.schema.json`. Keep `workspace_ref`, stable project identity, and
+the handoff snapshot identity separate. The handoff is a portable state export; it
+is not a workspace database, enterprise asset repository, or complete project
+source.
+
+Run `scripts/validate_project_handoff.py` against the exact snapshot and portable
+artifact root. Read its four conclusions independently: `schema_valid`,
+`bindings_valid`, `continuation_ready`, and `delivery_ready`. A valid/openable
+handoff is not delivery evidence. The validator verifies existing path/hash and
+structured QA/authorization bindings only; it never claims to have executed
+browser, asset, Runtime/editor, traceability, or delivery QA.
+
+Use only safe relative portable paths or stable non-local locators for identity.
+Local absolute paths may appear solely as optional current-environment
+observations. Unknown schema versions, extra fields, path escape, symlink traversal,
+and current-file hash drift fail closed under the structured contract.
 
 ## Candidate Discovery Boundary
 

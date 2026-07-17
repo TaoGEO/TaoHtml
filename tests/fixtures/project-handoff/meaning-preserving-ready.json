@@ -1,0 +1,278 @@
+{
+  "schema_version": "1.0",
+  "workspace_ref": {
+    "kind": "opaque_ref",
+    "portable_ref": "workspace://portable-fixture",
+    "observation": {
+      "local_absolute_path": "/portable/current-environment",
+      "observed_at": "2026-07-17T09:00:00Z"
+    }
+  },
+  "project_identity": {
+    "project_id": "project-generic-001",
+    "identity_version": "1",
+    "project_ref": "project://generic/project-generic-001"
+  },
+  "handoff_snapshot": {
+    "handoff_id": "handoff-meaning-preserving-ready",
+    "created_at": "2026-07-17T10:05:00Z",
+    "exporter_version": "taohtml-handoff-1.0"
+  },
+  "task": {
+    "task_intent": "continue_existing",
+    "content_route": "existing_ppt_html",
+    "change_class": "meaning_preserving_local",
+    "requested_delta": {
+      "summary": "Apply a bounded local presentation adjustment without changing meaning.",
+      "affected_source_refs": [],
+      "affected_decision_ids": ["decision-meaning-boundary"],
+      "preserves_meaning": true,
+      "interpretation_basis": "not_applicable",
+      "confirmation_ref": null
+    }
+  },
+  "source_ledger": [
+    {
+      "source_id": "source-current-rendered-state",
+      "identity": {
+        "kind": "portable_path",
+        "value": "artifacts/current.html",
+        "sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155"
+      },
+      "source_binding": "task_instruction_explicit",
+      "source_role": "current_artifact",
+      "availability_status": "workspace_readable",
+      "evidence_verification": "not_applicable",
+      "inspection": {
+        "coverage": "complete",
+        "observed_at": "2026-07-17T10:00:00Z",
+        "observation_basis": "Exact current HTML bytes were read from the portable artifact root."
+      },
+      "supports": [
+        {
+          "claim_id": "claim-current-rendered-state",
+          "support_kind": "rendered_state"
+        }
+      ],
+      "limits": [
+        "The current artifact does not prove the provenance or truth of its rendered claims."
+      ]
+    }
+  ],
+  "decisions": {
+    "still_valid": [
+      {
+        "decision_id": "decision-meaning-boundary",
+        "category": "meaning_boundary",
+        "value": "Preserve claims, evidence relationships, structure, and responsibility boundary.",
+        "basis_source_refs": ["source-current-rendered-state"]
+      }
+    ],
+    "inferred": [],
+    "unresolved": []
+  },
+  "confirmations": {
+    "vi": {
+      "status": "not_required",
+      "scope": "not_applicable",
+      "artifact_ref": null,
+      "artifact_sha256": null,
+      "confirmation_ref": null
+    },
+    "design_brief": {
+      "status": "confirmed",
+      "scope": "inherited_baseline",
+      "artifact_ref": "design-brief",
+      "artifact_sha256": "2d95483a895ce0b7c0976a7f56d746c1523f2df505803aae90c05fbe22d71d48",
+      "confirmation_ref": "conversation://baseline/design-brief-confirmation"
+    },
+    "production_authorization": {
+      "status": "not_required",
+      "scope": "not_applicable",
+      "record_artifact_ref": null,
+      "record_sha256": null,
+      "target_artifact_ref": null,
+      "target_artifact_sha256": null,
+      "design_brief_sha256": null,
+      "authorized_actions": []
+    }
+  },
+  "design_binding": {
+    "kind": "built_in_theme",
+    "built_in_theme": {
+      "theme_id": "rigorous-consulting-report",
+      "theme_version": "1.0",
+      "theme_sha256": "d96d596f4998e80b72d5f53f017be3f4aba68ee6bef87b85fb6da5f33848fac2"
+    },
+    "project_theme": null,
+    "enterprise_profile": null
+  },
+  "artifacts": [
+    {
+      "artifact_id": "baseline-html",
+      "kind": "html",
+      "role": "delivered_baseline",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "artifacts/baseline.html"},
+      "sha256": "bf49977763077c9ad589fadf948e8877fa6f0749ad49c831d8864ef637d20f9f",
+      "baseline_identity": null,
+      "versions": {
+        "runtime_version": "taohtml-runtime-1",
+        "editor_version": "taohtml-editor-1",
+        "theme_version": "1.0",
+        "compiler_version": null
+      },
+      "report_ir_ref": null
+    },
+    {
+      "artifact_id": "current-html",
+      "kind": "html",
+      "role": "current",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "artifacts/current.html"},
+      "sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+      "baseline_identity": {
+        "artifact_ref": "baseline-html",
+        "sha256": "bf49977763077c9ad589fadf948e8877fa6f0749ad49c831d8864ef637d20f9f"
+      },
+      "versions": {
+        "runtime_version": "taohtml-runtime-1",
+        "editor_version": "taohtml-editor-1",
+        "theme_version": "1.0",
+        "compiler_version": null
+      },
+      "report_ir_ref": null
+    },
+    {
+      "artifact_id": "design-brief",
+      "kind": "design_brief",
+      "role": "gate_record",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "artifacts/design-brief.md"},
+      "sha256": "2d95483a895ce0b7c0976a7f56d746c1523f2df505803aae90c05fbe22d71d48",
+      "baseline_identity": null,
+      "versions": {
+        "runtime_version": null,
+        "editor_version": null,
+        "theme_version": null,
+        "compiler_version": null
+      },
+      "report_ir_ref": null
+    },
+    {
+      "artifact_id": "qa-asset-record",
+      "kind": "qa_record",
+      "role": "gate_record",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "records/asset-qa.json"},
+      "sha256": "f94f39927e162fb32617062072a2f2496005db00709407241757756889d66288",
+      "baseline_identity": null,
+      "versions": {"runtime_version": null, "editor_version": null, "theme_version": null, "compiler_version": null},
+      "report_ir_ref": null
+    },
+    {
+      "artifact_id": "qa-browser-record",
+      "kind": "qa_record",
+      "role": "gate_record",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "records/browser-qa.json"},
+      "sha256": "1b6da6b896a68ee3eb75f235300b10e72d62eff2be9ae79b7a866e027278570d",
+      "baseline_identity": null,
+      "versions": {"runtime_version": null, "editor_version": null, "theme_version": null, "compiler_version": null},
+      "report_ir_ref": null
+    },
+    {
+      "artifact_id": "qa-runtime-editor-record",
+      "kind": "qa_record",
+      "role": "gate_record",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "records/runtime-editor-qa.json"},
+      "sha256": "9a91110a91ea213bb2f1310d2c3cf7b51e639a80a6a7e5836f402eacd14b9062",
+      "baseline_identity": null,
+      "versions": {"runtime_version": null, "editor_version": null, "theme_version": null, "compiler_version": null},
+      "report_ir_ref": null
+    },
+    {
+      "artifact_id": "qa-traceability-record",
+      "kind": "qa_record",
+      "role": "gate_record",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "records/traceability.json"},
+      "sha256": "004546e4efc590b8f0630afd8324a24e3cc0bb6cbf18a4a8b4bbe16cc8b7c5f4",
+      "baseline_identity": null,
+      "versions": {"runtime_version": null, "editor_version": null, "theme_version": null, "compiler_version": null},
+      "report_ir_ref": null
+    },
+    {
+      "artifact_id": "qa-delivery-record",
+      "kind": "qa_record",
+      "role": "gate_record",
+      "availability_status": "workspace_readable",
+      "locator": {"kind": "portable_path", "value": "records/delivery-verification.json"},
+      "sha256": "214596fc76b42e53f7e1641b81e83e2b34ea1729107e6d6b1ba0b5e82127da9d",
+      "baseline_identity": null,
+      "versions": {"runtime_version": null, "editor_version": null, "theme_version": null, "compiler_version": null},
+      "report_ir_ref": null
+    }
+  ],
+  "qa_records": [
+    {
+      "record_id": "qa-asset-current",
+      "check_type": "asset_qa",
+      "status": "passed",
+      "artifact_ref": "current-html",
+      "artifact_sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+      "record_artifact_ref": "qa-asset-record",
+      "record_sha256": "f94f39927e162fb32617062072a2f2496005db00709407241757756889d66288"
+    },
+    {
+      "record_id": "qa-browser-current",
+      "check_type": "browser_qa",
+      "status": "passed",
+      "artifact_ref": "current-html",
+      "artifact_sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+      "record_artifact_ref": "qa-browser-record",
+      "record_sha256": "1b6da6b896a68ee3eb75f235300b10e72d62eff2be9ae79b7a866e027278570d"
+    },
+    {
+      "record_id": "qa-runtime-editor-current",
+      "check_type": "runtime_editor_qa",
+      "status": "passed",
+      "artifact_ref": "current-html",
+      "artifact_sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+      "record_artifact_ref": "qa-runtime-editor-record",
+      "record_sha256": "9a91110a91ea213bb2f1310d2c3cf7b51e639a80a6a7e5836f402eacd14b9062"
+    },
+    {
+      "record_id": "qa-traceability-current",
+      "check_type": "traceability",
+      "status": "passed",
+      "artifact_ref": "current-html",
+      "artifact_sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+      "record_artifact_ref": "qa-traceability-record",
+      "record_sha256": "004546e4efc590b8f0630afd8324a24e3cc0bb6cbf18a4a8b4bbe16cc8b7c5f4"
+    },
+    {
+      "record_id": "qa-delivery-current",
+      "check_type": "delivery_verification",
+      "status": "passed",
+      "artifact_ref": "current-html",
+      "artifact_sha256": "d0e31135c73414c8633cdaa25beeba56c8f50a3f7700372086d31dd0a2f6d155",
+      "record_artifact_ref": "qa-delivery-record",
+      "record_sha256": "214596fc76b42e53f7e1641b81e83e2b34ea1729107e6d6b1ba0b5e82127da9d"
+    }
+  ],
+  "lineage": {
+    "parent_handoff_sha256": null,
+    "baseline_artifact_ref": "baseline-html",
+    "baseline_artifact_sha256": "bf49977763077c9ad589fadf948e8877fa6f0749ad49c831d8864ef637d20f9f",
+    "previous_artifact_refs": [],
+    "current_delta_summary": "A meaning-preserving local revision was applied to the exact delivered baseline."
+  },
+  "audit_metadata": {
+    "platform": "fixture-platform",
+    "model": "fixture-model",
+    "cost": {"amount": 1.25, "currency": "TEST", "source": "synthetic audit metadata"},
+    "notes": ["Audit metadata is intentionally excluded from readiness."]
+  }
+}

@@ -56,7 +56,10 @@ add a fourth content entry. A read-only handoff defaults to zero clarification
 questions, does not restart intake, and must not create HTML. Continuing work reuses
 still-supported state, first classifies whether the delta preserves meaning, asks
 only the largest result-changing gap when one exists, and protects the source/evidence
-boundary defined in that reference.
+boundary defined in that reference. For a cross-Agent export, import, or readiness
+check, also read `references/project-handoff-schema.md`, use its strict JSON schema,
+and run `scripts/validate_project_handoff.py`; never collapse its four independent
+results into one PASS.
 
 ## Required State Flow
 
@@ -118,6 +121,7 @@ Block only on the hard boundaries in `references/intake-workflow.md`: never inve
 After brief confirmation, load only what the task needs:
 
 - `references/project-handoff.md`: task-intent overlay, source role/availability map, read-only audit, continuation boundaries, candidate discovery, and readiness language.
+- `references/project-handoff-schema.md`: portable workspace/project/snapshot identities, strict source/decision/design/artifact/lineage serialization, version policy, and four-layer handoff validation.
 - `references/process-playbook.md`: story, evidence, visual, production, and delivery workflow.
 - `references/layout-pattern-library.md`: layout selection for composed presentation pages.
 - `references/visual-systems.md`: built-in system routing and selection policy; after selection, load only that system's `theme.json`, `theme.css`, and `templates.html` under `assets/visual-systems/`.
@@ -137,6 +141,7 @@ Use the bundled scripts where relevant:
 - `scripts/preflight.py`: run `core`, `pdf`, `static-reference`, `profile-reuse`, or `browser` capability checks before the corresponding work. Its parent process uses only the Python standard library.
 - `scripts/profile_store.py`: create, update, list, show, resolve, bind, validate, activate, rollback, archive/restore, export, and import explicit corporate-template profiles without writing to the Skill directory.
 - `scripts/check_production_authorization.py`: validate current material-summary, VI or profile-use binding, project-theme, and design-brief state before a requested preview, formal HTML, QA, or delivery action.
+- `scripts/validate_project_handoff.py`: validate a structured portable handoff's schema, exact bindings, continuation state, and recorded delivery evidence without executing QA.
 - `scripts/check_assets.py`: find missing, remote, or non-portable assets.
 - `scripts/check_html_deck.py`: exercise routes, reveal states, runtime behavior, media, console errors, bounds, and screenshots.
 - `scripts/build_contact_sheet.py`: build a visual QA overview.

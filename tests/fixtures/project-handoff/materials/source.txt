@@ -1,0 +1,1 @@
+Primary source fixture for deterministic meaning-changing handoff validation.
