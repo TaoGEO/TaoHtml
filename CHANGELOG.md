@@ -4,6 +4,22 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-07-17
+
+### Added
+
+- Add explicit, versioned enterprise template profiles so a confirmed corporate VI and compiled project theme can be reused across later reading or presentation projects without re-reading the same reference images or regenerating the same VI ([#16](https://github.com/TaoGEO/TaoHtml/pull/16)).
+- Add profile inspection, exact enterprise matching, task-local bindings, temporary overrides, permanent upgrades, rollback, archive/restore, and complete export/import under `${TAOHTML_HOME:-~/.taohtml}` ([#16](https://github.com/TaoGEO/TaoHtml/pull/16)).
+
+### Changed
+
+- Reuse the active profile version only after an exact enterprise match; ambiguous, conflicting, or cross-enterprise inputs require one outcome-changing choice instead of silent reuse, while every new report still requires its current design brief, production authorization, browser QA, and delivery gates ([#16](https://github.com/TaoGEO/TaoHtml/pull/16)).
+- Share one validated profile store across local Agents and provide complete archive transfer for other devices or environments without claiming implicit model memory or automatic cloud synchronization ([#16](https://github.com/TaoGEO/TaoHtml/pull/16)).
+
+### Fixed
+
+- Make profile upgrades transactional and recoverable after interrupted writes, keep readers on a consistent snapshot during concurrent updates, and add a lightweight `profile-reuse` preflight that does not impose the heavier reference-rendering chain on an already confirmed profile ([#16](https://github.com/TaoGEO/TaoHtml/pull/16)).
+
 ## [0.3.2] - 2026-07-16
 
 ### Added

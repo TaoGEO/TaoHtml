@@ -12,7 +12,7 @@
 
 > English brief: TaoHtml turns ideas and source material into polished, offline HTML reports and presentation-ready decks, with confirmed design decisions, reusable visual systems, and delivery QA.
 
-当前版本：[`0.3.2`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.2) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
+当前版本：[`0.3.3`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.3) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
 
 ## 核心能力
 
@@ -131,7 +131,7 @@ cp -R "$source" "$target"
 
 ### Release ZIP：离线 / 手动安装
 
-[`taohtml-marketplace-v0.3.2.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.3.2/taohtml-marketplace-v0.3.2.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.3.2`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。这个链接只会在未来单独执行 GitHub Release 后生效；本次代码修补不会自动创建 Release 或发布 Skill Hub。
+[`taohtml-marketplace-v0.3.3.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.3.3/taohtml-marketplace-v0.3.3.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.3.3`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。这个链接只会在未来单独执行 GitHub Release 后生效；本次版号更新不会自动创建 Release 或发布 Skill Hub。
 
 ## 版本更新
 
@@ -139,6 +139,7 @@ README 只保留每版最重要的用户变化；完整逐条历史见 [CHANGELO
 
 | 版本 | 最重要的变化 | 版本页与完整记录 |
 |---|---|---|
+| **v0.3.3** | 企业模板在首次 VI 确认后可存为显式版本档案；后续项目精确匹配时自动沿用，并支持临时更换、永久升级、回退和完整迁移 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.3) · [CHANGELOG](CHANGELOG.md#033---2026-07-17) |
 | **v0.3.2** | 新调用入口握手与材料来源绑定；按能力运行的快速环境预检；技能包自带依赖声明与 Windows 冒烟验证 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.2) · [CHANGELOG](CHANGELOG.md#032---2026-07-16) |
 | **v0.3.1** | Skill Hub 概述改为与 GitHub README 同源的中文纯文字客户介绍；Agent 执行规则改由同包 reference 承载，能力边界不变 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.1) · [CHANGELOG](CHANGELOG.md#031---2026-07-16) |
 | **v0.3.0** | 四套可执行视觉系统与同内容样张；参考风格重构 / 企业模板保真及项目主题编译；报告产出优先 + 《待核实内容清单》与质量基准 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.0) · [CHANGELOG](CHANGELOG.md#030---2026-07-16) |
