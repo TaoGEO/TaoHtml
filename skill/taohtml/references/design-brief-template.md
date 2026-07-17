@@ -36,7 +36,9 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 预期结论：...
 
 ## 视觉方向
-- 视觉来源：用户明确参考 / TaoHtml 内置主题
+- 视觉来源：企业模板档案复用 / 用户明确参考 / TaoHtml 内置主题
+- 企业模板档案（复用或临时 override 时保留）：profile id、企业显示名、active version、theme fingerprint、解析依据、binding 路径与当前验证状态
+- 本次档案状态（复用或临时 override 时保留）：沿用 active version / `temporary_override`；临时 override 不修改企业默认档案
 - 用户参考（如适用）：本地文件或可定位描述
 - 参考图模式（如适用）：`reconstruct` 参考风格重构 / `corporate_fidelity` 企业模板保真
 - 保真边界（企业模板保真时保留）：只承诺截图中可见效果；不承诺恢复原始 PPT 母版、矢量 Logo、字体源文件或截图外资产
@@ -75,6 +77,8 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a simple report, merge short sections and keep the brief compact.
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - If the user supplied a clear visual reference, record `reference_mode`. Do not reduce `corporate_fidelity` to “closely reproduced”: state the screenshot-visible fidelity boundary, locked elements, editable region, and extension/unknown limits explicitly.
+- For a reused corporate profile, copy the exact live binding's profile id, display name, version, theme fingerprint, identity-resolution basis, and temporary-override state. Do not require or claim a new VI confirmation. Keep the profile binding, current brief confirmation, and production authorization as three separate facts.
+- A temporary override records the active profile that was deliberately not used and the current replacement visual route; it never changes the profile pointer. A permanent template update appears only after the new corporate VI/theme becomes an immutable profile version. Another company never reuses or overwrites the original profile record.
 - If the user supplied a clear visual reference, do not add a competing built-in-theme requirement.
 - For supported static-reference inputs, include the confirmed unified VI board path and confirmation state. In corporate fidelity, copy the exact source-role, canvas, shared-asset, shell placement, editable-region, extension, and limitation summary from the confirmed contract; do not silently alter it after current-board confirmation. Do not include a dynamic-analysis field or infer sequential behavior from multiple stills.
 - Treat VI confirmation and Report Design Brief confirmation as separate gates. A confirmed VI board may enter the separate project-theme handoff, but it does not authorize report production.

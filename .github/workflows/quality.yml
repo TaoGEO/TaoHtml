@@ -39,6 +39,7 @@ jobs:
           python skill/taohtml/scripts/preflight.py --profile core --workspace .
           python skill/taohtml/scripts/preflight.py --profile pdf --workspace .
           python skill/taohtml/scripts/preflight.py --profile static-reference --workspace .
+          python skill/taohtml/scripts/preflight.py --profile profile-reuse --workspace .
           python skill/taohtml/scripts/preflight.py --profile browser --workspace .
 
       - name: Run unit tests
@@ -110,6 +111,7 @@ jobs:
           python skill/taohtml/scripts/preflight.py --profile core --workspace .
           python skill/taohtml/scripts/preflight.py --profile pdf --workspace .
           python skill/taohtml/scripts/preflight.py --profile static-reference --workspace .
+          python skill/taohtml/scripts/preflight.py --profile profile-reuse --workspace .
           python skill/taohtml/scripts/preflight.py --profile browser --workspace .
 
       - name: Smoke corporate reference VI and project-theme chain

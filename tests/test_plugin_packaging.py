@@ -80,7 +80,9 @@ class PluginPackagingTests(unittest.TestCase):
                 for relative in (
                     "requirements.txt",
                     "scripts/preflight.py",
+                    "scripts/profile_store.py",
                     "scripts/check_production_authorization.py",
+                    "references/profile-memory.md",
                     "references/production-authorization.md",
                 ):
                     bundled = (
@@ -95,6 +97,13 @@ class PluginPackagingTests(unittest.TestCase):
                     f"{ARCHIVE_ROOT}/plugins/taohtml/skills/taohtml/scripts/preflight.py"
                 )
                 self.assertEqual((preflight_info.external_attr >> 16) & 0o777, 0o755)
+                profile_store_info = archive.getinfo(
+                    f"{ARCHIVE_ROOT}/plugins/taohtml/skills/taohtml/scripts/profile_store.py"
+                )
+                self.assertEqual(
+                    (profile_store_info.external_attr >> 16) & 0o777,
+                    0o755,
+                )
 
                 codex_manifest = json.loads(archive.read(codex_manifest_path))
                 claude_manifest = json.loads(archive.read(claude_manifest_path))
@@ -244,7 +253,9 @@ class PluginPackagingTests(unittest.TestCase):
                 self.assertIn("references/agent-workflow.md", names)
                 self.assertIn("requirements.txt", names)
                 self.assertIn("scripts/preflight.py", names)
+                self.assertIn("scripts/profile_store.py", names)
                 self.assertIn("scripts/check_production_authorization.py", names)
+                self.assertIn("references/profile-memory.md", names)
                 self.assertIn("references/production-authorization.md", names)
                 self.assertEqual(
                     archive.read("requirements.txt"),
@@ -256,6 +267,11 @@ class PluginPackagingTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     (archive.getinfo("scripts/preflight.py").external_attr >> 16) & 0o777,
+                    0o755,
+                )
+                self.assertEqual(
+                    (archive.getinfo("scripts/profile_store.py").external_attr >> 16)
+                    & 0o777,
                     0o755,
                 )
                 self.assertEqual(
@@ -424,6 +440,7 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertIn("windows-smoke:", workflow)
         self.assertIn("runs-on: windows-latest", workflow)
         self.assertIn("--profile static-reference", workflow)
+        self.assertIn("--profile profile-reuse", workflow)
         self.assertIn("render_reference_vi.py", workflow)
         self.assertIn("compile_project_theme.py", workflow)
 

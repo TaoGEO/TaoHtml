@@ -75,6 +75,18 @@ def state(**overrides: object) -> dict[str, object]:
     return payload
 
 
+def profile_use(
+    status: str,
+    artifact_path: str | None = None,
+    artifact_sha256: str | None = None,
+) -> dict[str, str | None]:
+    return {
+        "status": status,
+        "artifact_path": artifact_path,
+        "artifact_sha256": artifact_sha256,
+    }
+
+
 class ProductionAuthorizationTests(unittest.TestCase):
     def evaluate(
         self, payload: dict[str, object], artifact_root: Path
@@ -151,6 +163,19 @@ class ProductionAuthorizationTests(unittest.TestCase):
         self.assertIn("design-brief-preview", result["allowed_actions"])
         self.assertNotIn("formal-html", result["allowed_actions"])
 
+    def test_profile_reuse_pending_allows_only_current_binding_step(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = state(
+                schema_version="1.2",
+                visual_route="profile_reuse",
+                profile_use=profile_use("pending", "gates/profile-use.json"),
+            )
+            result = self.evaluate(payload, Path(temp_dir))
+        self.assertEqual(result["blocking_gates"], ["profile_use_binding"])
+        self.assertEqual(result["allowed_actions"], ["profile-use-bind", "status"])
+        self.assertNotIn("design-brief-preview", result["allowed_actions"])
+        self.assertNotIn("formal-html", result["allowed_actions"])
+
     def test_current_file_hash_match_authorizes_and_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -223,7 +248,27 @@ class ProductionAuthorizationTests(unittest.TestCase):
                 sha256(outside),
                 "conversation-ref-for-linked",
             )
-            with self.assertRaisesRegex(ValueError, "escapes the task artifact root"):
+            with self.assertRaisesRegex(ValueError, "must not .*symlink"):
+                CHECKER.validate_state(state(design_brief=brief), root)
+
+    def test_symlinked_parent_is_rejected_even_when_target_stays_inside_task_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "task"
+            real = root / "real"
+            real.mkdir(parents=True)
+            brief_path = real / "brief.md"
+            brief_path.write_text("inside", encoding="utf-8")
+            try:
+                (root / "linked").symlink_to(real, target_is_directory=True)
+            except (NotImplementedError, OSError) as exc:
+                self.skipTest(f"symlink creation is unavailable on this runner: {exc}")
+            brief = gate(
+                "confirmed",
+                "linked/brief.md",
+                sha256(brief_path),
+                "conversation-ref-for-linked-parent",
+            )
+            with self.assertRaisesRegex(ValueError, "must not use symlinks"):
                 CHECKER.validate_state(state(design_brief=brief), root)
 
     def test_impossible_confirmation_order_is_rejected(self) -> None:

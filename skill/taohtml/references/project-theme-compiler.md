@@ -214,6 +214,26 @@ python scripts/render_visual_system.py \
   --output /absolute/path/to/report.html
 ```
 
+## Corporate Profile Promotion
+
+Keep every compiled result project-local by default. Only a `corporate_fidelity`
+result with the current conversation-bound handoff schema, exact VI/reference hashes,
+and a successful `theme_runtime.load_project_theme()` check may enter the explicit
+profile workflow in `profile-memory.md`.
+
+Use `profile_store.py create` for a new enterprise or `update` only after the customer
+explicitly makes the new template permanent. The store validates this source theme,
+recompiles the same confirmed VI/reference bytes under a profile-only identity with no
+project corrections, verifies structural/CSS/template equivalence, and calls the same
+project-theme loader again. It never adds profile output to `assets/visual-systems/`.
+
+For a later project, load the live-validated binding's relative theme path through the
+same renderer `--project-theme` route and pass the binding's current report mode with
+`--target-mode reading|presentation`. The archived theme's compilation mode is
+provenance, not a corporate-brand boundary; a mode-only change must not create v2.
+Do not copy compiler/loader validation into a second profile-specific implementation
+and do not silently replace a damaged profile with a built-in theme.
+
 ## Verification
 
 For the compiled theme and at least one full sample deck:

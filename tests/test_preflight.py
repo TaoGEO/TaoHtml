@@ -108,6 +108,59 @@ class PreflightContractTests(unittest.TestCase):
             self.by_id(result, "chromium_launch_screenshot")["status"], "blocked"
         )
 
+    def test_profile_reuse_checks_only_pillow_and_theme_loader_without_browser(self) -> None:
+        observed: list[str] = []
+
+        def record_module(module: str, timeout: float) -> dict[str, str]:
+            observed.append(module)
+            return passing_module(module, timeout)
+
+        def unexpected_browser(*_args):
+            raise AssertionError("profile-reuse must not probe Playwright or Chromium")
+
+        result = self.run_profile(
+            "profile-reuse",
+            module_probe=record_module,
+            browser_probe=unexpected_browser,
+        )
+        self.assertTrue(result["ok"])
+        self.assertEqual(observed, ["PIL", "theme_runtime"])
+        self.assertEqual(
+            [item["id"] for item in result["checks"]],  # type: ignore[index]
+            [
+                "python_version",
+                "workspace_filesystem",
+                "module_pillow",
+                "module_theme_loader",
+            ],
+        )
+
+    def test_profile_reuse_missing_pillow_fails_before_binding_without_browser(self) -> None:
+        def missing_pillow(module: str, timeout: float) -> dict[str, str]:
+            if module == "PIL":
+                return {
+                    "status": "fail",
+                    "category": "module_missing",
+                    "detail": "No module named PIL",
+                }
+            return passing_module(module, timeout)
+
+        def unexpected_browser(*_args):
+            raise AssertionError("profile-reuse must not probe a browser")
+
+        result = self.run_profile(
+            "profile-reuse",
+            module_probe=missing_pillow,
+            browser_probe=unexpected_browser,
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual(self.by_id(result, "module_pillow")["status"], "fail")
+        self.assertNotIn(
+            "chromium_launch_screenshot",
+            [item["id"] for item in result["checks"]],  # type: ignore[index]
+        )
+        self.assertIn("尚未绑定或加载企业模板档案", result["customer_conclusion"])
+
     def test_missing_chromium_is_distinct_from_missing_playwright(self) -> None:
         def missing_chromium(*_args) -> dict[str, str]:
             return {
