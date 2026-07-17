@@ -11,16 +11,21 @@ import sys
 from pathlib import Path
 from typing import Any
 
+SCRIPT_ROOT = Path(__file__).resolve().parent
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
+LEGACY_SCHEMA_VERSION = "1.1"
 ROUTES = {"idea_only", "word_pdf", "existing_ppt_html"}
-VISUAL_ROUTES = {"unresolved", "built_in", "static_reference"}
+VISUAL_ROUTES = {"unresolved", "built_in", "static_reference", "profile_reuse"}
 ACTIONS = {
     "status",
     "material-summary-preview",
     "visual-route-decision",
     "reference-vi-preview",
     "project-theme-compile",
+    "profile-use-bind",
     "design-brief-preview",
     "formal-html",
     "browser-qa",
@@ -33,6 +38,7 @@ TOP_LEVEL_KEYS = {
     "visual_route",
     "material_summary",
     "reference_vi",
+    "profile_use",
     "project_theme_compiled",
     "design_brief",
 }
@@ -43,6 +49,7 @@ GATE_KEYS = {
     "confirmation_ref",
 }
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+PROFILE_USE_KEYS = {"status", "artifact_path", "artifact_sha256"}
 
 
 def _exact_object(raw: object, keys: set[str], label: str) -> dict[str, Any]:
@@ -92,8 +99,14 @@ def _current_artifact(
         raise ValueError(
             f"{label}.artifact_sha256 must be a lowercase SHA-256 digest"
         )
+    supplied = artifact_root / relative
+    cursor = artifact_root
+    for part in relative.parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise ValueError(f"{label}.artifact_path must not use symlinks")
     try:
-        current = (artifact_root / relative).resolve(strict=True)
+        current = supplied.resolve(strict=True)
     except FileNotFoundError as exc:
         raise ValueError(f"{label}.artifact_path does not exist: {relative_text}") from exc
     try:
@@ -110,6 +123,51 @@ def _current_artifact(
             f"{label}.artifact_sha256 does not match the current file"
         )
     return relative.as_posix(), current_sha256
+
+
+def _profile_use_gate(
+    raw: object,
+    artifact_root: Path,
+) -> dict[str, Any]:
+    gate = _exact_object(raw, PROFILE_USE_KEYS, "profile_use")
+    status = gate["status"]
+    if status not in {"not_required", "pending", "bound"}:
+        raise ValueError("profile_use.status must be not_required, pending, or bound")
+    artifact_path = _optional_text(gate["artifact_path"], "profile_use.artifact_path")
+    artifact_sha256 = _optional_text(
+        gate["artifact_sha256"], "profile_use.artifact_sha256"
+    )
+    validation_status = None
+    temporary_override = None
+    if status == "bound":
+        import profile_store
+
+        if artifact_path is None or artifact_sha256 is None:
+            raise ValueError(
+                "profile_use bound state requires artifact_path and artifact_sha256"
+            )
+        artifact_path, artifact_sha256 = _current_artifact(
+            artifact_root,
+            artifact_path,
+            artifact_sha256,
+            "profile_use",
+        )
+        current = artifact_root / artifact_path
+        validated = profile_store.validate_binding(current)
+        validation_status = validated["status"]
+        temporary_override = bool(validated["binding"]["temporary_override"])
+    elif status == "pending":
+        if artifact_sha256 is not None:
+            raise ValueError("profile_use pending state cannot contain artifact_sha256")
+    elif artifact_path is not None or artifact_sha256 is not None:
+        raise ValueError("profile_use not_required state cannot bind an artifact")
+    return {
+        "status": status,
+        "artifact_path": artifact_path,
+        "artifact_sha256": artifact_sha256,
+        "validation_status": validation_status,
+        "temporary_override": temporary_override,
+    }
 
 
 def _confirmation_gate(
@@ -169,9 +227,24 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
         raise ValueError(f"artifact_root does not exist: {artifact_root}") from exc
     if not resolved_artifact_root.is_dir():
         raise ValueError(f"artifact_root is not a directory: {resolved_artifact_root}")
-    state = _exact_object(raw, TOP_LEVEL_KEYS, "state")
-    if state["schema_version"] != SCHEMA_VERSION:
-        raise ValueError(f"schema_version must be {SCHEMA_VERSION}")
+    if not isinstance(raw, dict):
+        raise ValueError("state must be an object")
+    schema_version = raw.get("schema_version")
+    if schema_version == LEGACY_SCHEMA_VERSION:
+        legacy_keys = TOP_LEVEL_KEYS - {"profile_use"}
+        legacy = _exact_object(raw, legacy_keys, "state")
+        state = {**legacy, "schema_version": SCHEMA_VERSION}
+        state["profile_use"] = {
+            "status": "not_required",
+            "artifact_path": None,
+            "artifact_sha256": None,
+        }
+    else:
+        state = _exact_object(raw, TOP_LEVEL_KEYS, "state")
+        if schema_version != SCHEMA_VERSION:
+            raise ValueError(
+                f"schema_version must be {SCHEMA_VERSION} (or legacy {LEGACY_SCHEMA_VERSION})"
+            )
     task_id = _short_text(state["task_id"], "task_id")
     route = state["route"]
     if route not in ROUTES:
@@ -199,6 +272,7 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
         resolved_artifact_root,
         allowed_statuses={"pending", "confirmed"},
     )
+    profile_use = _profile_use_gate(state["profile_use"], resolved_artifact_root)
     project_theme_compiled = state["project_theme_compiled"]
     if not isinstance(project_theme_compiled, bool):
         raise ValueError("project_theme_compiled must be a boolean")
@@ -222,25 +296,46 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
             raise ValueError(
                 f"{visual_route} requires reference_vi.status=not_required"
             )
-        if project_theme_compiled:
+        if project_theme_compiled and visual_route not in {"profile_reuse"}:
             raise ValueError(
-                "project_theme_compiled can be true only for static_reference"
+                "project_theme_compiled can be true only for static_reference or profile_reuse"
             )
+
+    if visual_route == "profile_reuse":
+        if profile_use["status"] == "bound" and profile_use["temporary_override"]:
+            raise ValueError("profile_reuse cannot use a temporary-override binding")
+    elif profile_use["status"] == "pending":
+        raise ValueError("profile_use pending state is valid only for profile_reuse")
+    elif profile_use["status"] == "bound" and not profile_use["temporary_override"]:
+        raise ValueError(
+            "A reusable profile binding requires visual_route=profile_reuse"
+        )
 
     source_ready = not source_backed_route or material["status"] == "confirmed"
     vi_ready = (
         visual_route != "static_reference"
         or reference_vi["status"] == "confirmed"
     )
+    profile_ready = (
+        visual_route != "profile_reuse"
+        or (
+            profile_use["status"] == "bound"
+            and profile_use["validation_status"] == "valid_reuse"
+        )
+    )
     if reference_vi["status"] == "confirmed" and not source_ready:
         raise ValueError("reference VI cannot be confirmed before source grounding")
-    if project_theme_compiled and not vi_ready:
+    if project_theme_compiled and not (vi_ready and profile_ready):
         raise ValueError("project theme cannot be compiled before reference VI confirmation")
     upstream_ready = (
         source_ready
         and visual_route != "unresolved"
         and vi_ready
-        and (visual_route != "static_reference" or project_theme_compiled)
+        and profile_ready
+        and (
+            visual_route not in {"static_reference", "profile_reuse"}
+            or project_theme_compiled
+        )
     )
     if brief["status"] == "confirmed" and not upstream_ready:
         raise ValueError(
@@ -254,6 +349,7 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
         "visual_route": visual_route,
         "material_summary": material,
         "reference_vi": reference_vi,
+        "profile_use": profile_use,
         "project_theme_compiled": project_theme_compiled,
         "design_brief": brief,
         "artifact_root": str(resolved_artifact_root),
@@ -271,8 +367,15 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
         state["visual_route"] != "static_reference"
         or state["reference_vi"]["status"] == "confirmed"
     )
+    profile_ready = (
+        state["visual_route"] != "profile_reuse"
+        or (
+            state["profile_use"]["status"] == "bound"
+            and state["profile_use"]["validation_status"] == "valid_reuse"
+        )
+    )
     theme_ready = (
-        state["visual_route"] != "static_reference"
+        state["visual_route"] not in {"static_reference", "profile_reuse"}
         or state["project_theme_compiled"]
     )
     brief_ready = state["design_brief"]["status"] == "confirmed"
@@ -284,9 +387,11 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
         blocking_gates.append("visual_route_selection")
     if visual_ready and not vi_ready:
         blocking_gates.append("reference_vi_confirmation")
-    if visual_ready and vi_ready and not theme_ready:
+    if visual_ready and vi_ready and not profile_ready:
+        blocking_gates.append("profile_use_binding")
+    if visual_ready and vi_ready and profile_ready and not theme_ready:
         blocking_gates.append("project_theme_compilation")
-    if material_ready and visual_ready and vi_ready and theme_ready and not brief_ready:
+    if material_ready and visual_ready and vi_ready and profile_ready and theme_ready and not brief_ready:
         blocking_gates.append("design_brief_confirmation")
 
     allowed = {"status"}
@@ -297,6 +402,8 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
             allowed.add("visual-route-decision")
         elif not vi_ready:
             allowed.add("reference-vi-preview")
+        elif not profile_ready:
+            allowed.add("profile-use-bind")
         elif not theme_ready:
             allowed.add("project-theme-compile")
         elif not brief_ready:
@@ -314,6 +421,14 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
         for name in ("material_summary", "reference_vi", "design_brief")
         if state[name]["status"] == "confirmed"
     ]
+    if state["profile_use"]["status"] == "bound":
+        verified_artifacts.append(
+            {
+                "gate": "profile_use",
+                "artifact_path": state["profile_use"]["artifact_path"],
+                "artifact_sha256": state["profile_use"]["artifact_sha256"],
+            }
+        )
     return {
         "schema_version": SCHEMA_VERSION,
         "task_id": state["task_id"],

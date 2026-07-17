@@ -127,7 +127,12 @@ def package_bundle(output_zip: Path) -> None:
                     info.create_system = 3
                     mode = (
                         0o755
-                        if relative.endswith("/skills/taohtml/scripts/preflight.py")
+                        if relative.endswith(
+                            (
+                                "/skills/taohtml/scripts/preflight.py",
+                                "/skills/taohtml/scripts/profile_store.py",
+                            )
+                        )
                         else 0o644
                     )
                     info.external_attr = mode << 16

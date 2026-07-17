@@ -8,6 +8,8 @@
 
 如果你没有明确的参考风格，可以直接选择四套内置视觉系统：黑白荧光卡片、严谨咨询报告、稳重企业年报、杂志图文拼贴，由 TaoHtml 根据报告内容完成重构与设计。
 
+同一企业的模板第一次确认并通过主题验证后，可以保存为显式企业档案。后续项目精确匹配该企业时默认沿用 active version，不再重复读取参考图或生成同一份 VI；档案可检查、可回退、可导出导入，不依赖模型的隐式记忆。
+
 > English brief: TaoHtml turns ideas and source material into polished, offline HTML reports and presentation-ready decks, with confirmed design decisions, reusable visual systems, and delivery QA.
 
 当前版本：[`0.3.2`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.2) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
@@ -20,6 +22,7 @@
 - 在正式制作前确认《报告设计简报》，记录受众、目标、结构、证据、视觉来源和必要边界。
 - 内置四套可执行视觉系统，不只更换配色，还会改变构图、层级、组件、图片、图表、证据和动效语法。
 - 支持“参考风格重构”和“企业模板保真”：先生成可查看的 VI 设计标准图，确认后再编译项目专用主题。
+- 企业模板保真结果可保存到 `${TAOHTML_HOME:-~/.taohtml}` 的版本化企业档案；同一企业后续项目自动绑定 active version，支持本次临时更换、永久升级、回退、归档和严格 export/import。
 - 共享 HTML Runtime 支持阅读 / 演讲模式、分步呈现、整页导航、页状态保存、全屏和页码。
 - 采用“报告产出优先”合同：普通信息缺口可以形成创作性补全，先交付可用报告，再附结构化《待核实内容清单》；真实来源和高风险事实继续失败关闭。
 - 使用本地资产和相对路径，并执行离线资源检查、浏览器 QA、截图总览和 zip 打包。
@@ -44,7 +47,7 @@
 
 这两条路线共享“静态参考 → VI 设计标准图 → 当前版本确认 → 项目专用主题”的确认链，但保真目标不同。下方全部使用仓库自制、无真实品牌的合成样例。
 
-项目专用主题不是第五套内置主题，只服务于当前项目。两种路线都只承诺截图中可见效果：不重绘 Logo，内容进入可编辑安全区；动效由 Runtime 和报告任务决定，不从一张或多张静态图推断。
+项目专用主题不是第五套内置主题，默认只服务于当前项目；只有经过企业模板保真确认、hash-bound handoff、编译和 loader 验证的结果，才能另存为企业档案版本。两种路线都只承诺截图中可见效果：不重绘 Logo，内容进入可编辑安全区；动效由 Runtime 和报告任务决定，不从一张或多张静态图推断。
 
 <table>
   <tr>
@@ -62,6 +65,19 @@
 </table>
 
 企业模板保真只承诺截图中可见的像素与页面角色，不宣称恢复原始 PPT 母版、矢量 Logo、字体源文件、截图外资产或动效。可查看仓库中的[完整五页 HTML 样例](examples/corporate-template-fidelity/corporate-fidelity-sample.html)和[高清 VI 标准图](examples/corporate-template-fidelity/reference-vi-board.png)。
+
+## 企业模板档案与跨项目复用
+
+TaoHtml 会先从当前材料和对话解析企业身份，再与显式档案做精确匹配。唯一匹配时直接生成当前任务的 `profile-use` binding，并简短告知“本次沿用【企业模板 vN】；如需更换请直接说明”；不会把“是否复用”变成固定问卷。多个候选、身份不明确或本次需求与档案冲突时才问一个选择问题，禁止跨企业混用。
+
+- “这次不用 / 这次换一个”只写入临时 override，不修改 active version。
+- “以后改用 / 更新公司模板”重新走企业 VI 确认，创建 v2/v3 并原子切换 active pointer；旧版本保留可回退。
+- “这是另一家公司 / 客户”创建或选择独立档案，不覆盖原企业。
+- v1 不做破坏性删除；`archive` 只停止自动解析，`restore` 可恢复同一 active version。
+
+档案优先使用 `TAOHTML_HOME`，默认 `~/.taohtml`，不写入 Skill 安装目录。它只保存企业品牌/模板所需的 VI 合同、参考图、经现有 loader 验证的 theme、确认边界与完整 hashes，不保存报告正文、项目目标、受众、证据或客户报告数据。本机多个 Agent 可指向同一目录；跨设备或无持久磁盘环境使用完整档案包 export/import，TaoHtml 不声称自动云同步。
+
+每次 binding 都会再次验证 profile/version、VI、参考图、theme fingerprint 和来源边界。任何漂移、损坏、active version 变化或企业身份变化都会失败关闭，不能静默回退到四套内置系统。历史 binding 只替代“本次重新生成 VI”，仍必须确认当前《报告设计简报》，并通过 production authorization、浏览器 QA 和交付门禁。
 
 ## 安装入口
 
