@@ -197,6 +197,7 @@ class PluginPackagingTests(unittest.TestCase):
         ):
             self.assertIn(version, readme)
         self.assertIn("CHANGELOG.md#033---2026-07-17", readme)
+        self.assertIn("CHANGELOG.md#040---2026-07-17", readme)
         self.assertIn("CHANGELOG.md#032---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#031---2026-07-16", readme)
         self.assertIn("CHANGELOG.md#030---2026-07-16", readme)
