@@ -1,0 +1,25 @@
+{
+  "route": "direct-or-ir",
+  "client": "codex-or-workbuddy",
+  "agent": "unknown",
+  "model": "unknown-or-auto",
+  "skill_version": "read-from-VERSION",
+  "skill_commit": "read-from-git",
+  "question_count": 0,
+  "duration_seconds": null,
+  "token_usage": {
+    "availability": "unavailable",
+    "source": "unavailable",
+    "input_tokens": null,
+    "output_tokens": null,
+    "cache_tokens": null,
+    "total_tokens": null
+  },
+  "billing_usage": {
+    "availability": "unavailable",
+    "source": "unavailable",
+    "workbuddy_points": null,
+    "balance_before": null,
+    "balance_after": null
+  }
+}

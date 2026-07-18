@@ -1,0 +1,24 @@
+{
+  "case_spec_version": "report-ir-v0-case-1",
+  "case_id": "case-a",
+  "expected_report_id": "report_case_evidence_system",
+  "slide_count": 5,
+  "required_text": [
+    "证据先行",
+    "增长才可复制",
+    "案例很多，证据链仍然断裂",
+    "四步把案例变成可调用证据",
+    "同一组数据，直接看复用进度",
+    "12",
+    "8",
+    "6",
+    "先完成最小证据闭环，再扩大案例规模"
+  ],
+  "disclosure_text": ["合成", "示意", "待核实"],
+  "required_minimum_disclosures": 2,
+  "forbidden_text": [
+    "洞察入链",
+    "产品决策才可复盘",
+    "访谈不少，决策依据依然断层"
+  ]
+}

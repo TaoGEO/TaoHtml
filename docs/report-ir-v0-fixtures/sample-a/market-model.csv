@@ -1,0 +1,5 @@
+year,total_market_index,enterprise_service_index,consumer_service_index,enterprise_increment_share_pct,content_status
+2024,100,100,100,,illustrative_baseline
+2025,112,118,106,60.0,projected
+2026,126,141,112,62.0,projected
+2027,142,168,119,64.3,projected

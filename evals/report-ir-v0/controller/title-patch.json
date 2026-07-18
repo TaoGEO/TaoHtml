@@ -1,0 +1,6 @@
+{
+  "patch_version": "research-v0",
+  "operation": "replace_block_content",
+  "target_ref": "block_cover_title_b",
+  "value": "增长才真正可复制"
+}

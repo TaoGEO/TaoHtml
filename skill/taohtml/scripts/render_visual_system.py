@@ -263,7 +263,8 @@ def _render_bundle(
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(rendered, encoding="utf-8")
+    normalized = rendered.replace("\r\n", "\n").replace("\r", "\n")
+    output.write_bytes(normalized.encode("utf-8"))
     return output
 
 

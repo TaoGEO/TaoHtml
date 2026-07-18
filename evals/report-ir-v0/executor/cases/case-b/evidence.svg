@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#eef5f4"/>
+  <rect x="64" y="56" width="1072" height="648" rx="18" fill="#ffffff" stroke="#16372f" stroke-width="3"/>
+  <text x="112" y="132" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#16372f">Case B · 合成访谈转化记录</text>
+  <text x="112" y="184" font-family="Arial,sans-serif" font-size="20" fill="#526963">用于隔离测试，不代表真实客户研究数据</text>
+  <line x1="112" y1="226" x2="1088" y2="226" stroke="#b9cdc8" stroke-width="2"/>
+  <text x="112" y="294" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#16372f">转化条目</text>
+  <text x="112" y="344" font-family="Arial,sans-serif" font-size="20" fill="#16372f">访谈完成：15 份记录，问题与场景字段已统一</text>
+  <text x="112" y="390" font-family="Arial,sans-serif" font-size="20" fill="#16372f">洞察形成：10 条洞察，保留原话、反例与边界</text>
+  <text x="112" y="436" font-family="Arial,sans-serif" font-size="20" fill="#16372f">需求绑定：7 条洞察进入需求判断与方案取舍</text>
+  <rect x="112" y="500" width="976" height="112" rx="12" fill="#16372f"/>
+  <text x="152" y="550" font-family="Arial,sans-serif" font-size="18" fill="#b9cdc8">合成结论</text>
+  <text x="152" y="586" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#ffffff">洞察必须同时保留来源、反例、适用边界与决策去向。</text>
+</svg>

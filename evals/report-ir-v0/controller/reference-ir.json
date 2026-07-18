@@ -1,0 +1,542 @@
+{
+  "report_ir_version": "research-v0",
+  "report": {
+    "id": "report_case_evidence_system",
+    "title": "证据系统化｜Report IR v0 对照实验",
+    "objective": "让团队先完成最小证据闭环，再扩大案例规模",
+    "audience": "咨询或企业服务团队",
+    "archetype": "internal_strategy_presentation",
+    "evidence_rigor": "standard",
+    "visual_source_ref": "source_synthetic_evidence",
+    "document_title_ref": "block_document_title",
+    "footer_ref": "block_footer"
+  },
+  "projection": {
+    "id": "projection_presentation",
+    "delivery_mode": "presentation",
+    "information_density": "medium",
+    "motion_density": "medium",
+    "interaction_level": "low",
+    "page_order": [
+      "page_core_thesis",
+      "page_current_breaks",
+      "page_system_mechanism",
+      "page_evidence_progress",
+      "page_next_step"
+    ]
+  },
+  "sources": [
+    {
+      "id": "source_synthetic_evidence",
+      "locator": "input/materials/evidence.svg",
+      "sha256": "28c277f9f7e0e71d960e1dbea7a987a7c57f6db210d67662fa8510a1a61a75e7",
+      "source_role": "synthetic_fixture",
+      "content_status": "illustrative",
+      "limitation": "字节身份可核对，但不代表真实客户数据"
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim_evidence_system_first",
+      "kind": "recommendation",
+      "statement": "先把案例变成可调用证据，再扩大获客或案例规模",
+      "status": "conditional"
+    },
+    {
+      "id": "claim_progress_fixture",
+      "kind": "simulation",
+      "statement": "合成样本包含 12 个归档、8 个证据绑定和 6 个提案调用",
+      "status": "scenario_only"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_fixture_progress",
+      "source_refs": [
+        "source_synthetic_evidence"
+      ],
+      "kind": "synthetic_dataset",
+      "content_status": "illustrative",
+      "scope": "只支持本次架构对照，不支持现实世界结论"
+    }
+  ],
+  "evidence_links": [
+    {
+      "claim_ref": "claim_progress_fixture",
+      "evidence_ref": "evidence_fixture_progress",
+      "relation": "supports_in_scenario"
+    },
+    {
+      "claim_ref": "claim_evidence_system_first",
+      "evidence_ref": "evidence_fixture_progress",
+      "relation": "illustrates"
+    }
+  ],
+  "blocks": {
+    "block_document_title": {
+      "kind": "headline",
+      "content": "证据系统化｜Report IR v0 对照实验"
+    },
+    "block_footer": {
+      "kind": "label",
+      "content": "案例证据系统 · Report IR v0 合成样本"
+    },
+    "block_cover_kicker": {
+      "kind": "kicker",
+      "content": "01 / 核心命题"
+    },
+    "block_cover_title_a": {
+      "kind": "headline",
+      "content": "证据先行，"
+    },
+    "block_cover_title_b": {
+      "kind": "headline",
+      "content": "增长才可复制"
+    },
+    "block_cover_lede": {
+      "kind": "body_text",
+      "content": "把散落的客户案例变成可调用、可验证、可复用的证据系统。"
+    },
+    "block_cover_label": {
+      "kind": "label",
+      "content": "核心判断"
+    },
+    "block_cover_claim": {
+      "kind": "claim",
+      "content": "团队缺的不是更多案例，而是一套让证据随时进入提案、交付与复盘的结构。"
+    },
+    "block_breaks_kicker": {
+      "kind": "kicker",
+      "content": "02 / 当前断点"
+    },
+    "block_breaks_title": {
+      "kind": "headline",
+      "content": "案例很多，证据链仍然断裂"
+    },
+    "block_breaks_lede": {
+      "kind": "body_text",
+      "content": "同一批事实散落在文件夹、聊天记录和个人记忆里，导致价值无法稳定复用。"
+    },
+    "block_break_1_label": {
+      "kind": "label",
+      "content": "断点 01"
+    },
+    "block_break_1_title": {
+      "kind": "headline",
+      "content": "来源失联"
+    },
+    "block_break_1_body": {
+      "kind": "body_text",
+      "content": "截图被复制后失去项目、时间与原始语境。"
+    },
+    "block_break_2_label": {
+      "kind": "label",
+      "content": "断点 02"
+    },
+    "block_break_2_title": {
+      "kind": "headline",
+      "content": "结论失真"
+    },
+    "block_break_2_body": {
+      "kind": "body_text",
+      "content": "销售只记住漂亮结果，却无法说明证据支持了什么。"
+    },
+    "block_break_3_label": {
+      "kind": "label",
+      "content": "断点 03"
+    },
+    "block_break_3_title": {
+      "kind": "headline",
+      "content": "调用困难"
+    },
+    "block_break_3_body": {
+      "kind": "body_text",
+      "content": "新提案开始时，团队仍要从头寻找相似案例。"
+    },
+    "block_process_kicker": {
+      "kind": "kicker",
+      "content": "03 / 系统机制"
+    },
+    "block_process_title": {
+      "kind": "headline",
+      "content": "四步把案例变成可调用证据"
+    },
+    "block_process_lede": {
+      "kind": "body_text",
+      "content": "每一步都生成下一步可直接使用的结构化输入。"
+    },
+    "block_step_1_num": {
+      "kind": "label",
+      "content": "01"
+    },
+    "block_step_1_title": {
+      "kind": "headline",
+      "content": "采集"
+    },
+    "block_step_1_body": {
+      "kind": "body_text",
+      "content": "保留原始材料、来源、时间与责任人。"
+    },
+    "block_step_2_num": {
+      "kind": "label",
+      "content": "02"
+    },
+    "block_step_2_title": {
+      "kind": "headline",
+      "content": "切片"
+    },
+    "block_step_2_body": {
+      "kind": "body_text",
+      "content": "拆出问题、动作、结果和适用边界。"
+    },
+    "block_step_3_num": {
+      "kind": "label",
+      "content": "03"
+    },
+    "block_step_3_title": {
+      "kind": "headline",
+      "content": "绑定"
+    },
+    "block_step_3_body": {
+      "kind": "body_text",
+      "content": "把结论与可追溯证据建立双向链接。"
+    },
+    "block_step_4_num": {
+      "kind": "label",
+      "content": "04"
+    },
+    "block_step_4_title": {
+      "kind": "headline",
+      "content": "调用"
+    },
+    "block_step_4_body": {
+      "kind": "body_text",
+      "content": "按场景检索并装配到提案、交付和复盘。"
+    },
+    "block_data_kicker": {
+      "kind": "kicker",
+      "content": "04 / 固定样本"
+    },
+    "block_data_title": {
+      "kind": "headline",
+      "content": "同一组数据，直接看复用进度"
+    },
+    "block_data_lede": {
+      "kind": "body_text",
+      "content": "这是用于架构对照的合成样本，不代表真实客户数据。"
+    },
+    "block_data_source": {
+      "kind": "label",
+      "content": "来源：本地合成证据记录；示意 / 待核实"
+    },
+    "block_metric_1_value": {
+      "kind": "metric",
+      "content": "12"
+    },
+    "block_metric_1_label": {
+      "kind": "label",
+      "content": "已归档案例"
+    },
+    "block_metric_2_value": {
+      "kind": "metric",
+      "content": "8"
+    },
+    "block_metric_2_label": {
+      "kind": "label",
+      "content": "已绑定证据"
+    },
+    "block_metric_3_value": {
+      "kind": "metric",
+      "content": "6"
+    },
+    "block_metric_3_label": {
+      "kind": "label",
+      "content": "已进入提案"
+    },
+    "block_table_h1": {
+      "kind": "table_cell",
+      "content": "阶段"
+    },
+    "block_table_h2": {
+      "kind": "table_cell",
+      "content": "数量"
+    },
+    "block_table_h3": {
+      "kind": "table_cell",
+      "content": "判断"
+    },
+    "block_table_r1c1": {
+      "kind": "table_cell",
+      "content": "归档"
+    },
+    "block_table_r1c2": {
+      "kind": "table_cell",
+      "content": "12"
+    },
+    "block_table_r1c3": {
+      "kind": "table_cell",
+      "content": "入口已统一"
+    },
+    "block_table_r2c1": {
+      "kind": "table_cell",
+      "content": "证据绑定"
+    },
+    "block_table_r2c2": {
+      "kind": "table_cell",
+      "content": "8"
+    },
+    "block_table_r2c3": {
+      "kind": "table_cell",
+      "content": "仍需补齐来源语境"
+    },
+    "block_table_r3c1": {
+      "kind": "table_cell",
+      "content": "提案调用"
+    },
+    "block_table_r3c2": {
+      "kind": "table_cell",
+      "content": "6"
+    },
+    "block_table_r3c3": {
+      "kind": "table_cell",
+      "content": "优先优化检索与装配"
+    },
+    "block_action_kicker": {
+      "kind": "kicker",
+      "content": "05 / 下一步"
+    },
+    "block_action_title": {
+      "kind": "headline",
+      "content": "先完成最小证据闭环，再扩大案例规模"
+    },
+    "block_action_lede": {
+      "kind": "body_text",
+      "content": "用两周把高频场景跑通，让证据从存档进入实际决策。"
+    },
+    "block_action_1_num": {
+      "kind": "label",
+      "content": "01"
+    },
+    "block_action_1_title": {
+      "kind": "headline",
+      "content": "选场景"
+    },
+    "block_action_1_body": {
+      "kind": "body_text",
+      "content": "锁定一个高频提案或复盘任务。"
+    },
+    "block_action_2_num": {
+      "kind": "label",
+      "content": "02"
+    },
+    "block_action_2_title": {
+      "kind": "headline",
+      "content": "补链路"
+    },
+    "block_action_2_body": {
+      "kind": "body_text",
+      "content": "为 8 个核心案例补齐来源与结论绑定。"
+    },
+    "block_action_3_num": {
+      "kind": "label",
+      "content": "03"
+    },
+    "block_action_3_title": {
+      "kind": "headline",
+      "content": "测调用"
+    },
+    "block_action_3_body": {
+      "kind": "body_text",
+      "content": "记录检索时间、采用率与人工修订次数。"
+    },
+    "block_action_label": {
+      "kind": "label",
+      "content": "行动结论"
+    },
+    "block_action_claim": {
+      "kind": "claim",
+      "content": "只有进入真实工作流的证据，才是可复用资产。"
+    }
+  },
+  "pages": [
+    {
+      "id": "page_core_thesis",
+      "role": "assert",
+      "form": "poster",
+      "task": "建立核心命题",
+      "claim_refs": [
+        "claim_evidence_system_first"
+      ],
+      "evidence_refs": [],
+      "slots": {
+        "kicker": "block_cover_kicker",
+        "title_a": "block_cover_title_a",
+        "title_b": "block_cover_title_b",
+        "lede": "block_cover_lede",
+        "label": "block_cover_label",
+        "claim": "block_cover_claim"
+      }
+    },
+    {
+      "id": "page_current_breaks",
+      "role": "explain",
+      "form": "comparison",
+      "task": "解释证据链的三个断点",
+      "claim_refs": [],
+      "evidence_refs": [],
+      "slots": {
+        "kicker": "block_breaks_kicker",
+        "title": "block_breaks_title",
+        "lede": "block_breaks_lede",
+        "items": [
+          {
+            "label": "block_break_1_label",
+            "title": "block_break_1_title",
+            "body": "block_break_1_body"
+          },
+          {
+            "label": "block_break_2_label",
+            "title": "block_break_2_title",
+            "body": "block_break_2_body"
+          },
+          {
+            "label": "block_break_3_label",
+            "title": "block_break_3_title",
+            "body": "block_break_3_body"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page_system_mechanism",
+      "role": "explain",
+      "form": "process",
+      "task": "说明证据系统的四步机制",
+      "claim_refs": [],
+      "evidence_refs": [],
+      "slots": {
+        "kicker": "block_process_kicker",
+        "title": "block_process_title",
+        "lede": "block_process_lede",
+        "items": [
+          {
+            "num": "block_step_1_num",
+            "title": "block_step_1_title",
+            "body": "block_step_1_body"
+          },
+          {
+            "num": "block_step_2_num",
+            "title": "block_step_2_title",
+            "body": "block_step_2_body"
+          },
+          {
+            "num": "block_step_3_num",
+            "title": "block_step_3_title",
+            "body": "block_step_3_body"
+          },
+          {
+            "num": "block_step_4_num",
+            "title": "block_step_4_title",
+            "body": "block_step_4_body"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page_evidence_progress",
+      "role": "prove",
+      "form": "data",
+      "task": "用合成样本展示证据复用进度",
+      "claim_refs": [
+        "claim_progress_fixture"
+      ],
+      "evidence_refs": [
+        "evidence_fixture_progress"
+      ],
+      "slots": {
+        "kicker": "block_data_kicker",
+        "title": "block_data_title",
+        "lede": "block_data_lede",
+        "source_label": "block_data_source",
+        "metrics": [
+          {
+            "value": "block_metric_1_value",
+            "label": "block_metric_1_label"
+          },
+          {
+            "value": "block_metric_2_value",
+            "label": "block_metric_2_label"
+          },
+          {
+            "value": "block_metric_3_value",
+            "label": "block_metric_3_label"
+          }
+        ],
+        "table_headers": [
+          "block_table_h1",
+          "block_table_h2",
+          "block_table_h3"
+        ],
+        "table_rows": [
+          [
+            "block_table_r1c1",
+            "block_table_r1c2",
+            "block_table_r1c3"
+          ],
+          [
+            "block_table_r2c1",
+            "block_table_r2c2",
+            "block_table_r2c3"
+          ],
+          [
+            "block_table_r3c1",
+            "block_table_r3c2",
+            "block_table_r3c3"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "page_next_step",
+      "role": "act",
+      "form": "closing",
+      "task": "把建议转成最小行动闭环",
+      "claim_refs": [
+        "claim_evidence_system_first"
+      ],
+      "evidence_refs": [
+        "evidence_fixture_progress"
+      ],
+      "slots": {
+        "kicker": "block_action_kicker",
+        "title": "block_action_title",
+        "lede": "block_action_lede",
+        "items": [
+          {
+            "num": "block_action_1_num",
+            "title": "block_action_1_title",
+            "body": "block_action_1_body"
+          },
+          {
+            "num": "block_action_2_num",
+            "title": "block_action_2_title",
+            "body": "block_action_2_body"
+          },
+          {
+            "num": "block_action_3_num",
+            "title": "block_action_3_title",
+            "body": "block_action_3_body"
+          }
+        ],
+        "label": "block_action_label",
+        "claim": "block_action_claim"
+      }
+    }
+  ],
+  "traceability": {
+    "design_brief_ref": "input/design-brief.md",
+    "research_only": true,
+    "production_authorization": false,
+    "pending_verification_required": true
+  }
+}
