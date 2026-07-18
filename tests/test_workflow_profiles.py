@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -7,24 +8,63 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = ROOT / "skill" / "taohtml"
+REFERENCES = SKILL_DIR / "references"
 SKILL = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-CONTRACT = (
-    SKILL_DIR / "references" / "workflow-profile-contract.md"
-).read_text(encoding="utf-8")
-PROFILES = (SKILL_DIR / "references" / "workflow-profiles.md").read_text(
+CONTRACT = (REFERENCES / "workflow-profile-contract.md").read_text(
     encoding="utf-8"
+)
+CATALOG = (REFERENCES / "workflow-profiles.md").read_text(encoding="utf-8")
+BRIEF = (REFERENCES / "design-brief-template.md").read_text(encoding="utf-8")
+REPORT_IR_SCHEMA = json.loads(
+    (REFERENCES / "report-ir-v1.schema.json").read_text(encoding="utf-8")
 )
 
 EXPECTED_PROFILES = (
-    ("formal-submission-writing", "规范报送与正式写作"),
-    ("research-analysis-argumentation", "研究分析与专业论证"),
-    ("periodic-operations-reporting", "周期经营与数据汇报"),
-    ("proposal-planning-decision", "方案策划与决策提案"),
-    ("live-presentation-persuasion", "现场演讲与说服表达"),
-    ("teaching-training-knowledge-transfer", "教学培训与知识传递"),
-    ("project-lifecycle-reporting", "项目全过程汇报"),
-    ("brand-communication-editorial-publishing", "品牌传播与编辑出版"),
-    ("rule-response-application-defense", "规则响应、申报与答辩"),
+    (
+        "formal-submission-writing",
+        "规范报送与正式写作",
+        "references/workflow-profile-formal-submission-writing.md",
+    ),
+    (
+        "research-analysis-argumentation",
+        "研究分析与专业论证",
+        "references/workflow-profile-research-analysis-argumentation.md",
+    ),
+    (
+        "periodic-operations-reporting",
+        "周期经营与数据汇报",
+        "references/workflow-profile-periodic-operations-reporting.md",
+    ),
+    (
+        "proposal-planning-decision",
+        "方案策划与决策提案",
+        "references/workflow-profile-proposal-planning-decision.md",
+    ),
+    (
+        "live-presentation-persuasion",
+        "现场演讲与说服表达",
+        "references/workflow-profile-live-presentation-persuasion.md",
+    ),
+    (
+        "teaching-training-knowledge-transfer",
+        "教学培训与知识传递",
+        "references/workflow-profile-teaching-training-knowledge-transfer.md",
+    ),
+    (
+        "project-lifecycle-reporting",
+        "项目全过程汇报",
+        "references/workflow-profile-project-lifecycle-reporting.md",
+    ),
+    (
+        "brand-communication-editorial-publishing",
+        "品牌传播与编辑出版",
+        "references/workflow-profile-brand-communication-editorial-publishing.md",
+    ),
+    (
+        "rule-response-application-defense",
+        "规则响应、申报与答辩",
+        "references/workflow-profile-rule-response-application-defense.md",
+    ),
 )
 
 REQUIRED_SECTIONS = (
@@ -54,74 +94,95 @@ HORIZONTAL_PARAMETERS = (
 )
 
 
-def profile_sections() -> list[tuple[int, str, str]]:
-    matches = list(re.finditer(r"^### (\d+)\. (.+)$", PROFILES, re.MULTILINE))
-    sections = []
-    for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(PROFILES)
-        sections.append((int(match.group(1)), match.group(2), PROFILES[match.end() : end]))
-    return sections
+def catalog_rows() -> list[tuple[str, str, str, str]]:
+    rows = []
+    for line in CATALOG.splitlines():
+        match = re.match(
+            r"^\| `(?P<profile_id>[^`]+)` \| (?P<name>[^|]+) \| "
+            r"(?P<goal>[^|]+) \| `(?P<definition_ref>[^`]+)` \|$",
+            line,
+        )
+        if match:
+            rows.append(tuple(value.strip() for value in match.groups()))
+    return rows
+
+
+def definition_text(definition_ref: str) -> str:
+    return (SKILL_DIR / definition_ref).read_text(encoding="utf-8")
 
 
 class WorkflowProfileContractTests(unittest.TestCase):
-    def test_catalog_has_the_nine_stable_profiles_in_order(self) -> None:
-        sections = profile_sections()
+    def test_catalog_is_lightweight_complete_and_stable(self) -> None:
+        rows = catalog_rows()
         self.assertEqual(
-            [(number, name) for number, name, _ in sections],
-            [(index, name) for index, (_, name) in enumerate(EXPECTED_PROFILES, 1)],
+            [(profile_id, name, definition_ref) for profile_id, name, _, definition_ref in rows],
+            list(EXPECTED_PROFILES),
         )
-
-        ids = []
-        for (_, expected_name), (_, actual_name, body) in zip(
-            EXPECTED_PROFILES, sections, strict=True
-        ):
-            self.assertEqual(actual_name, expected_name)
-            match = re.search(r"^- `profile_id`: `([^`]+)`$", body, re.MULTILINE)
-            self.assertIsNotNone(match, expected_name)
-            ids.append(match.group(1))
-
-        self.assertEqual(ids, [profile_id for profile_id, _ in EXPECTED_PROFILES])
-        self.assertEqual(len(ids), len(set(ids)))
-
-        for profile_id, name in EXPECTED_PROFILES:
-            self.assertIn(f"| `{profile_id}` | {name} |", PROFILES)
-
-    def test_every_profile_implements_the_uniform_foundation_contract(self) -> None:
-        for _, name, body in profile_sections():
-            headings = re.findall(r"^#### (.+)$", body, re.MULTILINE)
-            self.assertEqual(headings, list(REQUIRED_SECTIONS), name)
-            for parameter in HORIZONTAL_PARAMETERS:
-                self.assertIn(f"`{parameter}`", body, f"{name}: {parameter}")
-
+        self.assertEqual(len({definition_ref for _, _, _, definition_ref in rows}), 9)
+        self.assertTrue(all(goal for _, _, goal, _ in rows))
+        self.assertLess(len(CATALOG.splitlines()), 50)
+        self.assertNotIn("## Foundation Definitions", CATALOG)
+        self.assertNotIn("Definition version", CATALOG)
         for heading in REQUIRED_SECTIONS:
-            self.assertIn(f"| {heading} |", CONTRACT)
+            self.assertNotIn(f"## {heading}", CATALOG)
 
-    def test_skill_is_a_lightweight_semantic_router(self) -> None:
+    def test_every_profile_has_one_unique_nonempty_direct_definition(self) -> None:
+        expected_files = {definition_ref for _, _, definition_ref in EXPECTED_PROFILES}
+        actual_profile_files = {
+            f"references/{path.name}"
+            for path in REFERENCES.glob("workflow-profile-*.md")
+            if path.name != "workflow-profile-contract.md"
+        }
+        self.assertEqual(actual_profile_files, expected_files)
+
+        for profile_id, name, definition_ref in EXPECTED_PROFILES:
+            self.assertEqual(definition_ref.count("/"), 1)
+            path = SKILL_DIR / definition_ref
+            self.assertTrue(path.is_file(), definition_ref)
+            text = definition_text(definition_ref)
+            self.assertGreater(len(text.strip()), 1000, definition_ref)
+            self.assertEqual(re.findall(r"^# (.+)$", text, re.MULTILINE), [name])
+            self.assertIn(f"- `profile_id`: `{profile_id}`", text)
+            self.assertIn("Definition version: `1.0`", text)
+            self.assertEqual(
+                re.findall(r"^## (.+)$", text, re.MULTILINE),
+                list(REQUIRED_SECTIONS),
+                name,
+            )
+            for parameter in HORIZONTAL_PARAMETERS:
+                self.assertIn(f"`{parameter}`", text, f"{name}: {parameter}")
+            self.assertIn(
+                f"| `{profile_id}` | {name} | `{definition_ref}` |", CONTRACT
+            )
+
+    def test_each_required_definition_section_is_nonempty(self) -> None:
+        for _, name, definition_ref in EXPECTED_PROFILES:
+            text = definition_text(definition_ref)
+            for index, heading in enumerate(REQUIRED_SECTIONS):
+                start = text.index(f"## {heading}") + len(f"## {heading}")
+                if index + 1 < len(REQUIRED_SECTIONS):
+                    end = text.index(f"## {REQUIRED_SECTIONS[index + 1]}", start)
+                else:
+                    end = len(text)
+                self.assertGreater(len(text[start:end].strip()), 20, f"{name}: {heading}")
+
+    def test_skill_routes_clear_and_ambiguous_paths_progressively(self) -> None:
         router = SKILL.split("## Workflow Profile Routing", 1)[1].split(
             "## Project Handoff Overlay", 1
         )[0]
-        router_flat = " ".join(router.split())
-        self.assertIn("TaoHtml is one installed Skill", router_flat)
-        self.assertIn("on-demand Workflow Profiles, not separate Skills", router_flat)
-        self.assertIn("exactly one primary Profile", router_flat)
-        self.assertIn("explicit business objective", router_flat)
-        self.assertIn("semantics of eligible inspected material", router_flat)
-        self.assertIn("select it automatically", router_flat)
-        self.assertIn(
-            "do not ask a Profile question or display the catalog", router_flat
-        )
-        self.assertIn("apply only the selected foundation definition", router_flat)
-        self.assertIn("display all nine exact customer-facing names", router_flat)
-        self.assertIn("ask one question", router_flat)
-        self.assertIn("primary business goal", router_flat)
-        self.assertIn("keyword blacklist", router_flat)
-        self.assertIn("hard-coded numbers", router_flat)
-        self.assertIn("fixed report-type mapping", router_flat)
-        self.assertIn("bounded overlays", router_flat)
-        self.assertIn("references/workflow-profile-contract.md", router_flat)
-        self.assertIn("references/workflow-profiles.md", router_flat)
-
-        for _, name in EXPECTED_PROFILES:
+        flat = " ".join(router.split())
+        self.assertIn("TaoHtml is one installed Skill", flat)
+        self.assertIn("exactly one primary Profile", flat)
+        self.assertIn("semantics of eligible inspected material", flat)
+        self.assertIn("select it automatically", flat)
+        self.assertIn("do not ask a Profile question or read/display the catalog", flat)
+        self.assertIn("read only the selected `definition_ref`", flat)
+        self.assertIn("do not load any other Profile definition", flat)
+        self.assertIn("read `references/workflow-profiles.md`", flat)
+        self.assertIn("display all nine exact customer-facing names and primary goals", flat)
+        self.assertIn("do not load the other eight definitions", flat)
+        self.assertIn("bounded overlays", flat)
+        for _, name, _ in EXPECTED_PROFILES:
             self.assertNotIn(name, router)
         self.assertLess(len(SKILL.splitlines()), 500)
 
@@ -144,9 +205,60 @@ class WorkflowProfileContractTests(unittest.TestCase):
         for parameter in HORIZONTAL_PARAMETERS:
             self.assertIn(f"| `{parameter}` |", CONTRACT)
 
-    def test_existing_entry_handoff_brief_and_authorization_gates_are_preserved(
-        self,
-    ) -> None:
+    def test_profile_enums_match_report_ir_without_aliases(self) -> None:
+        evidence_enum = set(
+            REPORT_IR_SCHEMA["$defs"]["report"]["properties"]["evidence_rigor"]["enum"]
+        )
+        information_enum = set(
+            REPORT_IR_SCHEMA["$defs"]["projection"]["properties"]["information_density"]["enum"]
+        )
+        motion_enum = set(
+            REPORT_IR_SCHEMA["$defs"]["projection"]["properties"]["motion_density"]["enum"]
+        )
+        self.assertEqual(evidence_enum, {"exploratory", "standard", "formal"})
+        self.assertEqual(information_enum, {"low", "medium", "high"})
+        self.assertEqual(motion_enum, {"minimal", "moderate", "rich"})
+        self.assertIn("No Product-layer aliases are permitted", CONTRACT)
+
+        for _, name, definition_ref in EXPECTED_PROFILES:
+            text = definition_text(definition_ref)
+            evidence = re.search(r"^- `evidence_rigor`: `([^`]+)`$", text, re.MULTILINE)
+            information = re.search(
+                r"^- `information_density`: `([^`]+)`$", text, re.MULTILINE
+            )
+            motion = re.search(r"^- `motion_density`: `([^`]+)`$", text, re.MULTILINE)
+            self.assertIn(evidence.group(1), evidence_enum, name)
+            self.assertIn(information.group(1), information_enum, name)
+            self.assertIn(motion.group(1), motion_enum, name)
+            use_mode_line = next(
+                line for line in text.splitlines() if line.startswith("- `use_mode`:")
+            )
+            self.assertIn("only after explicit delegation", use_mode_line, name)
+
+        self.assertIn("`content_length` is not a Profile default", CONTRACT)
+        self.assertIn("explicit-delegation requirement", CONTRACT)
+        self.assertIn("use-mode or content-length choice", SKILL)
+
+    def test_design_brief_formally_records_profile_result_and_gate_boundaries(self) -> None:
+        self.assertIn("## 主要工作场景", BRIEF)
+        for field in (
+            "主工作场景：九场景目录中的精确客户名称",
+            "稳定 profile_id：",
+            "definition version：",
+            "语义选择依据：",
+            "bounded capability overlays：无",
+        ):
+            self.assertIn(field, BRIEF)
+        self.assertIn(
+            "Profile selection, confirmation of the complete current Report Design Brief, and Production Authorization as three independent facts",
+            BRIEF,
+        )
+        self.assertIn("meaning-changing continuation", BRIEF)
+        self.assertIn("meaning-preserving local continuation", BRIEF)
+        self.assertIn("Do not add a Profile-specific confirmation round", BRIEF)
+        self.assertIn("Do not expose a Profile or IR questionnaire", BRIEF)
+
+    def test_existing_entry_handoff_brief_and_authorization_gates_are_preserved(self) -> None:
         entry_routes = SKILL.split("## Entry Routes", 1)[1].split(
             "## Workflow Profile Routing", 1
         )[0]
@@ -165,14 +277,14 @@ class WorkflowProfileContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, CONTRACT)
 
-    def test_profile_contract_does_not_copy_or_activate_implementation_layers(self) -> None:
+    def test_profile_contract_does_not_activate_implementation_layers(self) -> None:
         self.assertIn("Do not add or change Report IR schema fields", CONTRACT)
         self.assertIn("Do not invoke the Report IR route merely because a Profile", CONTRACT)
         self.assertIn("must not copy their schemas, scripts,\nalgorithms", CONTRACT)
-        self.assertIn("it cannot authorize new motion engineering", CONTRACT)
-        for _, _, body in profile_sections():
-            ir_boundary = body.split("#### IR 映射边界", 1)[1].split(
-                "#### Runtime/主题使用", 1
+        for _, _, definition_ref in EXPECTED_PROFILES:
+            text = definition_text(definition_ref)
+            ir_boundary = text.split("## IR 映射边界", 1)[1].split(
+                "## Runtime/主题使用", 1
             )[0]
             self.assertRegex(
                 ir_boundary,
@@ -180,10 +292,15 @@ class WorkflowProfileContractTests(unittest.TestCase):
             )
 
     def test_node_one_keeps_both_golden_paths_at_foundation_level(self) -> None:
-        bodies = {name: body for _, name, body in profile_sections()}
-        for name in ("方案策划与决策提案", "现场演讲与说服表达"):
-            identity = bodies[name].split("#### 身份与版本", 1)[1].split(
-                "#### 适用目标", 1
+        for profile_id in (
+            "proposal-planning-decision",
+            "live-presentation-persuasion",
+        ):
+            definition_ref = next(
+                ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
+            )
+            identity = definition_text(definition_ref).split("## 身份与版本", 1)[1].split(
+                "## 适用目标", 1
             )[0]
             self.assertIn("foundation definition only", identity)
             self.assertIn("Golden Path detailed workflow", identity)

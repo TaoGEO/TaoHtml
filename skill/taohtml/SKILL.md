@@ -55,19 +55,23 @@ choices. After the material entry is established, read
 `references/workflow-profile-contract.md` and resolve exactly one primary Profile from
 the user's explicit business objective plus the semantics of eligible inspected
 material. If one path is clear, select it automatically, record the basis, and do not
-ask a Profile question or display the catalog. Then read
-`references/workflow-profiles.md` and apply only the selected foundation definition.
+ask a Profile question or read/display the catalog. Use the contract's Definition
+Routing table to read only the selected `definition_ref`; do not load any other
+Profile definition.
 
 Only when the primary outcome remains genuinely ambiguous after using the available
-semantic evidence, display all nine exact customer-facing names from that same
-reference in one round and ask one question about the finished report's primary
-business goal. After the answer, apply only the selected definition. Do not route with
-a keyword blacklist, hard-coded numbers, filename-only matching, or a fixed report-type
+semantic evidence, read `references/workflow-profiles.md`, display all nine exact
+customer-facing names and primary goals in one round, and ask one question about the
+finished report's primary business goal. After the answer, read only that catalog
+row's `definition_ref`; do not load the other eight definitions. Do not route with a
+keyword blacklist, hard-coded numbers, filename-only matching, or a fixed report-type
 mapping. Do not repeat a known goal or ask the user to choose Profile ids, IR fields,
 Compiler modes, Runtime features, or theme implementations. Keep input entry,
 reading/presentation mode, visual binding, evidence rigor, information/motion density,
 and continuation state as independent horizontal parameters. Run only one complete
-primary Profile; borrow other Profile capabilities only as bounded overlays.
+primary Profile; borrow other Profile capabilities only as bounded overlays. A Profile
+default never replaces the existing use-mode or content-length choice unless the user
+explicitly delegates that decision under `references/intake-workflow.md`.
 
 ## Project Handoff Overlay
 
@@ -161,8 +165,8 @@ confirmed.
 
 - `references/project-handoff.md`: task-intent overlay, source role/availability map, read-only audit, continuation boundaries, candidate discovery, and readiness language.
 - `references/project-handoff-schema.md`: portable workspace/project/snapshot identities, strict source/decision/design/artifact/lineage serialization, version policy, and four-layer handoff validation.
-- `references/workflow-profile-contract.md`: one-primary-Profile contract, semantic routing, horizontal-parameter boundary, capability overlays, IR isolation, and existing-gate preservation.
-- `references/workflow-profiles.md`: nine stable foundation definitions; load the catalog only for ambiguous routing or the selected Profile's base requirements.
+- `references/workflow-profile-contract.md`: one-primary-Profile contract, direct definition routing, horizontal-parameter boundary, capability overlays, IR isolation, and existing-gate preservation.
+- `references/workflow-profiles.md`: lightweight nine-option catalog for ambiguous routing only; after selection, load only the unique definition reference named by the selected row.
 - `references/process-playbook.md`: story, evidence, visual, production, and delivery workflow.
 - `references/layout-pattern-library.md`: layout selection for composed presentation pages.
 - `references/visual-systems.md`: built-in system routing and selection policy; after selection, load only that system's `theme.json`, `theme.css`, and `templates.html` under `assets/visual-systems/`.

@@ -9,6 +9,7 @@ engine.
 
 - [Contract Identity](#contract-identity)
 - [Layering Model](#layering-model)
+- [Definition Routing](#definition-routing)
 - [Routing Contract](#routing-contract)
 - [Primary Profile And Capability Overlays](#primary-profile-and-capability-overlays)
 - [Horizontal Parameters](#horizontal-parameters)
@@ -50,6 +51,26 @@ The task-intent overlay, material entry, primary Profile, capability overlays, a
 horizontal parameters must remain separately recorded. A value in one layer must not
 be used as a hidden substitute for another.
 
+## Definition Routing
+
+Use this table for a clear semantic route. Read exactly one `definition_ref`; do not
+read `workflow-profiles.md` or any other Profile definition on the clear path.
+
+| profile_id | Exact customer-facing name | definition_ref |
+|---|---|---|
+| `formal-submission-writing` | 规范报送与正式写作 | `references/workflow-profile-formal-submission-writing.md` |
+| `research-analysis-argumentation` | 研究分析与专业论证 | `references/workflow-profile-research-analysis-argumentation.md` |
+| `periodic-operations-reporting` | 周期经营与数据汇报 | `references/workflow-profile-periodic-operations-reporting.md` |
+| `proposal-planning-decision` | 方案策划与决策提案 | `references/workflow-profile-proposal-planning-decision.md` |
+| `live-presentation-persuasion` | 现场演讲与说服表达 | `references/workflow-profile-live-presentation-persuasion.md` |
+| `teaching-training-knowledge-transfer` | 教学培训与知识传递 | `references/workflow-profile-teaching-training-knowledge-transfer.md` |
+| `project-lifecycle-reporting` | 项目全过程汇报 | `references/workflow-profile-project-lifecycle-reporting.md` |
+| `brand-communication-editorial-publishing` | 品牌传播与编辑出版 | `references/workflow-profile-brand-communication-editorial-publishing.md` |
+| `rule-response-application-defense` | 规则响应、申报与答辩 | `references/workflow-profile-rule-response-application-defense.md` |
+
+Every `definition_ref` must be unique, non-empty, directly reachable from this
+one-level reference table, and contain exactly one Profile foundation definition.
+
 ## Routing Contract
 
 Route by semantic outcome, not by labels alone:
@@ -58,9 +79,9 @@ Route by semantic outcome, not by labels alone:
    action, eligible inspected material, confirmed Material Understanding Summary,
    and still-supported handoff state.
 2. If one business-production path is clearly dominant, automatically select that
-   primary Profile, record the selection basis, load only its foundation definition
-   from `workflow-profiles.md`, and continue without a Profile question or catalog
-   display.
+   primary Profile, record the selection basis, read only its `definition_ref` from
+   Definition Routing, and continue without reading the catalog, asking a Profile
+   question, or loading any other Profile definition.
 3. Do not ask again when a prior answer, confirmed report goal, or material semantics
    already establishes the primary Profile. A report-type recommendation is not a
    reason to repeat a known business-goal question.
@@ -68,7 +89,8 @@ Route by semantic outcome, not by labels alone:
    eligible semantic evidence, read `workflow-profiles.md`, display all nine exact
    customer-facing Profile names in one round, and ask exactly one routing question:
    which business goal should the finished report primarily accomplish? After the
-   answer, apply only the selected foundation definition.
+   answer, read only the selected row's `definition_ref` and apply that foundation
+   definition. Do not load the other eight definition files.
 5. Record that catalog as the latest active option set. A short answer or ordinal can
    select an item only when it directly answers that still-active catalog in the same
    conversation; numbering in documentation is never a global command interface.
@@ -117,15 +139,18 @@ authoritative.
 | Parameter | Contract boundary |
 |---|---|
 | `input_entry_route` | Idea only, Word/PDF, or existing PPT/HTML; preserve the existing route handshake and source gate. |
-| `use_mode` | Reading or presentation; it remains a Runtime/delivery choice, not a scenario. |
+| `use_mode` | Reading or presentation; it remains an existing startup and Runtime/delivery choice, not a scenario. A Profile recommendation applies only after the user explicitly delegates that choice; otherwise preserve or resolve it under `intake-workflow.md`. |
 | `visual_binding` | Built-in visual system, confirmed project theme, or validated enterprise Profile binding; never copy theme implementation into a Workflow Profile. |
-| `evidence_rigor` | `contextual`, `balanced`, or `formal` Profile default and minimum evidence emphasis; high-risk and source-protection rules always override it. |
+| `evidence_rigor` | Use the Report IR stable enum directly: `exploratory`, `standard`, or `formal`. No Product-layer aliases are permitted. High-risk and source-protection rules always override the default. |
 | `information_density` | Low, medium, or high production guidance after content length and actual material are known. |
-| `motion_density` | Low, medium, or high intent constrained by the current Runtime contract; it cannot authorize new motion engineering. |
+| `motion_density` | Use the Report IR stable enum directly: `minimal`, `moderate`, or `rich`. No Product-layer aliases are permitted, and the current Runtime contract still constrains implementation. |
 | `continuation_state` | New build, review-only, meaning-preserving local continuation, or meaning-changing continuation under the existing Handoff contract. |
 
 Do not ask the user to fill these as a Profile form. Reuse values already established
 by conversation, eligible material, the Report Design Brief, or a valid handoff.
+`content_length` is not a Profile default: keep the existing concise/standard/detailed
+choice and its explicit-delegation requirement. Neither `use_mode` nor content length
+may be inferred merely because a Profile supplies other defaults.
 
 ## Required Profile Sections
 
@@ -147,9 +172,9 @@ Every Profile foundation definition must contain these exact sections:
 | QA 验收 | Profile-specific acceptance emphasis in addition to existing objective QA and delivery gates. |
 | 能力叠加与冲突处理 | Allowed bounded overlays and the rule for choosing or replacing the primary Profile. |
 
-Definitions may be centralized in the catalog while they remain foundation-level.
-Create a separate Profile file only when a later engineering node implements enough
-real workflow detail to justify on-demand loading. Do not create empty placeholders.
+Keep the catalog lightweight. Store each non-empty foundation definition in its unique
+one-level `definition_ref`; do not duplicate complete definitions in the catalog or
+create empty placeholders.
 
 ## IR Mapping Boundary
 
@@ -169,6 +194,12 @@ Workflow Profiles are upstream semantic guidance, not Report IR:
 The Report Design Brief remains the customer-readable source of confirmed business
 decisions. IR derivation, when separately authorized, remains downstream and does not
 replace Profile routing, brief confirmation, or production authorization.
+
+Record the exact customer-facing name, stable `profile_id`, definition version,
+semantic selection basis, and bounded capability overlays in the Report Design Brief.
+Profile selection, confirmation of the complete current Report Design Brief, and
+Production Authorization are three independent facts. Profile routing adds no
+questionnaire or separate confirmation round.
 
 ## Existing Gates And Implementations
 

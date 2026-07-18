@@ -15,6 +15,13 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 预计页数：根据当前材料动态估算
 - 交付形式：单 HTML，或 HTML + assets / ZIP
 
+## 主要工作场景
+- 主工作场景：九场景目录中的精确客户名称
+- 稳定 profile_id：对应 Workflow Profile 的稳定 id
+- definition version：所加载定义文件中的当前版本
+- 语义选择依据：用户明确目标与合格材料语义如何支持该主要场景
+- bounded capability overlays：无；或逐项写明借用能力、来源 Profile、原因和影响范围
+
 ## 续作基线（含义变化续作时保留）
 - 当前成品：精确路径或上传标识、检查覆盖与当前可预览状态
 - 继承状态：仍有直接依据的目标、受众、结构、视觉、来源解释与确认产物
@@ -88,7 +95,10 @@ Keep it readable by the customer. Include only fields that affect this project. 
 
 - For a simple report, merge short sections and keep the brief compact.
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
+- Copy the selected Workflow Profile's exact customer-facing name, stable `profile_id`, definition version, semantic selection basis, and bounded capability overlays into `主要工作场景`. Write `无` when there is no overlay. Do not expose a Profile or IR questionnaire.
+- Treat Profile selection, confirmation of the complete current Report Design Brief, and Production Authorization as three independent facts. Selecting a Profile neither confirms the brief nor authorizes production, and brief confirmation does not replace current-file Production Authorization.
 - For a meaning-changing continuation, preserve every still-supported inherited decision, describe only the requested delta in `续作基线`, rebuild only affected fields, then display and confirm the complete current brief. Avoid replaying the original interview. A read-only handoff and a meaning-preserving local continuation never use this template.
+- For a meaning-changing continuation whose dominant business outcome changes, update the affected `主要工作场景` fields inside the complete current brief and use the existing single brief-confirmation gate. For a meaning-preserving local continuation, keep the inherited Profile state without generating or reconfirming a brief. Do not add a Profile-specific confirmation round.
 - Keep the seven source roles, six availability states, and evidence-verification status independent from `source_binding`. A secondary summary and a current artifact must state what each can and cannot support; neither becomes original evidence through reuse. Retrieved public/third-party evidence uses its external role and availability and must never be relabeled as customer material or Agent-generated content.
 - Record only current observed readiness and operation evidence. A found/openable HTML is not formally deliverable; operating instructions must come from the exact artifact tested or be labeled as generic current Runtime-contract behavior.
 - If the user supplied a clear visual reference, record `reference_mode`. Do not reduce `corporate_fidelity` to “closely reproduced”: state the screenshot-visible fidelity boundary, locked elements, editable region, and extension/unknown limits explicitly.
@@ -109,4 +119,4 @@ Keep it readable by the customer. Include only fields that affect this project. 
 
 ## Authorization
 
-The brief must be displayed as a whole before asking for confirmation. If the customer edits one section, revise the whole current brief and request one final confirmation. Only then begin production.
+The brief must be displayed as a whole before asking for confirmation. If the customer edits one section, revise the whole current brief and request one final confirmation. Profile selection is not this confirmation, and this confirmation is not Production Authorization. Only after the complete current brief is confirmed may the existing current-file authorization gate permit production.
