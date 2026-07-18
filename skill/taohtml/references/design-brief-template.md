@@ -22,6 +22,10 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 语义选择依据：用户明确目标与合格材料语义如何支持该主要场景
 - bounded capability overlays：无；或逐项写明借用能力、来源 Profile、原因和影响范围
 
+## 场景特有决策（仅当所选 definition_ref 声明设计简报增量时保留）
+- 只写入当前主 Profile 的场景特有字段；逐项沿用该定义的客户可读字段名称与当前决策状态
+- 不展示未选 Profile 的字段，不新建第二份简报，也不增加 Profile 独立确认
+
 ## 续作基线（含义变化续作时保留）
 - 当前成品：精确路径或上传标识、检查覆盖与当前可预览状态
 - 继承状态：仍有直接依据的目标、受众、结构、视觉、来源解释与确认产物
@@ -96,6 +100,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a simple report, merge short sections and keep the brief compact.
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - Copy the selected Workflow Profile's exact customer-facing name, stable `profile_id`, definition version, semantic selection basis, and bounded capability overlays into `主要工作场景`. Write `无` when there is no overlay. Do not expose a Profile or IR questionnaire.
+- When the selected definition contains `设计简报增量`, copy only those fields into the one adaptive `场景特有决策` section. Omit the whole section for definitions without an increment, and never display fields from an unselected Profile. This is part of the complete current brief, not a second brief or confirmation round.
 - Treat Profile selection, confirmation of the complete current Report Design Brief, and Production Authorization as three independent facts. Selecting a Profile neither confirms the brief nor authorizes production, and brief confirmation does not replace current-file Production Authorization.
 - For a meaning-changing continuation, preserve every still-supported inherited decision, describe only the requested delta in `续作基线`, rebuild only affected fields, then display and confirm the complete current brief. Avoid replaying the original interview. A read-only handoff and a meaning-preserving local continuation never use this template.
 - For a meaning-changing continuation whose dominant business outcome changes, update the affected `主要工作场景` fields inside the complete current brief and use the existing single brief-confirmation gate. For a meaning-preserving local continuation, keep the inherited Profile state without generating or reconfirming a brief. Do not add a Profile-specific confirmation round.

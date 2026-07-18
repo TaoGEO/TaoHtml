@@ -19,6 +19,11 @@ REPORT_IR_SCHEMA = json.loads(
     (REFERENCES / "report-ir-v1.schema.json").read_text(encoding="utf-8")
 )
 
+DETAILED_PROFILES = {
+    "proposal-planning-decision": "2.0",
+    "live-presentation-persuasion": "2.0",
+}
+
 EXPECTED_PROFILES = (
     (
         "formal-submission-writing",
@@ -143,7 +148,8 @@ class WorkflowProfileContractTests(unittest.TestCase):
             self.assertGreater(len(text.strip()), 1000, definition_ref)
             self.assertEqual(re.findall(r"^# (.+)$", text, re.MULTILINE), [name])
             self.assertIn(f"- `profile_id`: `{profile_id}`", text)
-            self.assertIn("Definition version: `1.0`", text)
+            expected_version = DETAILED_PROFILES.get(profile_id, "1.0")
+            self.assertIn(f"Definition version: `{expected_version}`", text)
             self.assertEqual(
                 re.findall(r"^## (.+)$", text, re.MULTILINE),
                 list(REQUIRED_SECTIONS),
@@ -300,20 +306,152 @@ class WorkflowProfileContractTests(unittest.TestCase):
                 r"(?:IR (?:engineering )?route is independently authorized|independently authorized IR route)",
             )
 
-    def test_node_one_keeps_both_golden_paths_at_foundation_level(self) -> None:
-        for profile_id in (
-            "proposal-planning-decision",
-            "live-presentation-persuasion",
-        ):
+    def test_node_two_implements_exactly_two_detailed_golden_paths(self) -> None:
+        for profile_id, expected_version in DETAILED_PROFILES.items():
             definition_ref = next(
                 ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
             )
-            identity = definition_text(definition_ref).split("## 身份与版本", 1)[1].split(
+            text = definition_text(definition_ref)
+            identity = text.split("## 身份与版本", 1)[1].split(
                 "## 适用目标", 1
             )[0]
-            self.assertIn("foundation definition only", identity)
-            self.assertIn("Golden Path detailed workflow", identity)
-            self.assertIn("outside this engineering node", identity)
+            self.assertIn(f"Definition version: `{expected_version}`", identity)
+            self.assertIn("Status: detailed/implemented Golden Path", identity)
+            self.assertIn("### Golden Path", text)
+            self.assertIn("### 设计简报增量", text)
+
+        for profile_id, _, definition_ref in EXPECTED_PROFILES:
+            if profile_id in DETAILED_PROFILES:
+                continue
+            identity = definition_text(definition_ref).split(
+                "## 身份与版本", 1
+            )[1].split("## 适用目标", 1)[0]
+            self.assertIn("foundation definition", identity, profile_id)
+            self.assertNotIn("Status: detailed/implemented Golden Path", identity)
+
+        self.assertIn("two detailed/implemented Golden Paths", CONTRACT)
+        self.assertIn("the other seven\n  Profiles remain foundation definitions", CONTRACT)
+
+    def test_detailed_profiles_reuse_shared_flow_and_on_demand_loading(self) -> None:
+        router = SKILL.split("## Workflow Profile Routing", 1)[1].split(
+            "## Project Handoff Overlay", 1
+        )[0]
+        self.assertIn("When the selected definition declares a detailed/implemented", router)
+        self.assertIn("after loading that one\ndefinition", router)
+        self.assertIn("never\nloads another Profile", router)
+        for profile_id in DETAILED_PROFILES:
+            definition_ref = next(
+                ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
+            )
+            text = definition_text(definition_ref)
+            for shared_ref in (
+                "intake-workflow.md",
+                "design-brief-template.md",
+                "production-authorization.md",
+                "process-playbook.md",
+                "runtime-contract.md",
+                "project-handoff.md",
+            ):
+                self.assertIn(shared_ref, text, profile_id)
+            self.assertIn("first runnable direct-HTML artifact", text, profile_id)
+            self.assertIn("Profile-specific confirmation round", text, profile_id)
+
+    def test_proposal_golden_path_covers_decision_integrity_and_delivery(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-proposal-planning-decision.md"
+        )
+        for marker in (
+            "who makes the decision",
+            "why a decision is required now",
+            "maintaining the status quo means",
+            "客户提供的选项",
+            "Agent 提议的候选方案",
+            "已淘汰方案",
+            "Do not invent weights",
+            "never manufacture a full matrix",
+            "facts, assumptions, and projections distinct",
+            "Never change weights after seeing the result",
+            "failure conditions",
+            "residual risks",
+            "resource/time boundary",
+            "next decision",
+            "only if the desired result requires an external",
+        ):
+            self.assertIn(marker, text)
+
+        for field in (
+            "`决策问题`",
+            "`决策人及责任边界`",
+            "`选项集合及来源状态`",
+            "`评价标准`",
+            "`关键取舍`",
+            "`推荐依据`",
+            "`实施责任`",
+            "`风险与失效条件`",
+        ):
+            self.assertIn(field, text)
+
+    def test_live_golden_path_covers_audience_motion_and_presenter_qa(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-live-presentation-persuasion.md"
+        )
+        for marker in (
+            "audience's current understanding",
+            "the understanding, decision, or action",
+            "presenter's relationship",
+            "never ask for it by default",
+            "Build the oral story spine",
+            "make decisive evidence visible when",
+            "complete reading final state",
+            "Do not force a sales CTA",
+            "Generate speaker-support content only when",
+            "existing `fragment-v1` contract",
+            "whole-page navigation",
+            "per-page return-state",
+            "target presentation viewports",
+        ):
+            self.assertIn(marker, text)
+
+        for field in (
+            "`受众当前状态`",
+            "`目标移动`",
+            "`核心主张`",
+            "`决定性证据`",
+            "`主要阻力`",
+            "`故事脊柱`",
+            "`现场约束`",
+            "`动效/口播意图`",
+            "`最终行动`",
+        ):
+            self.assertIn(field, text)
+
+    def test_detailed_profiles_stay_inside_ir_runtime_and_layout_boundaries(self) -> None:
+        schema_properties = REPORT_IR_SCHEMA["properties"]
+        self.assertNotIn("workflow_profile", schema_properties)
+        self.assertNotIn("decision_score", schema_properties)
+        self.assertNotIn("audience_movement", schema_properties)
+
+        for profile_id in DETAILED_PROFILES:
+            definition_ref = next(
+                ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
+            )
+            text = definition_text(definition_ref)
+            self.assertIn("Direct HTML remains the default", text, profile_id)
+            self.assertIn("independently authorized", text, profile_id)
+            self.assertIn("Do not add", text, profile_id)
+            self.assertIn("Report IR Schema", text, profile_id)
+            self.assertIn("Compiler branch", text, profile_id)
+            self.assertIn("cross-page morphing", text, profile_id)
+            self.assertIn("no required", text, profile_id)
+            self.assertIn("page count", text, profile_id)
+
+    def test_design_brief_uses_one_selected_profile_increment_only(self) -> None:
+        self.assertIn("## 场景特有决策", BRIEF)
+        self.assertIn("只写入当前主 Profile", BRIEF)
+        self.assertIn("不展示未选 Profile 的字段", BRIEF)
+        self.assertIn("not a second brief or confirmation round", BRIEF)
+        for unselected_field in ("决策问题", "受众当前状态"):
+            self.assertNotIn(unselected_field, BRIEF)
 
 
 if __name__ == "__main__":

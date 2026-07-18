@@ -59,6 +59,11 @@ ask a Profile question or read/display the catalog. Use the contract's Definitio
 Routing table to read only the selected `definition_ref`; do not load any other
 Profile definition.
 
+When the selected definition declares a detailed/implemented Golden Path, execute
+that Profile-local sequence and its acceptance additions after loading that one
+definition. It refines the shared intake, brief, production, and QA flow; it never
+loads another Profile, creates a separate confirmation, or replaces a shared gate.
+
 Only when the primary outcome remains genuinely ambiguous after using the available
 semantic evidence, read `references/workflow-profiles.md`, display all nine exact
 customer-facing names and primary goals in one round, and ask one question about the

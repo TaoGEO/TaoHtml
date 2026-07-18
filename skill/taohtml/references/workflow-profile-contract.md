@@ -24,8 +24,9 @@ engine.
 - Contract version: `1.0`
 - Catalog: `workflow-profiles.md`
 - Cardinality: exactly one primary Profile per project after routing is resolved
-- Definition status in this engineering node: nine foundation definitions; no
-  Golden Path detail implementation
+- Definition status in this engineering node: two detailed/implemented Golden Paths
+  (`proposal-planning-decision` and `live-presentation-persuasion`); the other seven
+  Profiles remain foundation definitions
 
 Each Profile has one stable `profile_id`, one exact customer-facing Chinese name, and
 one definition version. The definition version is an internal Profile-contract
@@ -69,7 +70,12 @@ read `workflow-profiles.md` or any other Profile definition on the clear path.
 | `rule-response-application-defense` | 规则响应、申报与答辩 | `references/workflow-profile-rule-response-application-defense.md` |
 
 Every `definition_ref` must be unique, non-empty, directly reachable from this
-one-level reference table, and contain exactly one Profile foundation definition.
+one-level reference table, and contain exactly one Profile definition. After routing,
+apply the status declared by that selected definition: a detailed/implemented Golden
+Path supplies Profile-specific judgment, sequence, semantic mapping, brief additions,
+and QA emphasis while continuing to use every shared gate and implementation. Do not
+load a second definition to complete it. A foundation definition remains usable at
+its declared foundation scope and must not be presented as a detailed Golden Path.
 
 ## Routing Contract
 
@@ -89,7 +95,7 @@ Route by semantic outcome, not by labels alone:
    eligible semantic evidence, read `workflow-profiles.md`, display all nine exact
    customer-facing Profile names in one round, and ask exactly one routing question:
    which business goal should the finished report primarily accomplish? After the
-   answer, read only the selected row's `definition_ref` and apply that foundation
+   answer, read only the selected row's `definition_ref` and apply that selected
    definition. Do not load the other eight definition files.
 5. Record that catalog as the latest active option set. A short answer or ordinal can
    select an item only when it directly answers that still-active catalog in the same
@@ -154,11 +160,11 @@ may be inferred merely because a Profile supplies other defaults.
 
 ## Required Profile Sections
 
-Every Profile foundation definition must contain these exact sections:
+Every Profile definition must contain these exact sections:
 
 | Section | Required content |
 |---|---|
-| 身份与版本 | Stable id, exact name, definition version, and foundation/detailed status. |
+| 身份与版本 | Stable id, exact name, definition version, and foundation or detailed/implemented status. |
 | 适用目标 | The dominant business outcome that makes this the primary Profile. |
 | 排除范围 | Nearby outcomes that require another primary Profile or an existing subsystem. |
 | 成品 | Customer-usable TaoHtml output within the current delivery boundary. |
@@ -172,7 +178,7 @@ Every Profile foundation definition must contain these exact sections:
 | QA 验收 | Profile-specific acceptance emphasis in addition to existing objective QA and delivery gates. |
 | 能力叠加与冲突处理 | Allowed bounded overlays and the rule for choosing or replacing the primary Profile. |
 
-Keep the catalog lightweight. Store each non-empty foundation definition in its unique
+Keep the catalog lightweight. Store each non-empty Profile definition in its unique
 one-level `definition_ref`; do not duplicate complete definitions in the catalog or
 create empty placeholders.
 
