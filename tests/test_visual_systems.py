@@ -157,19 +157,73 @@ class VisualSystemRoutingTests(unittest.TestCase):
             self.assertIn(description, router)
             self.assertIn(f"assets/visual-systems/{theme_id}/preview.svg", router)
 
-    def test_reference_precedence_and_question_budget_are_explicit(self) -> None:
+    def test_default_route_shows_complete_current_catalog(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
+            encoding="utf-8"
+        )
         intake = (SKILL_ROOT / "references" / "intake-workflow.md").read_text(
             encoding="utf-8"
         )
+        selection_contract = "\n".join((skill, router, intake))
+
+        self.assertNotRegex(
+            selection_contract.lower(), r"recommend\s+2\s*[-–—]\s*3"
+        )
+        for text in (skill, router, intake):
+            self.assertIn("every system in the complete current built-in catalog", text)
+            self.assertIn("exact customer-facing name, one-line description, and bundled preview", text)
+            self.assertIn("recommendation never replaces complete catalog display", text)
+        self.assertIn("Future built-in additions automatically join", router)
+        self.assertIn("rather than a fixed count or shortlist", router)
+
+    def test_recommendation_marks_and_semantic_subsets_are_bounded(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
+            encoding="utf-8"
+        )
+        intake = (SKILL_ROOT / "references" / "intake-workflow.md").read_text(
+            encoding="utf-8"
+        )
+
+        for text in (skill, router, intake):
+            self.assertIn("one or two displayed systems as **更推荐**", text)
+            self.assertIn("semantically narrowed", text)
+            self.assertIn("rather than literal phrase matching", text)
+            self.assertIn("adopt it directly without displaying the catalog", text)
+        self.assertRegex(
+            router,
+            r"business-oriented subset is \*\*严谨咨询报告\*\* and \*\*稳重企业年报\*\*",
+        )
+        self.assertRegex(
+            router,
+            r"design-led or less-business-oriented subset is \*\*黑白荧光卡片\*\* and \*\*杂志图文拼贴\*\*",
+        )
+
+    def test_profile_reference_precedence_and_question_budget_are_explicit(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
+            encoding="utf-8"
+        )
+        intake = (SKILL_ROOT / "references" / "intake-workflow.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("unique active profile automatically selects", skill)
+        self.assertIn("profile remains the automatic route", router)
+        self.assertIn("do not enter this router", router)
+        self.assertIn("do not use this router", router)
+        self.assertIn("Only when no enterprise profile applies", intake)
+        self.assertIn("`reconstruct`", intake)
+        self.assertIn("`corporate_fidelity`", intake)
         self.assertIn("one to three representative static", intake)
         self.assertIn("read `static-reference-vi.md`", intake)
         self.assertIn("render one VI board", intake)
         self.assertIn("infer dynamic behavior", intake)
-        self.assertIn("recommend 2-3 genuinely suitable built-in systems", intake)
-        self.assertIn("exact customer-facing name, one-line description, and bundled preview", intake)
         self.assertIn("Do not ask open-ended aesthetic questions", intake)
         self.assertIn("never expands the six-question hard maximum", intake)
         self.assertIn("choose the lowest-risk fit", intake)
+        self.assertIn("one selection round", router)
+        self.assertIn("choose once or delegate to TaoHtml", router)
 
     def test_brief_records_source_selection_and_deviation(self) -> None:
         brief = (SKILL_ROOT / "references" / "design-brief-template.md").read_text(

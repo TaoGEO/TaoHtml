@@ -4,11 +4,25 @@ Use this router only after content and chapter structure are clear. Its purpose 
 
 ## Reference Precedence
 
+A unique eligible active enterprise profile remains the automatic route defined in `profile-memory.md`; do not enter this router, reopen its reference images, or present built-in choices for that route.
+
 When the user chooses “use my reference” and supplies one supported reconstruct still or one to three supported corporate-family stills, do not use this router. Read `static-reference-vi.md`, apply its current-session readability gate, extract only visible static composition, hierarchy, image treatment, module language, and evidence treatment, render the unified VI standards board, and wait for clear confirmation of that exact current board. Do not infer dynamic rules, force one of the built-in systems, or reduce the reference to colors.
 
 If the current session cannot reliably locate static visual facts, follow the two recovery paths in `static-reference-vi.md`; do not guess or maintain a model matrix here. A clear PPT, webpage, video, state sequence, more than three corporate screenshots, or multiple reconstruct screenshots is an unsupported reference input rather than “no clear reference”: ask for a supported representative raster input and do not enter this router unless the customer explicitly abandons the reference route. Never infer movement from those sources.
 
-When no clear reference exists, recommend 2-3 systems from the four built-in systems in the table. Show the exact name, description, and bundled preview. Let the user choose once or delegate. Never ask an open-ended taste question. Theme selection shares the existing six-question budget; at the cap, after three no-gain rounds, or under delegation, choose the lowest-risk fit and disclose it in the Report Design Brief.
+## Catalog Display And Selection
+
+When no clear reference exists and no enterprise profile applies, enter this router. Apply one of these mutually exclusive rules:
+
+- If the user has already specified one concrete built-in system, adopt it directly without displaying the catalog.
+- If the user has semantically narrowed the acceptable style range, display only the matching subset. Determine scope from the user's meaning and constraints rather than literal phrase matching. The current business-oriented subset is **严谨咨询报告** and **稳重企业年报**; the current design-led or less-business-oriented subset is **黑白荧光卡片** and **杂志图文拼贴**.
+- Otherwise, in the same round, show every system in the complete current built-in catalog below. Include each exact customer-facing name, one-line description, and bundled preview. Never omit a catalog entry because the Agent considers it less suitable.
+
+The Agent may mark one or two displayed systems as **更推荐** based on the report goal, audience, content, and reading or presentation mode, and briefly explain the reason. Recommendation may order attention, but recommendation never replaces complete catalog display or removes an entry.
+
+Read the complete current catalog rather than a fixed count or shortlist. Future built-in additions automatically join the default complete display; update the catalog metadata and preview table with the new system instead of retaining a four-system or shortlist cap.
+
+Keep catalog display, recommendation marking, and selection in one selection round. Let the user choose once or delegate to TaoHtml. Never ask an open-ended taste question. Theme selection shares the existing six-question budget. At the cap, after three no-gain rounds, or under delegation, do not open another selection round: show the applicable catalog if it has not yet been shown, choose the lowest-risk fit, and disclose it in the Report Design Brief.
 
 ## Customer-Facing Route Table
 
@@ -35,7 +49,7 @@ Use `preview.svg` only when presenting the choice. Do not load all four manifest
 
 Treat `assets/html-deck-template/index.html` as the runtime shell and the selected system as the presentation layer. Replace content sections and inject theme CSS, but keep runtime controls, navigation, hash routing, reveal state, fullscreen behavior, and offline constraints unchanged. A theme switch must never add a new state machine or require a remote asset.
 
-This router remains exactly four built-in systems. A theme compiled after current-board confirmation is project-local and must be loaded explicitly with `--project-theme` under `project-theme-compiler.md`; never add it to this table or built-in asset directory.
+This router remains exactly four built-in systems in the current catalog; that current asset count is not a future catalog or default-display cap. A theme compiled after current-board confirmation is project-local and must be loaded explicitly with `--project-theme` under `project-theme-compiler.md`; never add it to this table or built-in asset directory.
 
 Use the production renderer with an explicit source kind. For a real local source image:
 
