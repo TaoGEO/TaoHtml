@@ -15,10 +15,12 @@ If the current session cannot reliably locate static visual facts, follow the tw
 When no clear reference exists and no enterprise profile applies, enter this router. Apply one of these mutually exclusive rules:
 
 - If the user has already specified one concrete built-in system, adopt it directly without displaying the catalog.
-- If the user has semantically narrowed the acceptable style range, display only the matching subset. Determine scope from the user's meaning and constraints rather than literal phrase matching. The current business-oriented subset is **严谨咨询报告** and **稳重企业年报**; the current design-led or less-business-oriented subset is **黑白荧光卡片** and **杂志图文拼贴**.
+- Show a category subset only when the user has proactively and explicitly constrained the acceptable range of the built-in catalog and that constraint maps unambiguously to one declared category. Determine the user's stated scope from meaning rather than literal phrase matching. The current business-oriented subset is **严谨咨询报告** and **稳重企业年报**; the current design-led or less-business-oriented subset is **黑白荧光卡片** and **杂志图文拼贴**.
 - Otherwise, in the same round, show every system in the complete current built-in catalog below. Include each exact customer-facing name, one-line description, and bundled preview. Never omit a catalog entry because the Agent considers it less suitable.
 
-The Agent may mark one or two displayed systems as **更推荐** based on the report goal, audience, content, and reading or presentation mode, and briefly explain the reason. Recommendation may order attention, but recommendation never replaces complete catalog display or removes an entry.
+Report goal, audience, content, report type, and reading or presentation mode are recommendation inputs only. Use them to mark one or two displayed systems as **更推荐** and briefly explain the reason, but never to shrink the catalog or treat them as a user catalog-range constraint. Recommendation may order attention, but recommendation never replaces complete catalog display or removes an entry.
+
+If a user preference or constraint does not map unambiguously to a declared category, show the complete current catalog, reflect that preference in the recommendation reason, and never invent an ad hoc subset.
 
 Read the complete current catalog rather than a fixed count or shortlist. Future built-in additions automatically join the default complete display; update the catalog metadata and preview table with the new system instead of retaining a four-system or shortlist cap.
 

@@ -177,7 +177,7 @@ class VisualSystemRoutingTests(unittest.TestCase):
         self.assertIn("Future built-in additions automatically join", router)
         self.assertIn("rather than a fixed count or shortlist", router)
 
-    def test_recommendation_marks_and_semantic_subsets_are_bounded(self) -> None:
+    def test_subset_requires_an_explicit_unambiguous_catalog_constraint(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
             encoding="utf-8"
@@ -187,9 +187,14 @@ class VisualSystemRoutingTests(unittest.TestCase):
         )
 
         for text in (skill, router, intake):
+            self.assertIn(
+                "user has proactively and explicitly constrained the acceptable range of the built-in catalog",
+                text,
+            )
+            self.assertIn(
+                "constraint maps unambiguously to one declared category", text
+            )
             self.assertIn("one or two displayed systems as **更推荐**", text)
-            self.assertIn("semantically narrowed", text)
-            self.assertIn("rather than literal phrase matching", text)
             self.assertIn("adopt it directly without displaying the catalog", text)
         self.assertRegex(
             router,
@@ -199,6 +204,29 @@ class VisualSystemRoutingTests(unittest.TestCase):
             router,
             r"design-led or less-business-oriented subset is \*\*黑白荧光卡片\*\* and \*\*杂志图文拼贴\*\*",
         )
+
+    def test_project_context_and_ambiguous_preferences_cannot_shrink_catalog(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
+            encoding="utf-8"
+        )
+        intake = (SKILL_ROOT / "references" / "intake-workflow.md").read_text(
+            encoding="utf-8"
+        )
+
+        for text in (skill, router, intake):
+            self.assertIn(
+                "Report goal, audience, content, report type, and reading or presentation mode are recommendation inputs only",
+                text,
+            )
+            self.assertIn("never to shrink the catalog", text)
+            self.assertIn(
+                "user preference or constraint does not map unambiguously to a declared category",
+                text,
+            )
+            self.assertIn("show the complete current catalog", text)
+            self.assertIn("reflect that preference in the recommendation reason", text)
+            self.assertIn("never invent an ad hoc subset", text)
 
     def test_profile_reference_precedence_and_question_budget_are_explicit(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
