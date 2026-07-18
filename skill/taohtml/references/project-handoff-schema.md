@@ -168,8 +168,10 @@ also ineligible for either primary role. A current artifact and a delivered
 baseline are separate roles even when their bytes happen to match. The current
 HTML's baseline identity must agree with `lineage`.
 
-`compiler_version` and `report_ir_ref` are only versioned references. Their
-presence does not mean a Compiler or Report IR exists in this Skill.
+`compiler_version` and `report_ir_ref` are versioned references only. Their presence
+does not make this handoff validator parse, validate, compile, or migrate the referenced
+Report IR. Use the separate Report IR validation and Compiler contracts when that
+experimental engineering route is explicitly active.
 
 For continuation or delivery through an enterprise profile, export only the small
 profile-use binding record as a hashed `portable_path`; keep the enterprise assets
@@ -304,8 +306,9 @@ new snapshot and preserves the old snapshot hash in lineage.
 
 ## Future Boundaries
 
-This contract reserves clean references for future TaoHtml Workspace, TaoHtml
-Project, Report IR, and Compiler work. It does not implement any of them:
+This contract reserves clean references for TaoHtml Workspace, TaoHtml Project,
+Report IR, and Compiler work. It does not implement those systems inside the handoff
+validator:
 
 - `workspace_ref` is opaque; it is not a workspace database or asset store.
 - `project_identity` is identity only; it is not a mutable Project service.

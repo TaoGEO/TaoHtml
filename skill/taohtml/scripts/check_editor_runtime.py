@@ -13,16 +13,22 @@ from check_assets import extract_resource_refs, is_absolute_local, is_remote
 
 
 PNG_PAYLOAD = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yM1QAAAACXBIWXMAAAsSAAALEgHS3X78"
-    "AAAANUlEQVR4nO3OMQ0AAAgDINc/9K3hHFQgE1nS3TMzuwrgUQCPAngUwKMAHgXwKIBHATwK"
-    "4FEAjwJ4FMDjBfV4AiN2V/7hAAAAAElFTkSuQmCC"
+    "iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAIAAAC1qksFAAAAMklEQVR42mPktk9joCVgYqAx"
+    "GPoWsOCSaJkykySDanLSR+Ng1IJRCwbKAsbR0nTALQAAoMMEhd/eaXUAAAAASUVORK5CYII="
 )
 TEXT_MARKER = "TaoHtml 编辑器浏览器 QA 文本"
+EDITOR_IMAGE_URI = (
+    "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20"
+    "viewBox='0%200%20160%2090'%3E%3Crect%20width='160'%20height='90'%20"
+    "fill='%230b3f66'/%3E%3C/svg%3E"
+)
 ACTION_FIXTURE = """
 <section class="slide" data-title="Editor action fixture" data-taohtml-editor-qa-fixture>
   <div style="position:absolute;inset:120px;display:grid;gap:24px;align-content:center">
     <a data-editor-qa="link" href="#999" onclick="window.__taohtmlQaLinkActions=(window.__taohtmlQaLinkActions||0)+1">可编辑报告链接</a>
     <button type="button" data-editor-qa="button" data-taohtml-edit="text" onclick="window.__taohtmlQaButtonActions=(window.__taohtmlQaButtonActions||0)+1">可编辑行动按钮</button>
+    <img class="fragment" data-step="1" data-editor-qa="image" src="__EDITOR_IMAGE_URI__" alt="编辑器图片操作测试" style="width:160px;height:90px;object-fit:cover">
+    <button type="button" class="source-btn" data-source="编辑器 QA 来源" data-taohtml-edit-lock>来源</button>
     <button type="button" data-editor-qa="locked" data-taohtml-edit="text" data-taohtml-edit-lock onclick="window.__taohtmlQaLockedActions=(window.__taohtmlQaLockedActions||0)+1">锁定系统按钮</button>
     <div hidden data-editor-qa="hard-boundaries">
       <script type="application/json" data-editor-qa-hard data-taohtml-edit="text">{"fixture":true}</script>
@@ -43,7 +49,7 @@ ACTION_FIXTURE = """
     </div>
   </div>
 </section>
-"""
+""".replace("__EDITOR_IMAGE_URI__", EDITOR_IMAGE_URI)
 
 
 def portable_input(path: Path) -> tuple[bool, list[str]]:
@@ -146,7 +152,7 @@ def main() -> int:
                 """() => ({
                   runtime: ['getState', 'setEditing', 'setMode', 'nextStep', 'previousStep']
                     .every(name => typeof window.TaoHtmlRuntime?.[name] === 'function'),
-                  editor: ['getState', 'enter', 'requestExit', 'undo', 'redo', 'exportHtml']
+                  editor: ['getState', 'enter', 'requestExit', 'undo', 'redo', 'exportHtml', 'getReportIrPatch']
                     .every(name => typeof window.TaoHtmlEditor?.[name] === 'function'),
                   editButton: Boolean(document.querySelector('#editToggle')),
                   textTargets: document.querySelectorAll('[data-taohtml-editor-kind="text"]').length,
@@ -196,6 +202,9 @@ def main() -> int:
                 locked_state,
             )
 
+            page.locator(".slide:has(.fragment)").first.evaluate(
+                "element => window.TaoHtmlRuntime.showPage([...document.querySelectorAll('.slide')].indexOf(element))"
+            )
             state_before_pause = page.evaluate("() => window.TaoHtmlRuntime.getState()")
             page.keyboard.press("ArrowRight")
             page.locator(".slide.active").click(position={"x": 8, "y": 8})
@@ -331,6 +340,39 @@ def main() -> int:
                 discarded,
             )
             page.evaluate("() => window.TaoHtmlEditor.enter()")
+            report_ir_edit = page.evaluate(
+                """() => {
+                  const target = document.querySelector(
+                    '[data-ir-edit-kind="text"][data-ir-edit-key]'
+                  );
+                  if (!target) return {available: false, patch: null};
+                  target.focus();
+                  target.textContent = `${target.textContent || ''} `;
+                  target.dispatchEvent(new InputEvent('input', {
+                    bubbles: true,
+                    inputType: 'insertText',
+                    data: ' ',
+                  }));
+                  return {
+                    available: true,
+                    key: target.dataset.irEditKey,
+                    patch: window.TaoHtmlEditor.getReportIrPatch(),
+                  };
+                }"""
+            )
+            check(
+                "report_ir_patch_preview",
+                not report_ir_edit["available"]
+                or (
+                    report_ir_edit["patch"] is not None
+                    and report_ir_edit["patch"]["operation_count"] >= 1
+                    and any(
+                        operation["target"]["key"] == report_ir_edit["key"]
+                        for operation in report_ir_edit["patch"]["operations"]
+                    )
+                ),
+                report_ir_edit,
+            )
 
             text_target = page.locator(
                 '.slide.active [data-taohtml-editor-kind="text"]'
@@ -596,6 +638,55 @@ def main() -> int:
             )
 
             page.evaluate("() => window.TaoHtmlEditor.enter()")
+            report_ir_image = page.locator(
+                '[data-ir-edit-kind="image"][data-ir-edit-key]'
+            ).first
+            report_ir_image_detail: dict[str, object] = {"available": False}
+            if report_ir_image.count() > 0:
+                report_ir_image.evaluate(
+                    """element => window.TaoHtmlRuntime.showPage(
+                      [...document.querySelectorAll('.slide')].indexOf(element.closest('.slide'))
+                    )"""
+                )
+                with page.expect_file_chooser() as report_ir_chooser_info:
+                    report_ir_image.click()
+                report_ir_chooser_info.value.set_files(
+                    {
+                        "name": "taohtml-report-ir-editor-qa.png",
+                        "mimeType": "image/png",
+                        "buffer": PNG_PAYLOAD,
+                    }
+                )
+                report_ir_key = report_ir_image.get_attribute("data-ir-edit-key")
+                page.wait_for_function(
+                    """key => document.querySelector(
+                      `[data-ir-edit-key="${CSS.escape(key)}"]`
+                    )?.getAttribute('src')?.startsWith('data:image/png')""",
+                    arg=report_ir_key,
+                )
+                report_ir_image.evaluate(
+                    "element => { element.style.objectPosition = '61.00% 39.00%'; }"
+                )
+                report_ir_patch = page.evaluate(
+                    "() => window.TaoHtmlEditor.getReportIrPatch()"
+                )
+                report_ir_image_detail = {
+                    "available": True,
+                    "key": report_ir_key,
+                    "patch": report_ir_patch,
+                }
+                check(
+                    "report_ir_image_patch_preview",
+                    report_ir_patch is not None
+                    and any(
+                        operation["op"] == "replace_image"
+                        and operation["target"]["key"] == report_ir_key
+                        for operation in report_ir_patch["operations"]
+                    ),
+                    report_ir_image_detail,
+                )
+            else:
+                check("report_ir_image_patch_preview", True, report_ir_image_detail)
             page.evaluate("() => window.TaoHtmlEditor.requestExit()")
             with page.expect_download() as download_info:
                 page.locator('[data-action="export"]').click()
@@ -631,8 +722,7 @@ def main() -> int:
                   const editor = window.TaoHtmlEditor;
                   const text = [...document.querySelectorAll('[data-taohtml-editor-kind="text"]')]
                     .some(element => element.textContent === marker);
-                  const image = [...document.querySelectorAll('[data-taohtml-editor-kind="image"]')]
-                    .find(element => element.getAttribute('src')?.startsWith('data:image/png'));
+                  const image = document.querySelector('[data-editor-qa="image"]');
                   runtime.setMode('reading');
                   const reading = runtime.getState();
                   runtime.setMode('presentation');

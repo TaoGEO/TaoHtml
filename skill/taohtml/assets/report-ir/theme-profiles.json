@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "themes": {
+    "black-white-fluorescent-cards": {
+      "profile_version": "1.0",
+      "display_name": "黑白荧光卡片",
+      "layout_variants": {
+        "hero": "signal-poster",
+        "grid": "card-stack",
+        "sequence": "stepped-rail",
+        "evidence": "metric-board",
+        "comparison": "action-wall"
+      },
+      "supported_transition_intents": ["initial", "reveal", "final"]
+    },
+    "rigorous-consulting-report": {
+      "profile_version": "1.0",
+      "display_name": "严谨咨询报告",
+      "layout_variants": {
+        "hero": "executive-summary",
+        "grid": "issue-tree",
+        "sequence": "workstream-grid",
+        "evidence": "evidence-tableau",
+        "comparison": "recommendation-matrix"
+      },
+      "supported_transition_intents": ["initial", "reveal", "final"]
+    },
+    "corporate-annual-report": {
+      "profile_version": "1.0",
+      "display_name": "稳重企业年报",
+      "layout_variants": {
+        "hero": "brand-hero",
+        "grid": "narrative-balance",
+        "sequence": "operating-ribbon",
+        "evidence": "performance-spread",
+        "comparison": "commitment-page"
+      },
+      "supported_transition_intents": ["initial", "reveal", "final"]
+    },
+    "editorial-collage": {
+      "profile_version": "1.0",
+      "display_name": "杂志图文拼贴",
+      "layout_variants": {
+        "hero": "cover-collage",
+        "grid": "three-cut-diagnosis",
+        "sequence": "foldout-sequence",
+        "evidence": "data-feature",
+        "comparison": "editorial-finale"
+      },
+      "supported_transition_intents": ["initial", "reveal", "final"]
+    }
+  }
+}

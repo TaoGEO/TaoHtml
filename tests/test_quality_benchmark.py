@@ -218,7 +218,12 @@ class PrepareRunTests(unittest.TestCase):
                         "editorial-collage",
                     )
                 }
-                | {"skill/taohtml/references/project-handoff.schema.json"},
+                | {
+                    "skill/taohtml/references/project-handoff.schema.json",
+                    "skill/taohtml/references/report-ir-runtime-patch.schema.json",
+                    "skill/taohtml/references/report-ir-v1.schema.json",
+                    "skill/taohtml/assets/report-ir/theme-profiles.json",
+                },
             )
 
     def test_pdf_is_generated_as_small_three_page_material(self) -> None:

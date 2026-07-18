@@ -21,6 +21,9 @@
   const undoStack = [];
   const redoStack = [];
   const lastTextValues = new Map();
+  const reportIrTextBaseline = new Map();
+  const reportIrImageBaseline = new Map();
+  const REPORT_IR_PATCH_ID = 'taohtml-report-ir-runtime-patch';
   let active = false;
   let dirty = false;
   let recoveryAvailable = true;
@@ -33,6 +36,7 @@
   let sourceBaseline;
   let checkpointBaseline;
   let documentSignature;
+  let existingReportIrPatch = null;
 
   function isLocked(element) {
     return Boolean(element.closest(LOCK_SELECTOR));
@@ -166,6 +170,118 @@
       hash = Math.imul(hash, 16777619);
     }
     return (hash >>> 0).toString(16).padStart(8, '0');
+  }
+
+  function reportIrTarget(element) {
+    const { irEditEntity: entity, irEditId: id, irEditField: field, irEditKey: key } = element.dataset;
+    if (!entity || !id || !field || !key) return null;
+    return { entity, id, field, key };
+  }
+
+  function reportIrImageValue(image) {
+    const state = captureImageState(image);
+    return {
+      src_fingerprint: hashString(state.src || ''),
+      object_position: state.objectPosition || '',
+      aspect_ratio: state.aspectRatio || '',
+    };
+  }
+
+  function collectReportIrValues(selector, valueReader) {
+    const values = new Map();
+    deck.querySelectorAll(selector).forEach(element => {
+      const target = reportIrTarget(element);
+      if (!target) return;
+      const value = valueReader(element);
+      if (values.has(target.key) && stableStringify(values.get(target.key).value) !== stableStringify(value)) {
+        throw new Error(`Report IR edit target ${target.key} has divergent repeated instances.`);
+      }
+      values.set(target.key, { target, value, element });
+    });
+    return values;
+  }
+
+  function readExistingReportIrPatch() {
+    const script = document.getElementById(REPORT_IR_PATCH_ID);
+    if (!script) return null;
+    try {
+      const payload = JSON.parse(script.textContent || 'null');
+      if (
+        payload?.schema_version !== '1.0'
+        || payload?.kind !== 'taohtml-report-ir-runtime-patch'
+        || payload?.base_ir_sha256 !== deck.dataset.reportIrSha256
+        || !Array.isArray(payload?.operations)
+      ) return null;
+      return payload;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function captureReportIrBaselines() {
+    collectReportIrValues(
+      '[data-ir-edit-kind="text"][data-ir-edit-key]',
+      element => element.textContent || '',
+    ).forEach(({ value }, key) => reportIrTextBaseline.set(key, value));
+    collectReportIrValues(
+      '[data-ir-edit-kind="image"][data-ir-edit-key]',
+      element => reportIrImageValue(element),
+    ).forEach(({ value }, key) => reportIrImageBaseline.set(key, value));
+  }
+
+  function buildReportIrPatch() {
+    const baseHash = deck.dataset.reportIrSha256;
+    if (!baseHash || deck.dataset.reportIrVersion !== '1.0') return null;
+    const operations = new Map(
+      (existingReportIrPatch?.operations || []).map(operation => [operation.target?.key, operation]),
+    );
+    collectReportIrValues(
+      '[data-ir-edit-kind="text"][data-ir-edit-key]',
+      element => element.textContent || '',
+    ).forEach(({ target, value }, key) => {
+      const baseline = reportIrTextBaseline.get(key);
+      if (baseline === undefined || value === baseline) return;
+      const existing = operations.get(key);
+      const before = existing?.before ?? baseline;
+      if (value === before) operations.delete(key);
+      else operations.set(key, { op: 'replace_text', target, before, value });
+    });
+    collectReportIrValues(
+      '[data-ir-edit-kind="image"][data-ir-edit-key]',
+      element => reportIrImageValue(element),
+    ).forEach(({ target, value, element }, key) => {
+      const baseline = reportIrImageBaseline.get(key);
+      if (!baseline || stableStringify(value) === stableStringify(baseline)) return;
+      const existing = operations.get(key);
+      const before = existing?.before ?? baseline;
+      if (stableStringify(value) === stableStringify(before)) {
+        operations.delete(key);
+        return;
+      }
+      operations.set(key, {
+        op: 'replace_image',
+        target,
+        asset_id: element.dataset.irEditAssetId || '',
+        before,
+        value: {
+          ...value,
+          dom_ref: { kind: 'data_ir_edit_key', value: key },
+        },
+      });
+    });
+    const ordered = [...operations.values()].sort((left, right) =>
+      String(left.target?.key).localeCompare(String(right.target?.key))
+    );
+    return {
+      schema_version: '1.0',
+      kind: 'taohtml-report-ir-runtime-patch',
+      base_ir_sha256: baseHash,
+      report_id: deck.dataset.reportId || '',
+      projection_id: deck.dataset.projectionId || '',
+      extraction_contract: 'embedded-html-v1',
+      operation_count: ordered.length,
+      operations: ordered,
+    };
   }
 
   function buildDelta(baseline, current) {
@@ -554,6 +670,23 @@
     if (cloneModalBody) cloneModalBody.replaceChildren();
   }
 
+  function syncReportIrPatch(clone, patch) {
+    let script = clone.querySelector(`#${REPORT_IR_PATCH_ID}`);
+    if (!patch || patch.operation_count === 0) {
+      script?.remove();
+      return;
+    }
+    if (!script) {
+      script = document.createElement('script');
+      script.id = REPORT_IR_PATCH_ID;
+      script.type = 'application/json';
+      script.dataset.taohtmlEditLock = '';
+      clone.querySelector('body')?.appendChild(script);
+    }
+    script.dataset.baseIrSha256 = patch.base_ir_sha256;
+    script.textContent = JSON.stringify(patch).replace(/</g, '\\u003c');
+  }
+
   function safeFilename() {
     const title = (document.title || 'taohtml').trim()
       .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-')
@@ -574,8 +707,16 @@
 
   async function exportHtml() {
     flushPendingText();
+    let reportIrPatch;
+    try {
+      reportIrPatch = buildReportIrPatch();
+    } catch (error) {
+      showToast(`Report IR Patch 生成失败：${error.message}`, 9000);
+      throw error;
+    }
     const clone = document.documentElement.cloneNode(true);
     cleanExportClone(clone);
+    syncReportIrPatch(clone, reportIrPatch);
     const externalAssets = collectExternalAssets(clone);
     const doctype = document.doctype ? '<!doctype html>\n' : '';
     const html = `${doctype}${clone.outerHTML}`;
@@ -606,6 +747,7 @@
       filename,
       kind: externalAssets.length ? 'html-with-assets' : 'single-file',
       externalAssets,
+      reportIrPatchOperations: reportIrPatch?.operation_count || 0,
     };
   }
 
@@ -729,6 +871,8 @@
   sourceBaseline = captureSnapshot();
   checkpointBaseline = captureSnapshot();
   documentSignature = hashString(stableStringify(sourceBaseline));
+  existingReportIrPatch = readExistingReportIrPatch();
+  captureReportIrBaselines();
   restoreRecovery();
   emitEditorState();
 
@@ -739,5 +883,6 @@
     undo,
     redo,
     exportHtml,
+    getReportIrPatch: buildReportIrPatch,
   });
 })();

@@ -87,6 +87,19 @@ Export always downloads a newly named `.html`; it never writes over the source f
 - The in-browser editor does **not** create a ZIP. Agent-side delivery may still use `scripts/package_deck.py` to package an existing HTML-plus-assets directory.
 - The editor reports `single-file` versus `html-with-assets` from `TaoHtmlEditor.exportHtml()` and lists the detected external asset references.
 
+For HTML compiled from Report IR v1, export also embeds one
+`taohtml-report-ir-runtime-patch` JSON record. The patch is bound to the normalized
+base-IR hash and contains only Compiler-declared text/image targets. It is not a DOM
+diff and does not make the edited HTML a new source of truth. Apply it with
+`scripts/apply_report_ir_patch.py`, then recompile the resulting IR. A stale base hash,
+stale before-value, divergent repeated target, invalid image, or unknown field fails
+closed instead of being guessed.
+
+The Agent must classify every Runtime patch as meaning-preserving or meaning-changing.
+Meaning-changing edits require a refreshed Report Design Brief confirmation before the
+draft IR can be used for formal compilation. A replaced image is always returned to
+`pending_verification` until its content and brand/provenance meaning are checked.
+
 Chromium/Chrome is the primary browser QA path. Safari is a documented best-effort path: content editing and session recovery use standard browser APIs, but TaoHtml does not claim automated Safari coverage. If Safari does not honor the Blob download filename/flow, use the page it opens and **Save As**, then keep relative assets beside it. No File System Access API or ZIP fallback is claimed.
 
 ## Module API
@@ -100,9 +113,15 @@ requestExit()
 undo()
 redo()
 exportHtml()
+getReportIrPatch()
 ```
 
 `getState()` returns `active`, `dirty`, `canUndo`, `canRedo`, and `recoveryAvailable`. Changes dispatch `taohtml:editorstatechange` on `window` with the same snapshot in `event.detail`.
+
+`getReportIrPatch()` returns the current controlled Patch only when the document was
+compiled from Report IR v1; ordinary direct-HTML reports return `null`. Generated
+Report IR charts and tables remain locked because changing their displayed values
+without updating Dataset/Evidence would break traceability.
 
 The editor calls `TaoHtmlRuntime.setEditing(boolean)`; it must not replace navigation state or attach a second page state machine. Read `runtime-contract.md` for the core API and `taohtml:statechange` compatibility rules.
 
@@ -115,4 +134,4 @@ python skill/taohtml/scripts/check_html_deck.py path/to/index.html path/to/qa
 python skill/taohtml/scripts/check_editor_runtime.py path/to/index.html path/to/editor-qa
 ```
 
-The editor QA must use a self-contained rendered report with at least one text target, one `<img>`, and one fragment. It covers continuous text/image editing, crop focus, unified undo/redo, dirty-exit choices, reload recovery, export/reopen, locked controls, and restored reading/presentation behavior.
+The editor QA must use a self-contained rendered report with at least one text target, one `<img>`, and one fragment. It covers continuous text/image editing, crop focus, unified undo/redo, dirty-exit choices, reload recovery, export/reopen, locked controls, Report IR Patch preview when IR metadata is present, and restored reading/presentation behavior. For an IR project, also apply the exported Patch, recompile, and rerun HTML/browser QA against the new build.

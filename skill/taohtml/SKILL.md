@@ -120,6 +120,20 @@ Block only on the hard boundaries in `references/intake-workflow.md`: never inve
 
 After brief confirmation, load only what the task needs:
 
+The Report IR path remains an explicit engineering route in this development
+version. Enter it only when the user explicitly asks to research, generate, validate,
+compile, benchmark, or continue a Report IR project. Do not silently move an ordinary
+customer build from the confirmed direct-HTML workflow onto Report IR, and do not call
+the research Compiler a released customer capability. On that route, read
+`references/report-ir-v1.md`, validate the exact IR with
+`scripts/validate_report_ir.py`, then compile it with
+`scripts/compile_report_ir.py`. The Compiler never replaces the Report Design Brief or
+production-authorization gates and never calls a model. If the customer edits an
+IR-compiled HTML, use `scripts/apply_report_ir_patch.py` to bind the exported Runtime
+Patch back to the exact base IR. Classify the edit as meaning-preserving or
+meaning-changing; never compile a meaning-changing draft until the refreshed brief is
+confirmed.
+
 - `references/project-handoff.md`: task-intent overlay, source role/availability map, read-only audit, continuation boundaries, candidate discovery, and readiness language.
 - `references/project-handoff-schema.md`: portable workspace/project/snapshot identities, strict source/decision/design/artifact/lineage serialization, version policy, and four-layer handoff validation.
 - `references/process-playbook.md`: story, evidence, visual, production, and delivery workflow.
@@ -127,6 +141,7 @@ After brief confirmation, load only what the task needs:
 - `references/visual-systems.md`: built-in system routing and selection policy; after selection, load only that system's `theme.json`, `theme.css`, and `templates.html` under `assets/visual-systems/`.
 - `references/static-reference-vi.md`: one-time reconstruct/corporate-fidelity routing, supported static-input gate, observed/extension/unknown boundary, exact executable layout grammar, corporate template-family contract, unified VI board, confirmation gate, and next-step handoff.
 - `references/project-theme-compiler.md`: post-confirmation hash-bound handoff, deterministic structural project-theme compilation, corporate multi-shell crop generation and role routing, eligible/compiled usage mapping, fallback policy, explicit project rendering, and verification.
+- `references/report-ir-v1.md`: experimental report-source contract, semantic/evidence/page/state model, four independent validation results, deterministic Compiler boundary, project-theme routing, and unreleased capability limits. Load only for the explicit Report IR engineering route above.
 - `references/profile-memory.md`: explicit TaoHtml home, exact enterprise resolution, immutable corporate-profile versions, automatic binding, override/update/other-company semantics, export/import, and current-task authorization boundary.
 - `references/design-quality-rubric.md`: optional diagnosis when the user asks for a design review or says the result feels ordinary; do not use a fixed aesthetic score as the production authorization gate.
 - `references/runtime-contract.md`: implemented DOM, controls, state, modes, and extension boundary.
@@ -142,6 +157,9 @@ Use the bundled scripts where relevant:
 - `scripts/profile_store.py`: create, update, list, show, resolve, bind, validate, activate, rollback, archive/restore, export, and import explicit corporate-template profiles without writing to the Skill directory.
 - `scripts/check_production_authorization.py`: validate current material-summary, VI or profile-use binding, project-theme, and design-brief state before a requested preview, formal HTML, QA, or delivery action.
 - `scripts/validate_project_handoff.py`: validate a structured portable handoff's schema, exact bindings, continuation state, and recorded delivery evidence without executing QA.
+- `scripts/validate_report_ir.py`: validate Report IR schema, references, semantics, and current compiler readiness separately; it never executes QA.
+- `scripts/compile_report_ir.py`: deterministically compile a validated Report IR through a built-in theme or validated project theme into Runtime HTML, Source Map, normalized IR, and Build Manifest without model calls.
+- `scripts/apply_report_ir_patch.py`: extract or load a controlled Runtime text/image Patch, verify its exact base binding and before-values, update Report IR and image provenance, and stop with a reconfirmation gate when meaning changes.
 - `scripts/check_assets.py`: find missing, remote, or non-portable assets.
 - `scripts/check_html_deck.py`: exercise routes, reveal states, runtime behavior, media, console errors, bounds, and screenshots.
 - `scripts/build_contact_sheet.py`: build a visual QA overview.

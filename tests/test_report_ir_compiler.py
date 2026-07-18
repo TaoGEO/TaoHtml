@@ -1,0 +1,339 @@
+from __future__ import annotations
+
+import copy
+import hashlib
+import importlib.util
+import json
+import re
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from types import ModuleType
+
+from tests.test_report_ir_v1 import valid_ir
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_DIR = ROOT / "skill" / "taohtml" / "scripts"
+FIXTURES = ROOT / "tests" / "fixtures"
+THEME_IDS = (
+    "black-white-fluorescent-cards",
+    "rigorous-consulting-report",
+    "corporate-annual-report",
+    "editorial-collage",
+)
+
+
+def load_script(name: str) -> ModuleType:
+    path = SCRIPT_DIR / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"taohtml_{name}", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+COMPILER = load_script("compile_report_ir")
+PROJECT_THEME_COMPILER = load_script("compile_project_theme")
+
+
+def sha256(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+class ReportIrCompilerTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.source_bytes = b"segment,value\nenterprise,28\nother,7\n"
+        self.ir = valid_ir(sha256(self.source_bytes))
+
+    def _project(self, root: Path) -> None:
+        materials = root / "materials"
+        materials.mkdir(parents=True)
+        (materials / "growth.csv").write_bytes(self.source_bytes)
+
+    def test_compiles_variable_seven_page_report_into_runtime(self) -> None:
+        self.ir["sources"][0].update(
+            {
+                "title": "客户增长数据",
+                "publisher": "客户研究组",
+                "published_date": "2026-07",
+                "page_locator": "数据表 1",
+            }
+        )
+        self.ir["pages"][1]["source_display"] = "footer"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            output = root / "build"
+            manifest = COMPILER.compile_ir(self.ir, root, output)
+            rendered = (output / "index.html").read_text(encoding="utf-8")
+            source_map = json.loads((output / "source-map.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(manifest["counts"]["pages"], 7)
+            self.assertEqual(manifest["counts"]["output_pages"], 7)
+            self.assertEqual(rendered.count('class="slide ri-page'), 7)
+            self.assertIn('data-report-ir-version="1.0"', rendered)
+            self.assertIn('data-ir-page-id="page-growth"', rendered)
+            self.assertIn('data-ir-block-id="block-growth-chart"', rendered)
+            self.assertIn('data-step="1"', rendered)
+            self.assertIn('id="taohtml-speaker-notes"', rendered)
+            self.assertIn("客户增长数据 · 客户研究组 · 2026-07 · 数据表 1", rendered)
+            self.assertEqual(len(source_map["pages"]), 7)
+            self.assertEqual(manifest["qa_execution_claim"], "not_executed_by_compiler")
+            self.assertEqual(
+                manifest["runtime"]["report_ir_patch_contract"],
+                "embedded-html-v1",
+            )
+            self.assertNotIn(
+                "runtime_editor_does_not_yet_export_a_report_ir_patch",
+                manifest["open_boundaries"],
+            )
+
+    def test_compiler_output_is_deterministic(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            first = root / "first"
+            second = root / "second"
+            first_manifest = COMPILER.compile_ir(self.ir, root, first)
+            second_manifest = COMPILER.compile_ir(self.ir, root, second)
+            for name in (
+                "index.html",
+                "source-map.json",
+                "report.ir.normalized.json",
+                "build-manifest.json",
+            ):
+                self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
+            self.assertEqual(
+                first_manifest["outputs"]["html"]["sha256"],
+                second_manifest["outputs"]["html"]["sha256"],
+            )
+
+    def test_same_ir_semantics_compile_through_all_four_themes(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            normalized_hashes: set[str] = set()
+            semantic_hashes: set[str] = set()
+            html_hashes: set[str] = set()
+            for theme_id in THEME_IDS:
+                candidate = copy.deepcopy(self.ir)
+                candidate["build_binding"]["theme"]["ref"] = theme_id
+                output = root / theme_id
+                manifest = COMPILER.compile_ir(candidate, root, output)
+                rendered = (output / "index.html").read_text(encoding="utf-8")
+                normalized_hashes.add(manifest["report_ir"]["normalized_sha256"])
+                semantic_hashes.add(manifest["report_ir"]["semantic_graph_sha256"])
+                html_hashes.add(manifest["outputs"]["html"]["sha256"])
+                self.assertIn(f'data-theme="{theme_id}"', rendered)
+                self.assertEqual(manifest["counts"]["output_pages"], 7)
+            self.assertEqual(len(normalized_hashes), 4)
+            self.assertEqual(len(semantic_hashes), 1)
+            self.assertEqual(len(html_hashes), 4)
+
+    def test_appendix_is_a_deterministic_derived_page(self) -> None:
+        self.ir["appendices"] = [
+            {
+                "id": "appendix-method",
+                "title": "研究方法",
+                "block_refs": ["block-method-process"],
+                "source_refs": ["source-customer-data"],
+            }
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            output = root / "build"
+            manifest = COMPILER.compile_ir(self.ir, root, output)
+            rendered = (output / "index.html").read_text(encoding="utf-8")
+            self.assertEqual(manifest["counts"]["appendix_pages"], 1)
+            self.assertEqual(manifest["counts"]["output_pages"], 8)
+            self.assertIn('data-ir-appendix-ref="appendix-method"', rendered)
+
+    def test_non_monotonic_page_state_fails_instead_of_silently_changing_meaning(self) -> None:
+        self.ir["pages"][1]["state_sequence"].extend(
+            [
+                {
+                    "id": "state-growth-regression",
+                    "visible_refs": ["block-growth-title"],
+                    "emphasized_refs": ["block-growth-title"],
+                    "focus_ref": "block-growth-title",
+                    "transition_intent": "final",
+                },
+                {
+                    "id": "state-growth-restored",
+                    "visible_refs": ["block-growth-title", "block-growth-chart"],
+                    "emphasized_refs": ["block-growth-chart"],
+                    "focus_ref": "block-growth-chart",
+                    "transition_intent": "final",
+                },
+            ]
+        )
+        self.ir["pages"][1]["reading_final_state_ref"] = "state-growth-restored"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            with self.assertRaises(COMPILER.CompileError):
+                COMPILER.compile_ir(self.ir, root, root / "build")
+
+    def test_project_theme_requires_the_exact_validated_bundle(self) -> None:
+        self.ir["build_binding"]["theme"] = {
+            "kind": "project_theme",
+            "ref": "project-example",
+            "version": "1.0",
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            with self.assertRaisesRegex(COMPILER.CompileError, "--project-theme-dir"):
+                COMPILER.compile_ir(self.ir, root, root / "build")
+
+    def test_reference_reconstruction_project_theme_compiles_without_enterprise_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            theme_dir = PROJECT_THEME_COMPILER.compile_theme(
+                FIXTURES / "reference-theme-handoff.json", root / "theme"
+            )
+            theme_manifest = json.loads(
+                (theme_dir / "theme.json").read_text(encoding="utf-8")
+            )
+            self.ir["build_binding"]["theme"] = {
+                "kind": "project_theme",
+                "ref": theme_manifest["id"],
+                "version": theme_manifest["schema_version"],
+            }
+            manifest = COMPILER.compile_ir(
+                self.ir,
+                root,
+                root / "build",
+                project_theme_dir=theme_dir,
+            )
+            rendered = (root / "build" / "index.html").read_text(encoding="utf-8")
+            self.assertEqual(manifest["theme"]["reference_mode"], "reconstruct")
+            self.assertNotIn("enterprise_shell", manifest)
+            self.assertEqual(rendered.count('class="slide ri-page'), 7)
+            self.assertIn('data-theme-kind="project"', rendered)
+
+    def test_corporate_fidelity_routes_arbitrary_pages_without_mutating_fixed_shells(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            theme_dir = PROJECT_THEME_COMPILER.compile_theme(
+                FIXTURES / "corporate-family-handoff.json", root / "theme"
+            )
+            theme_manifest = json.loads(
+                (theme_dir / "theme.json").read_text(encoding="utf-8")
+            )
+            self.ir["build_binding"]["theme"] = {
+                "kind": "project_theme",
+                "ref": theme_manifest["id"],
+                "version": theme_manifest["schema_version"],
+            }
+            self.ir["build_binding"]["enterprise"] = {
+                "profile_ref": "enterprise-orbital",
+                "profile_version": 1,
+                "shell_policy": "fidelity",
+            }
+            output = root / "build"
+            manifest = COMPILER.compile_ir(
+                self.ir,
+                root,
+                output,
+                project_theme_dir=theme_dir,
+            )
+            rendered = (output / "index.html").read_text(encoding="utf-8")
+            output_sections = [
+                match.group(0)
+                for match in re.finditer(
+                    r"<section\b[^>]*>.*?</section>", rendered, flags=re.DOTALL
+                )
+                if 'data-ir-shell-role="' in match.group(0).split(">", 1)[0]
+            ]
+            roles = [
+                re.search(r'data-ir-shell-role="([^"]+)"', section).group(1)
+                for section in output_sections
+            ]
+            self.assertEqual(
+                roles,
+                ["cover", "data", "content", "content", "content", "data", "content"],
+            )
+            self.assertEqual(rendered.count(" ri-corporate-page"), 7)
+            self.assertEqual(rendered.count(" ri-corporate-page active"), 1)
+            source_sections = COMPILER._project_sections_by_role(
+                (theme_dir / "templates.html").read_text(encoding="utf-8")
+            )
+            for output_section, role in zip(output_sections, roles):
+                source_bounds = COMPILER._find_div_content_bounds(
+                    source_sections[role], "pt-corporate-fixed-shell"
+                )
+                output_bounds = COMPILER._find_div_content_bounds(
+                    output_section, "pt-corporate-fixed-shell"
+                )
+                source_fixed = source_sections[role][source_bounds[0] : source_bounds[3]]
+                output_fixed = output_section[output_bounds[0] : output_bounds[3]]
+                self.assertEqual(source_fixed, output_fixed)
+            self.assertEqual(manifest["theme"]["reference_mode"], "corporate_fidelity")
+            self.assertEqual(
+                manifest["enterprise_shell"]["protected_shell_policy"],
+                "fixed_descendants_preserved",
+            )
+            self.assertNotIn(
+                "project_theme_and_enterprise_shell_compilation_not_implemented",
+                manifest["open_boundaries"],
+            )
+
+    def test_corporate_fidelity_rejects_missing_enterprise_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            theme_dir = PROJECT_THEME_COMPILER.compile_theme(
+                FIXTURES / "corporate-family-handoff.json", root / "theme"
+            )
+            theme_manifest = json.loads(
+                (theme_dir / "theme.json").read_text(encoding="utf-8")
+            )
+            self.ir["build_binding"]["theme"] = {
+                "kind": "project_theme",
+                "ref": theme_manifest["id"],
+                "version": theme_manifest["schema_version"],
+            }
+            with self.assertRaisesRegex(COMPILER.CompileError, "requires build_binding.enterprise"):
+                COMPILER.compile_ir(
+                    self.ir,
+                    root,
+                    root / "build",
+                    project_theme_dir=theme_dir,
+                )
+
+    def test_cli_emits_build_and_machine_readable_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            ir_path = root / "report.ir.json"
+            ir_path.write_text(json.dumps(self.ir, ensure_ascii=False), encoding="utf-8")
+            output = root / "build"
+            result = subprocess.run(
+                [
+                    str(ROOT / ".venv" / "bin" / "python"),
+                    str(SCRIPT_DIR / "compile_report_ir.py"),
+                    str(ir_path),
+                    "--artifact-root",
+                    str(root),
+                    "--output-dir",
+                    str(output),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("REPORT_IR_COMPILED pages=7", result.stdout)
+            manifest = json.loads((output / "build-manifest.json").read_text(encoding="utf-8"))
+            self.assertTrue(manifest["validation"]["compiler_ready"])
+
+
+if __name__ == "__main__":
+    unittest.main()
