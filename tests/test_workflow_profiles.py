@@ -257,6 +257,15 @@ class WorkflowProfileContractTests(unittest.TestCase):
         self.assertIn("meaning-preserving local continuation", BRIEF)
         self.assertIn("Do not add a Profile-specific confirmation round", BRIEF)
         self.assertIn("Do not expose a Profile or IR questionnaire", BRIEF)
+        self.assertNotIn("作为正式 HTML 制作授权", BRIEF)
+        self.assertIn("明确确认只绑定此版本的完整设计简报与当前会话记录", BRIEF)
+        self.assertIn(
+            "允许进入独立的 current-file Production Authorization 检查", BRIEF
+        )
+        self.assertIn("设计简报确认不是正式 HTML 制作授权", BRIEF)
+        self.assertIn(
+            "只有该检查允许 `formal-html` 后，才能开始正式制作", BRIEF
+        )
 
     def test_existing_entry_handoff_brief_and_authorization_gates_are_preserved(self) -> None:
         entry_routes = SKILL.split("## Entry Routes", 1)[1].split(

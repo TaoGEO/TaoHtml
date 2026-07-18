@@ -88,7 +88,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 数据修正及原因：...
 - 其他会影响成品的判断：...
 
-请确认或修正这份当前设计简报；明确确认将绑定此版本与当前会话记录，并作为正式 HTML 制作授权。
+请确认或修正这份当前完整设计简报；明确确认只绑定此版本的完整设计简报与当前会话记录，并允许进入独立的 current-file Production Authorization 检查。设计简报确认不是正式 HTML 制作授权；只有该检查允许 `formal-html` 后，才能开始正式制作。
 ```
 
 ## Adaptation Rules
