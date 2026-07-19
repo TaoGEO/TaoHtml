@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import base64
 import copy
 import hashlib
+import io
 import importlib.util
 import json
 import re
@@ -11,8 +13,9 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 
 from tests.test_report_ir_v1 import bound_ir, valid_ir
 
@@ -47,6 +50,51 @@ HTML_QA = load_script("check_html_deck")
 
 def sha256(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def assert_fixed_asset_visible(
+    test: unittest.TestCase,
+    locator: Any,
+    painted_page: Image.Image,
+    *,
+    page_index: int,
+) -> None:
+    """Compare the painted page crop with the locked asset, independent of brand colors."""
+    box = locator.bounding_box()
+    test.assertIsNotNone(box)
+    assert box is not None
+    actual = painted_page.crop(
+        (
+            round(box["x"]),
+            round(box["y"]),
+            round(box["x"] + box["width"]),
+            round(box["y"] + box["height"]),
+        )
+    ).convert("RGB")
+    source = locator.get_attribute("src")
+    test.assertIsNotNone(source)
+    assert source is not None
+    test.assertTrue(source.startswith("data:image/png;base64,"), source[:32])
+    expected = Image.open(
+        io.BytesIO(base64.b64decode(source.split(",", 1)[1]))
+    ).convert("RGB")
+    expected = expected.resize(actual.size, Image.Resampling.BILINEAR)
+    difference = ImageChops.difference(actual, expected)
+    mean_error = sum(ImageStat.Stat(difference).mean) / 3
+    mismatch_ratio = sum(
+        1 for pixel in difference.get_flattened_data() if max(pixel) > 32
+    ) / (actual.width * actual.height)
+    asset_id = locator.get_attribute("data-asset-id")
+    test.assertLess(
+        mean_error,
+        12,
+        f"page {page_index + 1} locked asset {asset_id} is visually occluded",
+    )
+    test.assertLess(
+        mismatch_ratio,
+        0.15,
+        f"page {page_index + 1} locked asset {asset_id} does not match its crop",
+    )
 
 
 class ReportIrCompilerTests(unittest.TestCase):
@@ -993,7 +1041,6 @@ class ReportIrCompilerTests(unittest.TestCase):
                 browser_page.goto(
                     (output / "index.html").resolve().as_uri(), wait_until="load"
                 )
-                browser_page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
                 expected_assets = {
                     0: ["cover-left-composition", "cover-top-rule"],
                     1: ["shared-header", "shared-footer"],
@@ -1002,11 +1049,51 @@ class ReportIrCompilerTests(unittest.TestCase):
                         "section-header",
                         "shared-footer",
                     ],
+                    3: ["shared-header", "shared-footer"],
+                    4: ["shared-header", "shared-footer"],
+                    5: ["shared-header", "shared-footer"],
+                    6: ["shared-header", "shared-footer"],
                 }
                 for page_index, expected in expected_assets.items():
                     browser_page.evaluate(
                         "index => window.TaoHtmlRuntime.showPage(index)", page_index
                     )
+                    active_page = browser_page.locator(".slide.active")
+                    self.assertEqual(
+                        active_page.get_attribute("data-ir-shell-role"),
+                        roles[page_index],
+                    )
+                    self.assertEqual(
+                        active_page.get_attribute("data-ir-form"),
+                        self.ir["pages"][page_index]["form"],
+                    )
+                    layer_contract = active_page.evaluate(
+                        """page => {
+                          const shell = page.querySelector('.pt-corporate-fixed-shell');
+                          const editable = page.querySelector('.pt-corporate-editable');
+                          const editableBox = editable.getBoundingClientRect();
+                          const overlaps = [...shell.querySelectorAll(
+                            '.pt-corporate-fixed-region'
+                          )].filter(item => {
+                            const box = item.getBoundingClientRect();
+                            return box.left < editableBox.right &&
+                              box.right > editableBox.left &&
+                              box.top < editableBox.bottom &&
+                              box.bottom > editableBox.top;
+                          }).map(item => item.dataset.assetId);
+                          return {
+                            isolation: getComputedStyle(page).isolation,
+                            shellZ: Number(getComputedStyle(shell).zIndex),
+                            editableZ: Number(getComputedStyle(editable).zIndex),
+                            overlaps,
+                          };
+                        }"""
+                    )
+                    self.assertEqual(layer_contract["isolation"], "isolate")
+                    self.assertGreater(
+                        layer_contract["shellZ"], layer_contract["editableZ"]
+                    )
+                    self.assertEqual(layer_contract["overlaps"], [])
                     self.assertEqual(
                         browser_page.locator(
                             ".slide.active .ri-page-number"
@@ -1056,6 +1143,17 @@ class ReportIrCompilerTests(unittest.TestCase):
                     screenshot = root / f"corporate-page-{page_index + 1}-1366x768.png"
                     browser_page.screenshot(path=str(screenshot))
                     screenshots.append(screenshot)
+                    with Image.open(screenshot) as captured:
+                        painted_page = captured.convert("RGB")
+                    for asset_locator in browser_page.locator(
+                        ".slide.active .pt-corporate-fixed-region"
+                    ).all():
+                        assert_fixed_asset_visible(
+                            self,
+                            asset_locator,
+                            painted_page,
+                            page_index=page_index,
+                        )
                 browser.close()
             for screenshot in screenshots:
                 with Image.open(screenshot) as image:

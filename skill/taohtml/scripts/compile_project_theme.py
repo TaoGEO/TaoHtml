@@ -699,8 +699,8 @@ def _css(
     corporate_css = ""
     if corporate_shell is not None:
         corporate_css = f"""
-{selector} .slide.pt-corporate-page {{ position:absolute; overflow:hidden; padding:0; background:var(--pt-canvas); }}
-{selector} .pt-corporate-fixed-shell {{ position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none; animation:none !important; transition:none !important; transform:none !important; }}
+{selector} .slide.pt-corporate-page {{ position:absolute; isolation:isolate; overflow:hidden; padding:0; background:var(--pt-canvas); }}
+{selector} .pt-corporate-fixed-shell {{ position:absolute; inset:0; z-index:3; overflow:hidden; pointer-events:none; animation:none !important; transition:none !important; transform:none !important; }}
 {selector} .pt-corporate-fixed-region {{ position:absolute; z-index:1; display:block; object-fit:fill; pointer-events:none; animation:none !important; transition:none !important; transform:none !important; }}
 {selector} .pt-corporate-editable {{ position:absolute; z-index:2; display:grid; align-content:center; overflow:hidden; padding:18px; }}
 {selector} .pt-corporate-editable > .pt-cover-layout, {selector} .pt-corporate-editable > .pt-page-layout {{ min-height:0; height:100%; }}

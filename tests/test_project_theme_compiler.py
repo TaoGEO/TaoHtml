@@ -1000,6 +1000,18 @@ class CorporateTemplateFamilyThemeTests(unittest.TestCase):
                 '[data-shell-role="cover"] .pt-cover-art { display:none !important; }',
                 css,
             )
+            self.assertIn(
+                ".slide.pt-corporate-page { position:absolute; isolation:isolate;",
+                css,
+            )
+            self.assertIn(
+                ".pt-corporate-fixed-shell { position:absolute; inset:0; z-index:3;",
+                css,
+            )
+            self.assertIn(
+                ".pt-corporate-editable { position:absolute; z-index:2;",
+                css,
+            )
             self.assertNotIn('class="pt-cover-art"', templates)
             self.assertNotIn("corporate_shell", manifest)
             self.assertEqual(len(family["replaceable_regions"]), 1)

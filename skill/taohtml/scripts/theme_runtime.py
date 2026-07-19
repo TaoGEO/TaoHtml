@@ -638,6 +638,7 @@ def _is_protected_css_property(name: str) -> bool:
         "opacity",
         "zoom",
         "z-index",
+        "isolation",
         "pointer-events",
         "object-fit",
         "box-sizing",
@@ -678,6 +679,7 @@ def _validate_fixed_css(css: str, theme_id: str) -> None:
     expected_rules = {
         f"{scope} .slide.pt-corporate-page": {
             "position": ("absolute", False),
+            "isolation": ("isolate", False),
             "overflow": ("hidden", False),
             "padding": ("0", False),
             "background": ("var(--pt-canvas)", False),
@@ -685,7 +687,7 @@ def _validate_fixed_css(css: str, theme_id: str) -> None:
         f"{scope} .{CORPORATE_FIXED_SHELL_CLASS}": {
             "position": ("absolute", False),
             "inset": ("0", False),
-            "z-index": ("1", False),
+            "z-index": ("3", False),
             "overflow": ("hidden", False),
             "pointer-events": ("none", False),
             "animation": ("none", True),
