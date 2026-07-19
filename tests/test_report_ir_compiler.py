@@ -12,6 +12,8 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
+from PIL import Image
+
 from tests.test_report_ir_v1 import bound_ir, valid_ir
 
 
@@ -197,6 +199,67 @@ class ReportIrCompilerTests(unittest.TestCase):
             self.assertIn(
                 'data-ir-edit-key="block:block-growth-chart:caption"', rendered
             )
+
+    def test_page_task_is_internal_and_explicit_subtitle_is_visible_at_1366(self) -> None:
+        from playwright.sync_api import sync_playwright
+
+        candidate = copy.deepcopy(self.ir)
+        candidate["pages"][0]["subtitle_ref"] = "block-cover-lede"
+        task_values = [page["task"] for page in candidate["pages"]]
+        subtitle = next(
+            block["text"]
+            for block in candidate["blocks"]
+            if block["id"] == "block-cover-lede"
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            output = root / "build"
+            COMPILER.compile_ir(candidate, root, output)
+            rendered = (output / "index.html").read_text(encoding="utf-8")
+            source_map = json.loads(
+                (output / "source-map.json").read_text(encoding="utf-8")
+            )
+            self.assertNotIn('class="ri-task"', rendered)
+            self.assertNotIn('data-ir-edit-entity="page"', rendered)
+            for task in task_values:
+                self.assertNotIn(task, rendered)
+            self.assertEqual(rendered.count(subtitle), 1)
+            self.assertIn('class="ri-subtitle', rendered)
+            self.assertEqual(
+                source_map["pages"]["page-cover"]["subtitle_ref"],
+                "block-cover-lede",
+            )
+
+            screenshot = root / "page-cover-1366x768.png"
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(args=["--disable-gpu"])
+                page = browser.new_page(viewport={"width": 1366, "height": 768})
+                page.goto((output / "index.html").resolve().as_uri(), wait_until="load")
+                page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+                self.assertEqual(page.locator(".slide.active .ri-task").count(), 0)
+                self.assertEqual(page.get_by_text(task_values[0], exact=True).count(), 0)
+                self.assertEqual(page.locator(".slide.active .ri-subtitle").count(), 1)
+                bounds = page.locator(".slide.active .ri-subtitle").evaluate(
+                    """subtitle => {
+                      const box = subtitle.getBoundingClientRect();
+                      const slide = subtitle.closest('.slide').getBoundingClientRect();
+                      return {
+                        inside: box.left >= slide.left && box.top >= slide.top &&
+                          box.right <= slide.right && box.bottom <= slide.bottom,
+                        width: box.width,
+                        height: box.height,
+                      };
+                    }"""
+                )
+                self.assertTrue(bounds["inside"], bounds)
+                self.assertGreater(bounds["width"], 0)
+                self.assertGreater(bounds["height"], 0)
+                self.assertEqual(page.evaluate(HTML_QA.OVERFLOW_CHECK), [])
+                page.screenshot(path=str(screenshot))
+                browser.close()
+            with Image.open(screenshot) as image:
+                self.assertEqual(image.size, (1366, 768))
 
     def test_generalized_density_cases_select_readable_item_layouts(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -527,7 +590,6 @@ class ReportIrCompilerTests(unittest.TestCase):
                             pagePadding: getComputedStyle(slide).padding,
                             kicker: pick('.ri-kicker'),
                             title: pick('.ri-title'),
-                            task: pick('.ri-task'),
                           };
                         }"""
                     )
@@ -548,8 +610,6 @@ class ReportIrCompilerTests(unittest.TestCase):
                     )
                     self.assertEqual(current["title"]["lineHeight"], expected_line_height)
                     self.assertEqual(current["title"]["marginTop"], "0px")
-                    self.assertEqual(current["task"]["fontSize"], "19.52px")
-                    self.assertEqual(current["task"]["marginTop"], "16px")
 
     def test_cjk_single_two_and_three_line_titles_are_safe_across_themes_and_viewports(
         self,
@@ -625,7 +685,6 @@ class ReportIrCompilerTests(unittest.TestCase):
                                       window.TaoHtmlRuntime.showPage(index);
                                       const slide = document.querySelectorAll('.slide')[index];
                                       const title = slide.querySelector('.ri-title');
-                                      const task = slide.querySelector('.ri-task');
                                       const content = slide.querySelector('.ri-content');
                                       const titleRange = document.createRange();
                                       titleRange.selectNodeContents(title);
@@ -635,10 +694,6 @@ class ReportIrCompilerTests(unittest.TestCase):
                                           top: rect.top,
                                           bottom: rect.bottom,
                                         }));
-                                      const taskRange = document.createRange();
-                                      taskRange.selectNodeContents(task);
-                                      const taskRects = [...taskRange.getClientRects()]
-                                        .filter(rect => rect.width > 0 && rect.height > 0);
                                       const slideRect = slide.getBoundingClientRect();
                                       const titleRect = title.getBoundingClientRect();
                                       const contentRect = content.getBoundingClientRect();
@@ -660,8 +715,8 @@ class ReportIrCompilerTests(unittest.TestCase):
                                         lines: titleRects.length,
                                         lineGaps: titleRects.slice(1).map((rect, line) =>
                                           rect.top - titleRects[line].bottom),
-                                        titleTaskGap: taskRects[0].top - titleRects.at(-1).bottom,
-                                        taskContentGap: contentRect.top - taskRects.at(-1).bottom,
+                                        titleContentGap:
+                                          contentRect.top - titleRects.at(-1).bottom,
                                         metricLineGaps,
                                         titleInside: inside(titleRect),
                                         contentInside: inside(contentRect),
@@ -684,8 +739,7 @@ class ReportIrCompilerTests(unittest.TestCase):
                                 self.assertTrue(
                                     all(gap >= 1 for gap in item["metricLineGaps"]), item
                                 )
-                                self.assertGreaterEqual(item["titleTaskGap"], 1, item)
-                                self.assertGreaterEqual(item["taskContentGap"], 1, item)
+                                self.assertGreaterEqual(item["titleContentGap"], 1, item)
                                 self.assertTrue(item["titleInside"], item)
                                 self.assertTrue(item["contentInside"], item)
                             page.close()
@@ -838,6 +892,8 @@ class ReportIrCompilerTests(unittest.TestCase):
             self.assertIn('data-theme-kind="project"', rendered)
 
     def test_corporate_fidelity_routes_arbitrary_pages_without_mutating_fixed_shells(self) -> None:
+        from playwright.sync_api import sync_playwright
+
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             self._project(root)
@@ -857,6 +913,10 @@ class ReportIrCompilerTests(unittest.TestCase):
                 "profile_version": 1,
                 "shell_policy": "fidelity",
             }
+            self.ir["pages"][2]["form"] = "section"
+            self.ir["pages"][2]["visual_intent"]["composition_family"] = (
+                "section-standard"
+            )
             self.ir = bound_ir(
                 self.ir,
                 "brand-communication-editorial-publishing",
@@ -883,10 +943,16 @@ class ReportIrCompilerTests(unittest.TestCase):
             ]
             self.assertEqual(
                 roles,
-                ["cover", "data", "content", "content", "content", "data", "content"],
+                ["cover", "data", "section", "content", "content", "data", "content"],
             )
             self.assertEqual(rendered.count(" ri-corporate-page"), 7)
             self.assertEqual(rendered.count(" ri-corporate-page active"), 1)
+            self.assertNotIn('class="ri-task"', rendered)
+            for page in self.ir["pages"]:
+                self.assertNotIn(page["task"], rendered)
+            for output_section in output_sections:
+                self.assertEqual(output_section.count('class="ri-page-number"'), 0)
+            self.assertEqual(rendered.count('id="pageIndicator"'), 1)
             source_sections = COMPILER._project_sections_by_role(
                 (theme_dir / "templates.html").read_text(encoding="utf-8")
             )
@@ -917,6 +983,84 @@ class ReportIrCompilerTests(unittest.TestCase):
                 "project_theme_and_enterprise_shell_compilation_not_implemented",
                 manifest["open_boundaries"],
             )
+
+            screenshots: list[Path] = []
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(args=["--disable-gpu"])
+                browser_page = browser.new_page(
+                    viewport={"width": 1366, "height": 768}
+                )
+                browser_page.goto(
+                    (output / "index.html").resolve().as_uri(), wait_until="load"
+                )
+                browser_page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+                expected_assets = {
+                    0: ["cover-left-composition", "cover-top-rule"],
+                    1: ["shared-header", "shared-footer"],
+                    2: [
+                        "section-left-composition",
+                        "section-header",
+                        "shared-footer",
+                    ],
+                }
+                for page_index, expected in expected_assets.items():
+                    browser_page.evaluate(
+                        "index => window.TaoHtmlRuntime.showPage(index)", page_index
+                    )
+                    self.assertEqual(
+                        browser_page.locator(
+                            ".slide.active .ri-page-number"
+                        ).count(),
+                        0,
+                    )
+                    self.assertEqual(
+                        browser_page.locator("#pageIndicator").inner_text(),
+                        f"{page_index + 1:02d} / 07",
+                    )
+                    self.assertEqual(
+                        browser_page.get_by_text(
+                            f"{page_index + 1:02d} / 07", exact=True
+                        ).count(),
+                        1,
+                    )
+                    assets = browser_page.locator(
+                        ".slide.active .pt-corporate-fixed-region"
+                    ).evaluate_all(
+                        """items => items.map(item => {
+                          const box = item.getBoundingClientRect();
+                          const slide = item.closest('.slide').getBoundingClientRect();
+                          return {
+                            id: item.dataset.assetId,
+                            loaded: item.complete && item.naturalWidth > 0,
+                            inside: box.left >= slide.left - 1 &&
+                              box.top >= slide.top - 1 &&
+                              box.right <= slide.right + 1 &&
+                              box.bottom <= slide.bottom + 1,
+                            width: box.width,
+                            height: box.height,
+                          };
+                        })"""
+                    )
+                    self.assertEqual([asset["id"] for asset in assets], expected)
+                    for asset in assets:
+                        self.assertTrue(asset["loaded"], asset)
+                        self.assertTrue(asset["inside"], asset)
+                        self.assertGreater(asset["width"], 0)
+                        self.assertGreater(asset["height"], 0)
+                    self.assertEqual(
+                        browser_page.evaluate(HTML_QA.OVERFLOW_CHECK), []
+                    )
+                    collisions = browser_page.evaluate(HTML_QA.TEXT_COLLISION_CHECK)
+                    self.assertEqual(collisions["collisions"], [])
+                    self.assertEqual(collisions["intra_element_collisions"], [])
+                    screenshot = root / f"corporate-page-{page_index + 1}-1366x768.png"
+                    browser_page.screenshot(path=str(screenshot))
+                    screenshots.append(screenshot)
+                browser.close()
+            for screenshot in screenshots:
+                with Image.open(screenshot) as image:
+                    self.assertEqual(image.size, (1366, 768))
+                    self.assertNotEqual(image.getbbox(), None)
 
     def test_corporate_fidelity_rejects_missing_enterprise_binding(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

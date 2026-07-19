@@ -56,7 +56,7 @@ New one-image handoffs use schema v2.0:
 }
 ```
 
-For VI schema v1.3, use handoff v2.1 and replace the singular fields with ordered arrays:
+For VI schema v1.3/v1.4, use handoff v2.1 and replace the singular fields with ordered arrays:
 
 ```json
 {
@@ -77,7 +77,7 @@ For VI schema v1.3, use handoff v2.1 and replace the singular fields with ordere
 }
 ```
 
-Use `reading` or `presentation` for `target_mode`. Use a lowercase hyphenated slug for `project.id`. Keep input paths relative to the handoff file and inside the same handoff directory. Array order must exactly match `reference_pages[]`. Compute SHA-256 after the current VI JSON and all reference inputs are final. `confirmation_ref` identifies the current conversation confirmation while the hashes bind it to exact bytes; changing any bound file invalidates the handoff and requires a new confirmation. Legacy v1.1/v1.2 VI contracts require a single-reference handoff (new schema v2.0); VI v1.3 requires a family handoff (new schema v2.1).
+Use `reading` or `presentation` for `target_mode`. Use a lowercase hyphenated slug for `project.id`. Keep input paths relative to the handoff file and inside the same handoff directory. Array order must exactly match `reference_pages[]`. Compute SHA-256 after the current VI JSON and all reference inputs are final. `confirmation_ref` identifies the current conversation confirmation while the hashes bind it to exact bytes; changing any bound file invalidates the handoff and requires a new confirmation. Legacy v1.1/v1.2 VI contracts require a single-reference handoff (new schema v2.0); VI v1.3/v1.4 requires a family handoff (new schema v2.1).
 
 Do not record an approval timestamp, machine path, or volatile build metadata in the contract. The minimal contract stays portable and produces byte-identical theme assets from identical inputs.
 
@@ -135,7 +135,7 @@ project-theme/
 └── provenance.json
 ```
 
-- `theme.json` contains the project identity, `reference_mode`, executable tokens, normalized `executable_layout`, per-field `structure_sources`, generated page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary. Corporate v1.3 also records source roles/hashes/dimensions/canvas crops, shared-asset source and crop hashes, five shell variants, per-shell fixed/editable regions, extensions, limitations, `full_screenshot_background: false`, and `logo_redraw: false`.
+- `theme.json` contains the project identity, `reference_mode`, executable tokens, normalized `executable_layout`, per-field `structure_sources`, generated page roles, components, preserve/forbidden rules, target mode, input hashes, and explicit static-reference motion boundary. Corporate v1.3/v1.4 also records source roles/hashes/dimensions/canvas crops, shared-asset source and crop hashes, five shell variants, per-shell fixed/editable regions, extensions, limitations, `full_screenshot_background: false`, and `logo_redraw: false`. v1.4 additionally records every replaceable region, original source-crop/region hashes, cleaned crop hash, pixel bboxes, and sampled background RGBA.
 - `theme.css` applies palette, type hierarchy, spacing/grid, border language, image crop/treatment, cards, panels, labels, data treatment, cover, content, evidence/data, and closing-page structures selected from the executable layout grammar.
 - `templates.html` provides five reusable, grammar-selected DOM variants using the same placeholders and `fragment` / `data-step` syntax as the built-in systems. Corporate-family mode routes `cover`, `toc`, `section`, `content`, and `data` to the matching shell, embeds only that shell's fixed crops, and wraps report DOM in its confirmed editable region. It never embeds a complete source screenshot.
 - `provenance.json` records every VI item, eligibility, actual compiled state, concrete usage targets, every neutral fallback, the source/crop hashes, and the motion boundary.
@@ -177,14 +177,15 @@ Generated templates mark the relationship owner and its direct endpoints with `d
 
 ## Corporate Template-Family Shell Boundary
 
-For v1.3 `corporate_fidelity`, compile a role-routed shell family from the exact confirmed sources and regions:
+For v1.3/v1.4 `corporate_fidelity`, compile a role-routed shell family from the exact confirmed sources and regions:
 
 - Crop every `canvas_bbox` first, then crop each shared asset with floor(left/top) and ceil(right/bottom) pixel bounds in that canvas. Encode each crop as deterministic offline PNG and record source-image, source-page, source bbox/pixel bbox, crop dimensions, and crop SHA-256.
+- For each v1.4 replaceable region, verify it belongs to one declared shared asset, deterministically fill only the declared variable pixels from a sufficiently uniform sampled edge, and preserve both original and cleaned provenance. The loader decodes the compiled PNG and fails if any pixel in the declared region differs from the recorded fill. A missing declaration means no cleaning; the Compiler never searches for a page-number string or customer-specific coordinate.
 - Route every report page by `data-shell-role` to exactly one of `cover/toc/section/content/data`; verify `data-source-page-id` for observed shells and the empty mapping for extensions.
 - Place each shell's crop bytes at its exact normalized placement bbox. Mark fixed elements with locked-region id, asset id, source-page id, crop hash, and `data-fixed-motion="none"`.
 - Wrap report content in that shell's one `data-editable-region`. Report DOM, layout changes, and Runtime fragments must remain descendants of that wrapper and use only the shell's allowed role.
 - Apply `animation:none`, `transition:none`, and `transform:none` to every fixed shell and fixed crop. The loader parses actual HTML, decodes every `src` data URI, validates PNG MIME/decodability/dimensions, recomputes SHA-256, and requires exact equality between actual style/bbox and manifest placement. It also rejects role/source mapping drift, crop-count drift, editable-region drift, fixed-element fragment classes, or weakened fixed-motion CSS.
-- Never embed the complete screenshot in `templates.html` or CSS. Example body text, charts, and numbers in the screenshot are extraction exclusions, not reusable background material.
+- Never embed the complete screenshot in `templates.html` or CSS. Example body text, charts, and numbers in the screenshot are extraction exclusions, not reusable background material. Corporate Report IR output removes the page-shell's derived page-number field and uses the Runtime's single global current/total indicator. When a v1.4 cleaned `runtime_page_number` region exists, this leaves one visible page number; an older crop with undeclared page-number pixels must be migrated and reconfirmed before making that claim.
 
 The shell family promises screenshot-visible pixels and confirmed positions only. It does not reconstruct a source master, vectors, fonts, hidden page types, or movement. Roles absent from all supplied screenshots remain `extension/proposed` even after VI confirmation; confirmation accepts the proposal, not a false claim that it was observed.
 

@@ -230,10 +230,10 @@ def load_handoff(
     ]
 
     contract = render_reference_vi.load_contract(vi_path)
-    if contract.get("schema_version") == render_reference_vi.SCHEMA_VERSION:
+    if render_reference_vi.is_family_contract(contract):
         if not is_family_handoff:
             raise ValueError(
-                "VI schema 1.3 requires a family handoff schema with reference_images."
+                "VI schema 1.3/1.4 requires a family handoff schema with reference_images."
             )
     elif is_family_handoff:
         raise ValueError(
@@ -838,7 +838,7 @@ def _corporate_shell_contract(
 ) -> dict[str, Any] | None:
     if (
         contract.get("reference_mode") != "corporate_fidelity"
-        or contract.get("schema_version") == render_reference_vi.SCHEMA_VERSION
+        or render_reference_vi.is_family_contract(contract)
     ):
         return None
     editable = contract["editable_regions"][0]
@@ -863,7 +863,7 @@ def _corporate_shell_contract(
 def _corporate_family_contract(
     contract: dict[str, Any], extracted_assets: list[dict[str, object]]
 ) -> dict[str, Any] | None:
-    if contract.get("schema_version") != render_reference_vi.SCHEMA_VERSION:
+    if not render_reference_vi.is_family_contract(contract):
         return None
     assets = {str(asset["id"]): asset for asset in extracted_assets}
     shells: dict[str, dict[str, Any]] = {}
@@ -878,6 +878,8 @@ def _corporate_family_contract(
                 "source_image_sha256": asset["source_image_sha256"],
                 "source_bbox": asset["source_bbox"],
                 "source_pixel_bbox": asset["source_pixel_bbox"],
+                "source_crop_sha256": asset["source_crop_sha256"],
+                "replaceable_regions": asset["replaceable_regions"],
                 "crop_sha256": asset["sha256"],
                 "crop_size": [asset["width"], asset["height"]],
             }
@@ -909,6 +911,11 @@ def _corporate_family_contract(
     return {
         "reference_pages": contract["reference_pages"],
         "shared_assets": extracted_assets,
+        "replaceable_regions": [
+            region
+            for asset in extracted_assets
+            for region in asset["replaceable_regions"]
+        ],
         "shared_brand_grammar": contract["shared_brand_grammar"],
         "shells": shells,
         "extension_pages": contract["extension_pages"],
@@ -1209,7 +1216,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
     )
     theme_id = f"project-{request['project']['id']}"
     reference_mode = contract.get("reference_mode", "reconstruct")
-    is_family = contract.get("schema_version") == render_reference_vi.SCHEMA_VERSION
+    is_family = render_reference_vi.is_family_contract(contract)
     extracted_regions = (
         []
         if is_family
@@ -1440,6 +1447,8 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
                     "source_image_sha256": asset["source_image_sha256"],
                     "source_bbox": asset["source_bbox"],
                     "source_pixel_bbox": asset["source_pixel_bbox"],
+                    "source_crop_sha256": asset["source_crop_sha256"],
+                    "replaceable_regions": asset["replaceable_regions"],
                     "status": asset["status"],
                     "basis": asset["basis"],
                     "extraction": asset["extraction"],
@@ -1448,6 +1457,7 @@ def compile_theme(request_path: Path, output_theme: Path) -> Path:
                 }
                 for asset in extracted_assets
             ],
+            "replaceable_regions": corporate_family["replaceable_regions"],
             "shell_variants": [
                 {
                     "role": shell["role"],

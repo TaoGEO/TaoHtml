@@ -72,7 +72,7 @@
   letter-spacing: var(--ri-title-letter-spacing);
 }
 
-.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-task {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-subtitle {
   max-width: 1020px;
   margin: clamp(10px, 1.1vw, 16px) 0 0;
   color: var(--ri-muted);
@@ -96,7 +96,7 @@
   margin-bottom: clamp(8px, .9vw, 13px);
 }
 
-.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-density-compact .ri-task {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-density-compact .ri-subtitle {
   margin-top: clamp(8px, .85vw, 12px);
   font-size: clamp(15px, 1.05vw, 17px);
 }
@@ -361,7 +361,7 @@
   line-height: var(--ri-title-line-height);
 }
 
-.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-corporate-page .ri-task {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-corporate-page .ri-subtitle {
   font-size: clamp(12px, 1vw, 16px);
 }
 

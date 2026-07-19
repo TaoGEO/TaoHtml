@@ -580,7 +580,7 @@ class CorporateTemplateFamilyVIContractTests(unittest.TestCase):
         self.contract = RENDERER.validate_contract(self.raw)
 
     def test_family_contract_binds_three_observed_roles_and_two_extensions(self) -> None:
-        self.assertEqual(self.contract["schema_version"], "1.3")
+        self.assertEqual(self.contract["schema_version"], "1.4")
         self.assertEqual(
             [page["role"] for page in self.contract["reference_pages"]],
             ["cover", "toc", "section"],
@@ -598,10 +598,28 @@ class CorporateTemplateFamilyVIContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unique role"):
             RENDERER.validate_contract(drift)
 
+    def test_v13_family_contract_defaults_to_no_replaceable_regions(self) -> None:
+        legacy = copy.deepcopy(self.raw)
+        legacy["schema_version"] = "1.3"
+        legacy.pop("replaceable_regions")
+        normalized = RENDERER.validate_contract(legacy)
+        self.assertEqual(normalized["replaceable_regions"], [])
+        assets = RENDERER.extract_corporate_assets(
+            normalized, FAMILY_SOURCE_PATHS
+        )
+        self.assertTrue(all(asset["replaceable_regions"] == [] for asset in assets))
+
+    def test_replaceable_region_must_be_inside_one_same_page_shared_asset(self) -> None:
+        invalid = copy.deepcopy(self.raw)
+        invalid["replaceable_regions"][0]["source_bbox"] = [0.85, 0.85, 0.1, 0.05]
+        with self.assertRaisesRegex(ValueError, "contained by exactly one shared asset"):
+            RENDERER.validate_contract(invalid)
+
     def test_single_image_family_remains_valid_with_four_explicit_extensions(self) -> None:
         single = copy.deepcopy(self.raw)
         single["reference_pages"] = single["reference_pages"][:1]
         single["shared_assets"] = single["shared_assets"][:2]
+        single["replaceable_regions"] = []
         for shell in single["shell_variants"][1:]:
             role = shell["role"]
             shell["status"] = "extension"
@@ -678,6 +696,31 @@ class CorporateTemplateFamilyVIContractTests(unittest.TestCase):
             payload = base64.b64decode(item["data_uri"].split(",", 1)[1])
             self.assertEqual(hashlib.sha256(payload).hexdigest(), item["sha256"])
 
+        footer = by_id["shared-footer"]
+        self.assertNotEqual(footer["source_crop_sha256"], footer["sha256"])
+        self.assertEqual(len(footer["replaceable_regions"]), 1)
+        replacement = footer["replaceable_regions"][0]
+        self.assertEqual(replacement["replacement"], "runtime_page_number")
+        payload = base64.b64decode(footer["data_uri"].split(",", 1)[1])
+        with Image.open(FAMILY_SOURCE_PATHS[1]) as source, Image.open(
+            io.BytesIO(payload)
+        ) as cleaned:
+            original = source.convert("RGBA").crop(tuple(footer["source_pixel_bbox"]))
+            cleaned_rgba = cleaned.convert("RGBA")
+            region = tuple(replacement["crop_pixel_bbox"])
+            self.assertNotEqual(
+                original.crop(region).tobytes(),
+                cleaned_rgba.crop(region).tobytes(),
+            )
+            expected = original.copy()
+            expected.paste(tuple(replacement["replacement_background_rgba"]), region)
+            self.assertEqual(cleaned_rgba.tobytes(), expected.tobytes())
+            self.assertEqual(
+                cleaned_rgba.crop(region).tobytes(),
+                bytes(replacement["replacement_background_rgba"])
+                * (cleaned_rgba.crop(region).width * cleaned_rgba.crop(region).height),
+            )
+
     def test_unified_board_shows_sources_observed_shells_extensions_and_limits(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             html_path, png_path = RENDERER.render_board(
@@ -690,6 +733,10 @@ class CorporateTemplateFamilyVIContractTests(unittest.TestCase):
             self.assertEqual(document.count('class="reference-page-card"'), 3)
             self.assertEqual(document.count('class="crop-preview"'), 6)
             self.assertEqual(document.count('class="mini-page-card'), 5)
+            self.assertIn(
+                'data-replaceable-region="reference-page-number"', document
+            )
+            self.assertIn("RUNTIME", visible_text(document))
             for marker in ("source-cover", "source-toc", "source-section", "content", "data", "未知项 / 限制"):
                 self.assertIn(marker, visible_text(document))
 

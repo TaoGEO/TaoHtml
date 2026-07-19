@@ -475,6 +475,7 @@
         "chapter_ref": {"$ref": "#/$defs/id"},
         "narrative_unit_refs": {"$ref": "#/$defs/id_list"},
         "task": {"$ref": "#/$defs/long_text"},
+        "subtitle_ref": {"$ref": "#/$defs/id"},
         "role": {"$ref": "#/$defs/id"},
         "form": {"$ref": "#/$defs/id"},
         "block_refs": {

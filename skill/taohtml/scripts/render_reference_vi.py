@@ -13,6 +13,7 @@ import math
 import re
 import sys
 import xml.etree.ElementTree as ET
+from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -30,7 +31,9 @@ from project_theme_layout import (
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = SKILL_ROOT / "assets" / "reference-vi-board" / "template.html"
-SCHEMA_VERSION = "1.3"
+SCHEMA_VERSION = "1.4"
+LEGACY_FAMILY_SCHEMA_VERSION = "1.3"
+FAMILY_SCHEMA_VERSIONS = {LEGACY_FAMILY_SCHEMA_VERSION, SCHEMA_VERSION}
 SINGLE_REFERENCE_SCHEMA_VERSION = "1.2"
 LEGACY_SCHEMA_VERSION = "1.1"
 BOARD_SIZE = (3200, 2400)
@@ -70,7 +73,9 @@ FAMILY_TOP_LEVEL_KEYS = BASE_TOP_LEVEL_KEYS | {
     "shared_brand_grammar",
     "extension_pages",
     "limitations",
+    "replaceable_regions",
 }
+LEGACY_FAMILY_TOP_LEVEL_KEYS = FAMILY_TOP_LEVEL_KEYS - {"replaceable_regions"}
 REFERENCE_MODES = {"reconstruct", "corporate_fidelity"}
 LOCKED_REGION_FIELDS = {"id", "type", "bbox", "status", "basis", "extraction"}
 EDITABLE_REGION_FIELDS = {"id", "bbox", "allowed_content", "basis"}
@@ -93,6 +98,15 @@ SHARED_ASSET_FIELDS = {
     "status",
     "basis",
     "extraction",
+}
+REPLACEABLE_REGION_FIELDS = {
+    "id",
+    "source_page_id",
+    "source_bbox",
+    "replacement",
+    "replacement_strategy",
+    "status",
+    "basis",
 }
 SHELL_VARIANT_FIELDS = {
     "role",
@@ -129,6 +143,10 @@ REGION_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 CORPORATE_MIN_SOURCE_SIZE = (960, 540)
 CORPORATE_MIN_CROP_SIZE = (24, 24)
+REPLACEABLE_REGION_REPLACEMENTS = {"runtime_page_number"}
+REPLACEABLE_REGION_STRATEGIES = {"sampled_edge_fill"}
+REPLACEMENT_EDGE_SAMPLE_SIZE = 2
+REPLACEMENT_EDGE_DOMINANCE_MINIMUM = 0.8
 CANVAS_ASPECT_RATIO = 16 / 9
 CANVAS_ASPECT_RELATIVE_TOLERANCE = 0.0025
 SECTION_LIMITS = {
@@ -381,6 +399,22 @@ def _bbox_overlap(first: list[float], second: list[float]) -> bool:
     return min(ax + aw, bx + bw) > max(ax, bx) and min(ay + ah, by + bh) > max(ay, by)
 
 
+def _bbox_contains(outer: list[float], inner: list[float]) -> bool:
+    ox, oy, ow, oh = outer
+    ix, iy, iw, ih = inner
+    tolerance = 1e-9
+    return (
+        ix >= ox - tolerance
+        and iy >= oy - tolerance
+        and ix + iw <= ox + ow + tolerance
+        and iy + ih <= oy + oh + tolerance
+    )
+
+
+def is_family_contract(contract: dict[str, Any]) -> bool:
+    return contract.get("schema_version") in FAMILY_SCHEMA_VERSIONS
+
+
 def _validate_source_image(raw: object) -> dict[str, object]:
     source = _require_exact_keys(raw, SOURCE_IMAGE_FIELDS, "source_image")
     digest = source["sha256"]
@@ -598,6 +632,82 @@ def _validate_shared_assets(
     return normalized
 
 
+def _validate_replaceable_regions(
+    raw: object,
+    reference_pages: list[dict[str, object]],
+    shared_assets: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    if not isinstance(raw, list) or len(raw) > 12:
+        raise ValueError("replaceable_regions must contain at most 12 variable source regions.")
+    page_ids = {str(page["id"]) for page in reference_pages}
+    ids: set[str] = set()
+    normalized: list[dict[str, object]] = []
+    for index, value in enumerate(raw):
+        path = f"replaceable_regions[{index}]"
+        item = _require_exact_keys(value, REPLACEABLE_REGION_FIELDS, path)
+        region_id = _require_text(item["id"], "id", path)
+        if not REGION_ID.fullmatch(region_id) or region_id in ids:
+            raise ValueError(f"{path}.id must be a unique lowercase hyphenated id.")
+        ids.add(region_id)
+        source_page_id = _require_text(
+            item["source_page_id"], "source_page_id", path
+        )
+        if source_page_id not in page_ids:
+            raise ValueError(f"{path}.source_page_id must reference reference_pages[].id.")
+        replacement = _require_text(item["replacement"], "replacement", path)
+        if replacement not in REPLACEABLE_REGION_REPLACEMENTS:
+            raise ValueError(
+                f"{path}.replacement must be one of: "
+                f"{', '.join(sorted(REPLACEABLE_REGION_REPLACEMENTS))}."
+            )
+        strategy = _require_text(
+            item["replacement_strategy"], "replacement_strategy", path
+        )
+        if strategy not in REPLACEABLE_REGION_STRATEGIES:
+            raise ValueError(
+                f"{path}.replacement_strategy must be one of: "
+                f"{', '.join(sorted(REPLACEABLE_REGION_STRATEGIES))}."
+            )
+        status = _require_text(item["status"], "status", path)
+        if status != "observed":
+            raise ValueError(
+                f"{path}.status must be observed because it marks visible variable source pixels."
+            )
+        source_bbox = _validate_bbox(item["source_bbox"], f"{path}.source_bbox")
+        containers = [
+            asset
+            for asset in shared_assets
+            if asset["source_page_id"] == source_page_id
+            and _bbox_contains(asset["source_bbox"], source_bbox)
+        ]
+        if len(containers) != 1:
+            raise ValueError(
+                f"{path}.source_bbox must be contained by exactly one shared asset "
+                "from the same source page."
+            )
+        normalized.append(
+            {
+                "id": region_id,
+                "source_page_id": source_page_id,
+                "source_bbox": source_bbox,
+                "replacement": replacement,
+                "replacement_strategy": strategy,
+                "status": status,
+                "basis": _require_text(item["basis"], "basis", path),
+            }
+        )
+    for index, region in enumerate(normalized):
+        for other in normalized[index + 1 :]:
+            if (
+                region["source_page_id"] == other["source_page_id"]
+                and _bbox_overlap(region["source_bbox"], other["source_bbox"])
+            ):
+                raise ValueError(
+                    f"replaceable_regions.{region['id']} overlaps {other['id']}."
+                )
+    return normalized
+
+
 def _validate_shared_brand_grammar(raw: object) -> dict[str, object]:
     grammar = _require_exact_keys(
         raw, SHARED_BRAND_GRAMMAR_FIELDS, "shared_brand_grammar"
@@ -776,12 +886,15 @@ def validate_contract(raw: object) -> dict[str, Any]:
         contract = _require_exact_keys(raw, BASE_TOP_LEVEL_KEYS, "contract")
     elif schema_version == SINGLE_REFERENCE_SCHEMA_VERSION:
         contract = _require_exact_keys(raw, SINGLE_REFERENCE_TOP_LEVEL_KEYS, "contract")
+    elif schema_version == LEGACY_FAMILY_SCHEMA_VERSION:
+        contract = _require_exact_keys(raw, LEGACY_FAMILY_TOP_LEVEL_KEYS, "contract")
     elif schema_version == SCHEMA_VERSION:
         contract = _require_exact_keys(raw, FAMILY_TOP_LEVEL_KEYS, "contract")
     else:
         raise ValueError(
             "schema_version must be "
-            f"{LEGACY_SCHEMA_VERSION}, {SINGLE_REFERENCE_SCHEMA_VERSION}, or {SCHEMA_VERSION}."
+            f"{LEGACY_SCHEMA_VERSION}, {SINGLE_REFERENCE_SCHEMA_VERSION}, "
+            f"{LEGACY_FAMILY_SCHEMA_VERSION}, or {SCHEMA_VERSION}."
         )
 
     board = _require_exact_keys(
@@ -869,13 +982,19 @@ def validate_contract(raw: object) -> dict[str, Any]:
 
     if mode != "corporate_fidelity":
         raise ValueError(
-            "schema_version 1.3 is the corporate template-family contract; reconstruct remains single-image v1.1/v1.2."
+            "schema_version 1.3/1.4 is the corporate template-family contract; "
+            "reconstruct remains single-image v1.1/v1.2."
         )
     normalized["reference_pages"] = _validate_family_reference_pages(
         contract["reference_pages"]
     )
     normalized["shared_assets"] = _validate_shared_assets(
         contract["shared_assets"], normalized["reference_pages"]
+    )
+    normalized["replaceable_regions"] = _validate_replaceable_regions(
+        contract.get("replaceable_regions", []),
+        normalized["reference_pages"],
+        normalized["shared_assets"],
     )
     normalized["shared_brand_grammar"] = _validate_shared_brand_grammar(
         contract["shared_brand_grammar"]
@@ -885,6 +1004,22 @@ def validate_contract(raw: object) -> dict[str, Any]:
         normalized["reference_pages"],
         normalized["shared_assets"],
     )
+    for shell in normalized["shell_variants"]:
+        replacement_count = sum(
+            region["replacement"] == "runtime_page_number"
+            and any(
+                placement["asset_id"] == asset["id"]
+                for placement in shell["locked_regions"]
+                for asset in normalized["shared_assets"]
+                if asset["source_page_id"] == region["source_page_id"]
+                and _bbox_contains(asset["source_bbox"], region["source_bbox"])
+            )
+            for region in normalized["replaceable_regions"]
+        )
+        if replacement_count > 1:
+            raise ValueError(
+                f"shell_variants.{shell['role']} resolves more than one runtime page-number region."
+            )
     normalized["extension_pages"] = _validate_family_extension_pages(
         contract["extension_pages"]
     )
@@ -1035,7 +1170,7 @@ def validate_source_bindings(
     contract: dict[str, Any], source_images: Path | Iterable[Path]
 ) -> list[dict[str, object]]:
     paths = _source_list(source_images)
-    if contract.get("schema_version") != SCHEMA_VERSION:
+    if not is_family_contract(contract):
         if len(paths) != 1:
             raise ValueError("Legacy reconstruct and v1.2 corporate contracts require exactly one source image.")
         return [{"id": "reference-1", **validate_source_binding(contract, paths[0])}]
@@ -1154,7 +1289,7 @@ def prepare_reference_sources(
 ) -> list[dict[str, object]]:
     paths = _source_list(source_images)
     bindings = validate_source_bindings(contract, paths)
-    if contract.get("schema_version") != SCHEMA_VERSION:
+    if not is_family_contract(contract):
         return [
             {
                 **bindings[0],
@@ -1189,13 +1324,52 @@ def prepare_reference_sources(
     return prepared
 
 
+def _relative_bbox(inner: list[float], outer: list[float]) -> list[float]:
+    ix, iy, iw, ih = inner
+    ox, oy, ow, oh = outer
+    return [(ix - ox) / ow, (iy - oy) / oh, iw / ow, ih / oh]
+
+
+def _replacement_edge_fill(
+    crop: object,
+    pixel_bbox: list[int],
+    label: str,
+) -> list[int]:
+    left, top, right, bottom = pixel_bbox
+    width, height = crop.size
+    pad = REPLACEMENT_EDGE_SAMPLE_SIZE
+    outer_left = max(0, left - pad)
+    outer_top = max(0, top - pad)
+    outer_right = min(width, right + pad)
+    outer_bottom = min(height, bottom + pad)
+    samples: list[tuple[int, int, int, int]] = []
+    pixels = crop.load()
+    for y in range(outer_top, outer_bottom):
+        for x in range(outer_left, outer_right):
+            if left <= x < right and top <= y < bottom:
+                continue
+            samples.append(tuple(pixels[x, y]))
+    if not samples:
+        raise ValueError(f"{label} has no surrounding pixels for sampled_edge_fill.")
+    background, count = Counter(samples).most_common(1)[0]
+    dominance = count / len(samples)
+    if dominance < REPLACEMENT_EDGE_DOMINANCE_MINIMUM:
+        raise ValueError(
+            f"{label} edge background is not uniform enough for deterministic "
+            f"sampled_edge_fill ({dominance:.3f} < "
+            f"{REPLACEMENT_EDGE_DOMINANCE_MINIMUM:.3f})."
+        )
+    crop.paste(background, (left, top, right, bottom))
+    return list(background)
+
+
 def extract_corporate_assets(
     contract: dict[str, Any], source_images: Path | Iterable[Path]
 ) -> list[dict[str, object]]:
     if contract.get("reference_mode") != "corporate_fidelity":
         return []
     paths = _source_list(source_images)
-    if contract.get("schema_version") != SCHEMA_VERSION:
+    if not is_family_contract(contract):
         return extract_locked_regions(contract, paths[0])
     bindings = validate_source_bindings(contract, paths)
     pages = {str(page["id"]): page for page in contract["reference_pages"]}
@@ -1232,6 +1406,45 @@ def extract_corporate_assets(
                 )
             with Image.open(path_by_id[page_id]) as image:
                 crop = image.convert("RGBA").crop(tuple(source_pixel_bbox))
+                _, source_crop_sha256, _ = _png_data_uri(crop)
+                replacements: list[dict[str, object]] = []
+                for region in contract["replaceable_regions"]:
+                    if (
+                        region["source_page_id"] != asset["source_page_id"]
+                        or not _bbox_contains(
+                            asset["source_bbox"], region["source_bbox"]
+                        )
+                    ):
+                        continue
+                    crop_pixel_bbox = _pixel_bbox(
+                        _relative_bbox(region["source_bbox"], asset["source_bbox"]),
+                        crop_width,
+                        crop_height,
+                    )
+                    source_region = crop.crop(tuple(crop_pixel_bbox))
+                    source_pixels_sha256 = hashlib.sha256(
+                        source_region.tobytes()
+                    ).hexdigest()
+                    background = _replacement_edge_fill(
+                        crop,
+                        crop_pixel_bbox,
+                        f"Replaceable region {region['id']}",
+                    )
+                    replacements.append(
+                        {
+                            **region,
+                            "asset_id": asset["id"],
+                            "crop_pixel_bbox": crop_pixel_bbox,
+                            "source_pixel_bbox": [
+                                source_pixel_bbox[0] + crop_pixel_bbox[0],
+                                source_pixel_bbox[1] + crop_pixel_bbox[1],
+                                source_pixel_bbox[0] + crop_pixel_bbox[2],
+                                source_pixel_bbox[1] + crop_pixel_bbox[3],
+                            ],
+                            "source_pixels_sha256": source_pixels_sha256,
+                            "replacement_background_rgba": background,
+                        }
+                    )
                 data_uri, crop_sha256, _ = _png_data_uri(crop)
             extracted.append(
                 {
@@ -1240,6 +1453,8 @@ def extract_corporate_assets(
                     "canvas_bbox": page["canvas_bbox"],
                     "canvas_pixel_bbox": list(canvas_pixel_bbox),
                     "source_pixel_bbox": source_pixel_bbox,
+                    "source_crop_sha256": source_crop_sha256,
+                    "replaceable_regions": replacements,
                     "width": crop_width,
                     "height": crop_height,
                     "sha256": crop_sha256,
@@ -1387,7 +1602,7 @@ def _render_reference_image(
         if not isinstance(source_uri, str):
             raise ValueError("reconstruct rendering requires exactly one source data URI.")
         return f'<img src="{_e(source_uri)}" alt="{reference_alt}">'
-    if contract.get("schema_version") == SCHEMA_VERSION:
+    if is_family_contract(contract):
         if not isinstance(source_uri, list):
             raise ValueError("Template-family rendering requires prepared reference pages.")
         shells = {str(item["role"]): item for item in contract["shell_variants"]}
@@ -1398,6 +1613,13 @@ def _render_reference_image(
                 f'<span class="reference-overlay locked-overlay" style="{_bbox_style(item["bbox"])}" '
                 f'data-locked-region="{_e(str(item["id"]))}">{_e(str(item["id"]))}</span>'
                 for item in shell["locked_regions"]
+            )
+            overlays += "".join(
+                f'<span class="reference-overlay replaceable-overlay" '
+                f'style="{_bbox_style(item["source_bbox"])}" '
+                f'data-replaceable-region="{_e(str(item["id"]))}">RUNTIME</span>'
+                for item in contract["replaceable_regions"]
+                if item["source_page_id"] == page["id"]
             )
             editable = shell["editable_region"]
             overlays += (
@@ -1463,6 +1685,17 @@ def _render_shell_variant_items(contract: dict[str, Any]) -> str:
     )
 
 
+def _render_replaceable_region_items(contract: dict[str, Any]) -> str:
+    return "".join(
+        '<article class="component replaceable-item">'
+        f'{_status(item)}<h3>运行时替换 · {_e(str(item["id"]))}</h3>'
+        f'<p>{_e(str(item["replacement"]))} / '
+        f'{_e(str(item["replacement_strategy"]))}</p>'
+        f'<code>{_e(json.dumps(item["source_bbox"]))}</code></article>'
+        for item in contract.get("replaceable_regions", [])
+    )
+
+
 def _render_crop_previews(items: list[dict[str, object]]) -> str:
     return "".join(
         '<article class="crop-preview">'
@@ -1477,7 +1710,7 @@ def _render_crop_previews(items: list[dict[str, object]]) -> str:
 def _render_editable_preview(contract: dict[str, Any]) -> str:
     if contract.get("reference_mode") != "corporate_fidelity":
         return '<span class="generic-safe-label">SAFE<br>AREA</span>'
-    if contract.get("schema_version") == SCHEMA_VERSION:
+    if is_family_contract(contract):
         return '<div class="family-safe-grid">' + "".join(
             '<div class="family-safe-card">'
             f'<strong>{_e(str(shell["role"]))}</strong>'
@@ -1507,7 +1740,7 @@ def _render_editable_items(contract: dict[str, Any]) -> str:
         return "".join(
             _info_item(item, "label", "value") for item in contract["layout"]
         )
-    if contract.get("schema_version") == SCHEMA_VERSION:
+    if is_family_contract(contract):
         return "".join(
             '<article class="info-item">'
             f'<div class="info-head"><strong>{_e(str(shell["role"]))}</strong>{_status(shell)}</div>'
@@ -1620,7 +1853,7 @@ def render_html(
 ) -> str:
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     corporate = contract.get("reference_mode") == "corporate_fidelity"
-    family = corporate and contract.get("schema_version") == SCHEMA_VERSION
+    family = corporate and is_family_contract(contract)
     if corporate and extracted_regions is None:
         raise ValueError(
             "corporate_fidelity VI rendering requires deterministic locked-region crops."
@@ -1652,15 +1885,18 @@ def render_html(
         )
         component_items = (
             _render_shell_variant_items(contract)
+            + _render_replaceable_region_items(contract)
             if family
             else _render_locked_region_items(contract["locked_regions"])
         )
         reference_caption = (
-            "1–3 张同族静态截图｜先裁 canvas_bbox，再确认角色、固定区和安全区"
+            "1–3 张同族静态截图｜先裁 canvas_bbox，再确认固定区、可替换区和安全区"
             if family
             else "企业模板保真｜红框为固定元素，绿框为可编辑安全区"
         )
-        components_title = "企业模板族角色壳" if family else "固定企业元素清单"
+        components_title = (
+            "企业模板族角色壳与可替换区" if family else "固定企业元素清单"
+        )
         footer_note = (
             "多页模板族｜observed 与 proposed 分开｜固定层静态"
             if family
@@ -1819,7 +2055,7 @@ def render_board(
     prepared_sources = prepare_reference_sources(normalized, source_image)
     source_uri: str | list[dict[str, object]] = (
         prepared_sources
-        if normalized.get("schema_version") == SCHEMA_VERSION
+        if is_family_contract(normalized)
         else str(prepared_sources[0]["data_uri"])
     )
     extracted_regions = extract_corporate_assets(normalized, source_image)

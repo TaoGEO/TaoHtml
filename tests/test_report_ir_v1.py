@@ -520,6 +520,29 @@ class ReportIrV1Tests(unittest.TestCase):
         self.assertFalse(result["references_valid"])
         self.assertTrue(any("global stable id" in item for item in result["issues"]["references"]))
 
+    def test_visible_subtitle_must_reference_same_page_body_text_block(self) -> None:
+        explicit = copy.deepcopy(self.ir)
+        explicit["pages"][0]["subtitle_ref"] = "block-cover-lede"
+        self.assertTrue(self.validate(explicit)["compiler_ready"])
+
+        off_page = copy.deepcopy(self.ir)
+        off_page["pages"][0]["subtitle_ref"] = "block-risk"
+        result = self.validate(off_page)
+        self.assertFalse(result["references_valid"])
+        self.assertTrue(
+            any("subtitle_ref must reference a block on the same page" in item
+                for item in result["issues"]["references"])
+        )
+
+        wrong_kind = copy.deepcopy(self.ir)
+        wrong_kind["pages"][0]["subtitle_ref"] = "block-cover-title"
+        result = self.validate(wrong_kind)
+        self.assertFalse(result["semantics_valid"])
+        self.assertTrue(
+            any("explicit body_text surface block" in item
+                for item in result["issues"]["semantics"])
+        )
+
     def test_formal_verified_claim_requires_verified_support(self) -> None:
         missing = copy.deepcopy(self.ir)
         missing["evidence_links"] = []

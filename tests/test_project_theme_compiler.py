@@ -1002,6 +1002,16 @@ class CorporateTemplateFamilyThemeTests(unittest.TestCase):
             )
             self.assertNotIn('class="pt-cover-art"', templates)
             self.assertNotIn("corporate_shell", manifest)
+            self.assertEqual(len(family["replaceable_regions"]), 1)
+            replacement = family["replaceable_regions"][0]
+            self.assertEqual(replacement["replacement"], "runtime_page_number")
+            self.assertEqual(replacement["asset_id"], "shared-footer")
+            footer = next(
+                asset for asset in family["shared_assets"]
+                if asset["id"] == "shared-footer"
+            )
+            self.assertNotEqual(footer["source_crop_sha256"], footer["crop_sha256"])
+            self.assertEqual(footer["replaceable_regions"], [replacement])
             for source in FAMILY_REFERENCE_FIXTURES:
                 self.assertNotIn(base64.b64encode(source.read_bytes()).decode("ascii"), templates)
             for shell in family["shell_variants"]:
@@ -1018,6 +1028,89 @@ class CorporateTemplateFamilyThemeTests(unittest.TestCase):
                     len(shell["fixed_regions"]),
                 )
             THEME_RUNTIME.load_project_theme(theme)
+
+    def test_v13_family_and_pre_v14_manifest_shape_remain_loadable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_dir = root / "input"
+            input_dir.mkdir()
+            legacy_vi = json.loads(
+                FAMILY_VI_FIXTURE.read_text(encoding="utf-8")
+            )
+            legacy_vi["schema_version"] = "1.3"
+            legacy_vi.pop("replaceable_regions")
+            vi_path = input_dir / FAMILY_VI_FIXTURE.name
+            vi_path.write_text(
+                json.dumps(legacy_vi, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            for source in FAMILY_REFERENCE_FIXTURES:
+                shutil.copy2(source, input_dir / source.name)
+            handoff = json.loads(
+                FAMILY_HANDOFF_FIXTURE.read_text(encoding="utf-8")
+            )
+            handoff["confirmation"]["vi_contract_sha256"] = sha256(vi_path)
+            handoff_path = input_dir / "handoff.json"
+            handoff_path.write_text(
+                json.dumps(handoff, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            theme = COMPILER.compile_theme(handoff_path, root / "theme")
+
+            manifest_path = theme / "theme.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            family = manifest["corporate_template_family"]
+            self.assertEqual(family["replaceable_regions"], [])
+            family.pop("replaceable_regions")
+            for asset in family["shared_assets"]:
+                asset.pop("source_crop_sha256")
+                asset.pop("replaceable_regions")
+            for shell in family["shell_variants"]:
+                for region in shell["fixed_regions"]:
+                    region.pop("source_crop_sha256")
+                    region.pop("replaceable_regions")
+            manifest_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            provenance_path = theme / "provenance.json"
+            provenance = json.loads(
+                provenance_path.read_text(encoding="utf-8")
+            )
+            provenance["corporate_fidelity"] = family
+            provenance_path.write_text(
+                json.dumps(provenance, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            THEME_RUNTIME.load_project_theme(theme)
+
+    def test_runtime_rejects_replaceable_region_manifest_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            theme = COMPILER.compile_theme(
+                FAMILY_HANDOFF_FIXTURE, Path(temp_dir) / "theme"
+            )
+            manifest_path = theme / "theme.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["corporate_template_family"]["replaceable_regions"] = []
+            manifest_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            provenance_path = theme / "provenance.json"
+            provenance = json.loads(
+                provenance_path.read_text(encoding="utf-8")
+            )
+            provenance["corporate_fidelity"] = manifest[
+                "corporate_template_family"
+            ]
+            provenance_path.write_text(
+                json.dumps(provenance, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ValueError, "replaceable-region manifest does not match"
+            ):
+                THEME_RUNTIME.load_project_theme(theme)
 
     def test_runtime_fails_closed_on_crop_position_role_and_source_mapping_tamper(self) -> None:
         cases = {

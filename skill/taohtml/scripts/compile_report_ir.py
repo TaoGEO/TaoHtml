@@ -385,6 +385,16 @@ class CorporateShellRenderer:
         for name, value in report_attributes.items():
             opening = _replace_or_add_attribute(opening, name, value)
         rendered = opening + rendered[opening_end:]
+        rendered, removed = re.subn(
+            r'<span class="ri-page-number" data-taohtml-edit-lock>[^<]*</span>',
+            "",
+            rendered,
+            count=1,
+        )
+        if removed != 1:
+            raise CompileError(
+                "Corporate Report IR shell requires exactly one derived page-number field"
+            )
         return rendered, role, self.variant_by_role[role]
 
 
@@ -605,13 +615,14 @@ class ReportRenderer:
         page: dict[str, Any],
         *,
         title_text: str,
+        subtitle_text: str,
         body_refs: list[str],
         layout: str,
         output_index: int,
     ) -> dict[str, Any]:
         blocks = [self.blocks[ref] for ref in body_refs]
         title_units = _text_units(title_text)
-        page_units = title_units + _text_units(page["task"]) + sum(
+        page_units = title_units + _text_units(subtitle_text) + sum(
             _block_units(block) for block in blocks
         )
         if title_units > MAX_SAFE_TITLE_UNITS:
@@ -1055,11 +1066,32 @@ class ReportRenderer:
                 title_ref, plan, emphasized_refs
             )
             title_edit_attrs = _edit_attributes("text", "block", title_ref, "text")
-        body_refs = [ref for ref in reading_order if ref != title_ref]
+        subtitle_ref = page.get("subtitle_ref")
+        subtitle_text = (
+            str(self.blocks[subtitle_ref]["text"])
+            if isinstance(subtitle_ref, str)
+            else ""
+        )
+        subtitle_html = ""
+        if isinstance(subtitle_ref, str):
+            subtitle_motion_classes, subtitle_motion_attrs = _motion_attributes(
+                subtitle_ref, plan, emphasized_refs
+            )
+            subtitle_class = f"ri-subtitle {subtitle_motion_classes}".strip()
+            subtitle_html = (
+                f'<p class="{subtitle_class}" data-ir-kind="body_text" '
+                f'data-ir-block-id="{_escape(subtitle_ref)}" {subtitle_motion_attrs} '
+                f'{_edit_attributes("text", "block", subtitle_ref, "text")} '
+                f'data-taohtml-edit="text">{_escape(subtitle_text)}</p>'
+            )
+        body_refs = [
+            ref for ref in reading_order if ref not in {title_ref, subtitle_ref}
+        ]
         layout, theme_variant = self._layout(page)
         layout_plan = self._layout_plan(
             page,
             title_text=title_text,
+            subtitle_text=subtitle_text,
             body_refs=body_refs,
             layout=layout,
             output_index=output_index,
@@ -1107,6 +1139,7 @@ class ReportRenderer:
                 for block_ref in page["block_refs"]
             },
             "state_ids": state_ids,
+            "subtitle_ref": subtitle_ref,
             "requested_composition_family": page["visual_intent"]["composition_family"],
             "resolved_layout_family": layout,
             "resolved_theme_variant": theme_variant,
@@ -1126,8 +1159,7 @@ class ReportRenderer:
             f'{_escape(page["role"])} / {_escape(page["form"])}</p>'
             f'<h1 class="{header_title_class}" {title_motion_attrs} {title_edit_attrs} '
             f'data-taohtml-edit="text">{_escape(title_text)}</h1>'
-            f'<p class="ri-task" {_edit_attributes("text", "page", page["id"], "task")} '
-            f'data-taohtml-edit="text">{_escape(page["task"])}</p>'
+            f'{subtitle_html}'
             '</header>'
             f'<div class="ri-content">{rendered_blocks}</div>'
             f'<footer class="ri-footer">{source_html}'
@@ -1358,7 +1390,9 @@ def compile_ir(
     normalized_hash = validation["identity"]["normalized_sha256"]
     renderer = ReportRenderer(ir, artifact_root, profile)
     if reference_mode == "corporate_fidelity":
-        sections = renderer.render_all_corporate(CorporateShellRenderer(theme))
+        sections = renderer.render_all_corporate(
+            CorporateShellRenderer(theme)
+        )
     else:
         sections = renderer.render_all()
     shell_theme_kind = "built-in" if theme_binding["kind"] == "built_in" else "project"

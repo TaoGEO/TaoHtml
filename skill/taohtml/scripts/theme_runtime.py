@@ -31,12 +31,27 @@ BUILT_IN_THEME_IDS = (
 )
 PROJECT_THEME_FILES = {"theme.json", "theme.css", "templates.html", "provenance.json"}
 PROJECT_ID = re.compile(r"^project-[a-z0-9]+(?:-[a-z0-9]+)*$")
+REGION_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 REMOTE_ASSET = re.compile(
     r"(?:src|href)\s*=\s*['\"]\s*(?:https?:)?//|@import\b|url\(\s*['\"]?\s*(?:https?:)?//",
     re.IGNORECASE,
 )
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 FAMILY_ROLES = ("cover", "toc", "section", "content", "data")
+REPLACEMENT_PROVENANCE_FIELDS = {
+    "id",
+    "source_page_id",
+    "source_bbox",
+    "replacement",
+    "replacement_strategy",
+    "status",
+    "basis",
+    "asset_id",
+    "crop_pixel_bbox",
+    "source_pixel_bbox",
+    "source_pixels_sha256",
+    "replacement_background_rgba",
+}
 CORPORATE_FIXED_SHELL_CLASS = "pt-corporate-fixed-shell"
 CORPORATE_FIXED_REGION_CLASS = "pt-corporate-fixed-region"
 CORPORATE_EDITABLE_CLASS = "pt-corporate-editable"
@@ -205,6 +220,34 @@ def _bbox_overlap(first: object, second: object, label: str) -> bool:
     return ax < bx + bw and ax + aw > bx and ay < by + bh and ay + ah > by
 
 
+def _bbox_contains(outer: object, inner: object, label: str) -> bool:
+    _bbox_style(outer, f"{label}.outer")
+    _bbox_style(inner, f"{label}.inner")
+    assert isinstance(outer, list) and isinstance(inner, list)
+    ox, oy, ow, oh = (float(value) for value in outer)
+    ix, iy, iw, ih = (float(value) for value in inner)
+    tolerance = 1e-9
+    return (
+        ix >= ox - tolerance
+        and iy >= oy - tolerance
+        and ix + iw <= ox + ow + tolerance
+        and iy + ih <= oy + oh + tolerance
+    )
+
+
+def _pixel_bbox(raw: object, label: str) -> list[int]:
+    if (
+        not isinstance(raw, list)
+        or len(raw) != 4
+        or any(not isinstance(value, int) for value in raw)
+    ):
+        raise ValueError(f"{label} must contain four integer pixel bounds.")
+    left, top, right, bottom = raw
+    if left < 0 or top < 0 or right <= left or bottom <= top:
+        raise ValueError(f"{label} has invalid pixel bounds.")
+    return raw
+
+
 def _decode_fixed_crop(attrs: dict[str, str], expected: dict[str, Any], label: str) -> None:
     declared_hash = expected.get("crop_sha256")
     if not isinstance(declared_hash, str) or not SHA256.fullmatch(declared_hash):
@@ -233,6 +276,37 @@ def _decode_fixed_crop(attrs: dict[str, str], expected: dict[str, Any], label: s
         raise ValueError(f"{label} embedded crop must be one static PNG frame.")
     if actual_size != expected.get("crop_size"):
         raise ValueError(f"{label} embedded crop dimensions do not match the manifest.")
+    replacements = expected.get("replaceable_regions", [])
+    if replacements:
+        try:
+            from PIL import Image
+
+            with Image.open(io.BytesIO(payload)) as image:
+                rgba = image.convert("RGBA")
+                for region in replacements:
+                    pixel_bbox = region.get("crop_pixel_bbox")
+                    background = region.get("replacement_background_rgba")
+                    if (
+                        not isinstance(pixel_bbox, list)
+                        or len(pixel_bbox) != 4
+                        or any(not isinstance(value, int) for value in pixel_bbox)
+                        or not isinstance(background, list)
+                        or len(background) != 4
+                        or any(not isinstance(value, int) or not 0 <= value <= 255 for value in background)
+                    ):
+                        raise ValueError(
+                            f"{label} replaceable-region pixel provenance is invalid."
+                        )
+                    cleaned = rgba.crop(tuple(pixel_bbox))
+                    expected_bytes = bytes(background) * (cleaned.width * cleaned.height)
+                    if cleaned.tobytes() != expected_bytes:
+                        raise ValueError(
+                            f"{label} still contains source pixels inside a replaceable region."
+                        )
+        except (ImportError, OSError, ValueError) as exc:
+            if isinstance(exc, ValueError):
+                raise
+            raise ValueError(f"{label} replaceable-region verification failed.") from exc
 
 
 def _strip_css_comments(css: str) -> str:
@@ -951,7 +1025,11 @@ def _validate_corporate_family(
     shells = family.get("shell_variants")
     grammar = family.get("shared_brand_grammar")
     extensions = family.get("extension_pages")
-    if not all(isinstance(value, list) for value in (pages, assets, shells, extensions)) or not isinstance(grammar, dict):
+    replacements = family.get("replaceable_regions", [])
+    if not all(
+        isinstance(value, list)
+        for value in (pages, assets, shells, extensions, replacements)
+    ) or not isinstance(grammar, dict):
         raise ValueError("Corporate template family contract is incomplete.")
     if (
         grammar.get("fixed_motion") != "none"
@@ -1000,12 +1078,103 @@ def _validate_corporate_family(
             or not SHA256.fullmatch(asset["crop_sha256"])
         ):
             raise ValueError("Corporate shared asset provenance is invalid.")
+        crop_size = asset.get("crop_size")
+        source_pixel_bbox = _pixel_bbox(
+            asset.get("source_pixel_bbox"),
+            f"shared asset {asset_id}.source_pixel_bbox",
+        )
+        if (
+            not isinstance(crop_size, list)
+            or len(crop_size) != 2
+            or any(not isinstance(value, int) or value <= 0 for value in crop_size)
+            or crop_size
+            != [
+                source_pixel_bbox[2] - source_pixel_bbox[0],
+                source_pixel_bbox[3] - source_pixel_bbox[1],
+            ]
+        ):
+            raise ValueError("Corporate shared asset crop geometry is invalid.")
+        asset_replacements = asset.get("replaceable_regions", [])
+        if not isinstance(asset_replacements, list) or len(asset_replacements) > 12:
+            raise ValueError("Corporate shared asset replaceable regions are invalid.")
+        source_crop_sha256 = asset.get("source_crop_sha256")
+        if (
+            source_crop_sha256 is not None
+            and (
+                not isinstance(source_crop_sha256, str)
+                or not SHA256.fullmatch(source_crop_sha256)
+            )
+        ) or (asset_replacements and source_crop_sha256 is None):
+            raise ValueError("Corporate shared asset source-crop provenance is invalid.")
+        for region in asset_replacements:
+            if (
+                not isinstance(region, dict)
+                or set(region) != REPLACEMENT_PROVENANCE_FIELDS
+                or not isinstance(region.get("id"), str)
+                or not REGION_ID.fullmatch(region["id"])
+                or region.get("asset_id") != asset_id
+                or region.get("source_page_id") != source_page_id
+                or region.get("replacement") != "runtime_page_number"
+                or region.get("replacement_strategy") != "sampled_edge_fill"
+                or region.get("status") != "observed"
+                or not isinstance(region.get("basis"), str)
+                or not region["basis"].strip()
+                or not isinstance(region.get("source_pixels_sha256"), str)
+                or not SHA256.fullmatch(region["source_pixels_sha256"])
+                or not isinstance(region.get("replacement_background_rgba"), list)
+                or len(region["replacement_background_rgba"]) != 4
+                or any(
+                    not isinstance(value, int) or not 0 <= value <= 255
+                    for value in region["replacement_background_rgba"]
+                )
+                or not _bbox_contains(
+                    asset.get("source_bbox"),
+                    region.get("source_bbox"),
+                    f"shared asset {asset_id} replacement {region.get('id')}",
+                )
+            ):
+                raise ValueError("Corporate shared asset replacement provenance is invalid.")
+            crop_pixel_bbox = _pixel_bbox(
+                region.get("crop_pixel_bbox"),
+                f"shared asset {asset_id} replacement crop_pixel_bbox",
+            )
+            replacement_source_bbox = _pixel_bbox(
+                region.get("source_pixel_bbox"),
+                f"shared asset {asset_id} replacement source_pixel_bbox",
+            )
+            if (
+                crop_pixel_bbox[2] > crop_size[0]
+                or crop_pixel_bbox[3] > crop_size[1]
+                or replacement_source_bbox
+                != [
+                    source_pixel_bbox[0] + crop_pixel_bbox[0],
+                    source_pixel_bbox[1] + crop_pixel_bbox[1],
+                    source_pixel_bbox[0] + crop_pixel_bbox[2],
+                    source_pixel_bbox[1] + crop_pixel_bbox[3],
+                ]
+            ):
+                raise ValueError("Corporate shared asset replacement geometry is invalid.")
         _bbox_style(asset.get("source_bbox"), f"shared asset {asset_id}.source_bbox")
         if asset.get("source_bbox") == [0.0, 0.0, 1.0, 1.0]:
             raise ValueError("Corporate shared asset must not be a complete screenshot canvas.")
         asset_by_id[asset_id] = asset
     if not asset_by_id:
         raise ValueError("Corporate template family must contain shared cropped assets.")
+    flattened_replacements = [
+        region
+        for asset in assets
+        if isinstance(asset, dict)
+        for region in asset.get("replaceable_regions", [])
+    ]
+    replacement_ids = {
+        region.get("id") for region in flattened_replacements
+    }
+    if (
+        len(replacements) > 12
+        or len(replacement_ids) != len(flattened_replacements)
+        or replacements != flattened_replacements
+    ):
+        raise ValueError("Corporate replaceable-region manifest does not match cleaned assets.")
 
     shell_by_role: dict[str, dict[str, Any]] = {}
     extension_roles = {
@@ -1051,6 +1220,8 @@ def _validate_corporate_family(
                 or placement.get("source_image_sha256") != asset.get("source_image_sha256")
                 or placement.get("source_bbox") != asset.get("source_bbox")
                 or placement.get("source_pixel_bbox") != asset.get("source_pixel_bbox")
+                or placement.get("source_crop_sha256") != asset.get("source_crop_sha256")
+                or placement.get("replaceable_regions") != asset.get("replaceable_regions")
                 or placement.get("crop_sha256") != asset.get("crop_sha256")
                 or placement.get("crop_size") != asset.get("crop_size")
                 or placement.get("status") != status

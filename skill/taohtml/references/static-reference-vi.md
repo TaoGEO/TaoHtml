@@ -171,12 +171,13 @@ Every `bbox` is `[x, y, width, height]` in normalized 0..1 coordinates. Width an
 
 The source-image digest and dimensions are verified against the current raster before rendering and compilation. Corporate mode fails before output if the source is below 960×540, a crop is below 24×24 pixels, a bbox is invalid or conflicts with the editable region, the source is missing or changed, or a fixed element requests anything other than exact cropping. Request a clearer screenshot rather than weakening the contract.
 
-For corporate template families, use schema v1.3. It extends the same base VI and executable-layout contract instead of creating a second pipeline. Replace the v1.2 single-source corporate fields with:
+For corporate template families, use schema v1.4. It extends the v1.3 family contract with an explicit variable-pixel boundary instead of creating a second pipeline. v1.3 remains read-compatible and normalizes to an empty `replaceable_regions` list. Replace the v1.2 single-source corporate fields with:
 
 | Field | Exact contract |
 |---|---|
 | `reference_pages[]` | 1–3 unique `{id, role, source_image, canvas_bbox, status, basis}` records; `role` is `cover/toc/section/content/data`, supplied pages are `observed` |
 | `shared_assets[]` | `{id, type, source_page_id, source_bbox, status, basis, extraction}`; pixels bind to one source page, status is `observed`, extraction is `crop` |
+| `replaceable_regions[]` | Zero to twelve `{id, source_page_id, source_bbox, replacement, replacement_strategy, status, basis}` records; currently `replacement` is `runtime_page_number`, strategy is `sampled_edge_fill`, and status is `observed` |
 | `shell_variants[]` | Exactly five unique roles; each has `{role, status, reference_page_id, locked_regions, editable_region, basis}` |
 | `shell_variants[].locked_regions[]` | `{id, type, asset_id, bbox, status, basis}`; `asset_id` points to a shared crop and `bbox` is its fixed placement in this shell |
 | `shell_variants[].editable_region` | `{id, bbox, allowed_content, basis}`; `allowed_content` is exactly that shell role |
@@ -187,6 +188,8 @@ For corporate template families, use schema v1.3. It extends the same base VI an
 For each source, `canvas_bbox` is measured against the supplied screenshot before any other normalization. Crop the screenshot border/background first; validate the resulting canvas as 16:9 with relative error no greater than `0.0025` (0.25%), and reject instead of stretching when it exceeds that tolerance. The cropped canvas must be at least 960×540. PNG, JPEG, and WebP inputs must decode as exactly one raster frame; reject animated PNG/WebP/JPEG when the decoder reports multiple frames.
 
 An observed shell binds to the source page with the same role and must use at least one asset from that page. An extension shell has `reference_page_id: null` and may reuse confirmed shared assets, but its role remains proposed. Every shared asset must be used, every locked placement must stay outside its editable region, and complex fixed visual groups may use `type: composition`. Never define an asset as the complete screenshot or include example body content merely to simplify extraction.
+
+Each `replaceable_regions[].source_bbox` must sit inside exactly one shared asset from the same source page and may not overlap another replaceable region. Do not infer one from OCR, a particular number string, filename, company, or known customer coordinates: the upstream VI JSON must explicitly mark the observed variable-pixel region. Extraction samples the region's immediate edge, requires a dominant uniform RGBA background, records the original crop/region hashes and pixel bboxes, then fills only that region. Non-uniform edges fail closed instead of erasing uncertain brand pixels. The fixed header, Logo, bar, footer line, and every pixel outside the declared region remain byte-identical to the source crop. A v1.3 contract has no such authorization and therefore performs no pixel replacement; migrate by adding the explicit list, recomputing the VI digest, rerendering the board, and obtaining confirmation again.
 
 Every list must be non-empty. `palette` accepts one to six items, so one or two supported colors are valid. A palette item with `observed` or `extension` status must carry a six-digit hex value. An `unknown` palette item must use the literal value `unknown`; the renderer shows a neutral hatched placeholder and “未识别色值”, never a real color swatch. Do not add an unknown palette item when the supported colors already express the category clearly.
 
@@ -248,7 +251,7 @@ python scripts/render_reference_vi.py \
   --output /absolute/path/to/reference-vi-board
 ```
 
-For corporate v1.3, repeat `--source-image` in the same order as `reference_pages[]`:
+For corporate v1.3/v1.4, repeat `--source-image` in the same order as `reference_pages[]`:
 
 ```bash
 python scripts/render_reference_vi.py \
@@ -281,6 +284,6 @@ After confirmation, retain these inputs and read `project-theme-compiler.md`:
 - customer corrections incorporated into the current contract;
 - target reading/presentation mode and any confirmed accessibility or brand constraints.
 
-For v1.2 corporate fidelity, also retain the exact `source_image`, `locked_regions`, and `editable_regions`. For v1.3, retain `reference_pages`, `shared_assets`, `shell_variants`, `shared_brand_grammar`, `extension_pages`, and `limitations`. Do not retain any complete screenshot as a reusable page background; each remains a confirmation and extraction source only.
+For v1.2 corporate fidelity, also retain the exact `source_image`, `locked_regions`, and `editable_regions`. For v1.3/v1.4, retain `reference_pages`, `shared_assets`, `replaceable_regions`, `shell_variants`, `shared_brand_grammar`, `extension_pages`, and `limitations`. Do not retain any complete screenshot as a reusable page background; each remains a confirmation and extraction source only.
 
 Create the machine-checkable handoff in `project-theme-compiler.md`, bind the confirmation to the exact VI JSON and ordered reference-image hashes, and compile the project-specific manifest, CSS, templates, and provenance. The compiler is a separate deterministic step: this reference renderer still does not compile theme assets. The result does not substitute or extend the four built-in themes and does not authorize report production without the remaining Report Design Brief gate.

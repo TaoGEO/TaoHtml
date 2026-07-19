@@ -621,6 +621,16 @@ def _semantic_validation(
             reference_issues.append(f"{label} references unknown chapter: {page['chapter_ref']}")
         _check_refs(page["narrative_unit_refs"], units, label, reference_issues)
         _check_refs(page["block_refs"], blocks, label, reference_issues)
+        subtitle_ref = page.get("subtitle_ref")
+        if subtitle_ref is not None:
+            if subtitle_ref not in page["block_refs"]:
+                reference_issues.append(
+                    f"{label}.subtitle_ref must reference a block on the same page"
+                )
+            elif subtitle_ref in blocks and blocks[subtitle_ref]["kind"] != "body_text":
+                semantic_issues.append(
+                    f"{label}.subtitle_ref must reference an explicit body_text surface block"
+                )
         intent = page["visual_intent"]
         if intent["primary_focus_ref"] not in page["block_refs"]:
             reference_issues.append(f"{label}.visual_intent primary focus must be a page block")

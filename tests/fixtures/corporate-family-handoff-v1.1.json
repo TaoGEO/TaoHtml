@@ -7,7 +7,7 @@
   "confirmation": {
     "status": "confirmed",
     "phrase": "确认 VI",
-    "vi_contract_sha256": "e4d6b9ae2ab9cae973c0829fe6a516a3975d84029f8e532ac26687223fb037a9",
+    "vi_contract_sha256": "3f03a29400e1cafd2c1ef85724f00565ad134451fb60f6f34effb3be3fec7738",
     "reference_images_sha256": [
       "5a48973689a8873f8a41ebc03b1e96f28af149a295f8dbceb10406bcc5e8ddae",
       "51e3a3c737dc0a13837eeec7d80bcb05dd956199d09afe41c2648b5e44599a8d",
