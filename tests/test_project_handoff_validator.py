@@ -12,6 +12,8 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
+from tests.test_report_ir_v1 import WORKFLOW_PROFILE_IDS, bound_ir, valid_ir
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = ROOT / "skill" / "taohtml"
@@ -34,12 +36,37 @@ def load_validator() -> ModuleType:
 VALIDATOR = load_validator()
 
 
+def load_compiler() -> ModuleType:
+    path = SKILL_DIR / "scripts" / "compile_report_ir.py"
+    spec = importlib.util.spec_from_file_location("taohtml_report_ir_compiler", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+COMPILER = load_compiler()
+
+
 def load_fixture(name: str) -> dict[str, object]:
     return json.loads((FIXTURE_ROOT / name).read_text(encoding="utf-8"))
 
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write_json(path: Path, value: object) -> None:
+    path.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def refresh_manifest_hash(payload: dict[str, object], root: Path) -> None:
+    payload["current_build"]["build_manifest_ref"]["sha256"] = sha256(  # type: ignore[index]
+        root / "build" / "build-manifest.json"
+    )
 
 
 def artifact(payload: dict[str, object], artifact_id: str) -> dict[str, object]:
@@ -230,6 +257,72 @@ def project_theme_ready_payload() -> dict[str, object]:
         "theme_version"
     ] = "project-theme-v1"
     return payload
+
+
+def compiled_handoff_payload(
+    root: Path,
+    primary_profile_id: str | None,
+) -> tuple[dict[str, object], dict[str, object]]:
+    shutil.copytree(FIXTURE_ROOT, root, dirs_exist_ok=True)
+    source_bytes = b"segment,value\nenterprise,28\nother,7\n"
+    source_path = root / "materials" / "growth.csv"
+    source_path.write_bytes(source_bytes)
+    ir = valid_ir(hashlib.sha256(source_bytes).hexdigest())
+    if primary_profile_id is not None:
+        ir = bound_ir(ir, primary_profile_id)
+    manifest = COMPILER.compile_ir(
+        ir,
+        root,
+        root / "build",
+        report_ir_ref="report.ir.json",
+    )
+
+    payload = load_fixture("meaning-preserving-ready.json")
+    payload["schema_version"] = "1.1"
+    current = artifact(payload, "current-html")
+    current["locator"] = {
+        "kind": "portable_path",
+        "value": "build/index.html",
+    }
+    current["sha256"] = manifest["outputs"]["html"]["sha256"]  # type: ignore[index]
+    current["versions"]["compiler_version"] = manifest["compiler_version"]  # type: ignore[index]
+    current["report_ir_ref"] = {
+        "ref": {
+            "kind": "portable_path",
+            "value": "build/report.ir.normalized.json",
+        },
+        "sha256": manifest["outputs"]["normalized_ir"]["sha256"],  # type: ignore[index]
+    }
+    current_source = next(
+        item
+        for item in payload["source_ledger"]  # type: ignore[index]
+        if item["source_role"] == "current_artifact"
+    )
+    current_source["identity"]["value"] = "build/index.html"
+    current_source["identity"]["sha256"] = current["sha256"]
+    for record in payload["qa_records"]:  # type: ignore[index]
+        record["status"] = "not_run"
+        record["artifact_sha256"] = current["sha256"]
+        record["record_artifact_ref"] = None
+        record["record_sha256"] = None
+    workflow_profile = manifest["workflow_profile"]
+    payload["current_build"] = {
+        "artifact_ref": current["artifact_id"],
+        "build_manifest_ref": {
+            "ref": {
+                "kind": "portable_path",
+                "value": "build/build-manifest.json",
+            },
+            "sha256": sha256(root / "build" / "build-manifest.json"),
+        },
+        "workflow_profile": {
+            "binding_state": workflow_profile["binding_state"],
+            "primary_profile_id": workflow_profile["primary_profile_id"],
+            "definition_version": workflow_profile["definition_version"],
+            "binding_sha256": workflow_profile["binding_sha256"],
+        },
+    }
+    return payload, manifest
 
 
 class ProjectHandoffValidatorTests(unittest.TestCase):
@@ -805,6 +898,295 @@ class ProjectHandoffValidatorTests(unittest.TestCase):
             result["blocking_reasons"]["delivery_ready"],
         )
 
+    def test_handoff_v1_0_fixtures_remain_valid_without_profile_inference(self) -> None:
+        for fixture in (
+            "meaning-preserving-ready.json",
+            "review-only-missing-source.json",
+            "meaning-changing-missing-gates.json",
+        ):
+            with self.subTest(fixture=fixture):
+                payload = load_fixture(fixture)
+                result = self.evaluate(payload)
+                self.assertTrue(result["readiness"]["schema_valid"])
+                self.assertTrue(result["readiness"]["bindings_valid"])
+                self.assertNotIn("current_build", payload)
+
+    def test_handoff_v1_1_direct_html_uses_null_current_build(self) -> None:
+        payload = load_fixture("meaning-preserving-ready.json")
+        payload["schema_version"] = "1.1"
+        payload["current_build"] = None
+        result = self.evaluate(payload)
+        self.assertTrue(all(result["readiness"].values()))
+
+    def test_handoff_version_conditions_are_explicit_and_fail_closed(self) -> None:
+        v1 = load_fixture("meaning-preserving-ready.json")
+        v1["current_build"] = None
+        self.assertFalse(self.evaluate(v1)["readiness"]["schema_valid"])
+
+        v1_1 = load_fixture("meaning-preserving-ready.json")
+        v1_1["schema_version"] = "1.1"
+        self.assertFalse(self.evaluate(v1_1)["readiness"]["schema_valid"])
+
+    def test_legacy_unbound_report_ir_build_is_verified_without_profile_inference(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(root, None)
+            result = self.evaluate(payload, root)
+        self.assertTrue(result["readiness"]["schema_valid"])
+        self.assertTrue(result["readiness"]["bindings_valid"])
+        self.assertTrue(result["readiness"]["continuation_ready"])
+        self.assertFalse(result["readiness"]["delivery_ready"])
+        self.assertEqual(
+            payload["current_build"]["workflow_profile"],  # type: ignore[index]
+            {
+                "binding_state": "legacy_unbound",
+                "primary_profile_id": None,
+                "definition_version": None,
+                "binding_sha256": None,
+            },
+        )
+
+    def test_all_nine_workflow_profiles_bind_the_same_handoff_contract(self) -> None:
+        for profile_id in WORKFLOW_PROFILE_IDS:
+            with self.subTest(profile_id=profile_id), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                payload, _ = compiled_handoff_payload(root, profile_id)
+                result = self.evaluate(payload, root)
+                self.assertTrue(result["readiness"]["schema_valid"])
+                self.assertTrue(
+                    result["readiness"]["bindings_valid"],
+                    result["blocking_reasons"]["bindings_valid"],
+                )
+                self.assertTrue(result["readiness"]["continuation_ready"])
+                self.assertFalse(result["readiness"]["delivery_ready"])
+                self.assertEqual(
+                    payload["current_build"]["workflow_profile"][  # type: ignore[index]
+                        "primary_profile_id"
+                    ],
+                    profile_id,
+                )
+
+    def test_handoff_profile_id_version_and_binding_hash_drift_fail_closed(self) -> None:
+        mutations = {
+            "primary_profile_id": "formal-submission-writing",
+            "definition_version": "9.9",
+            "binding_sha256": "f" * 64,
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                payload, _ = compiled_handoff_payload(
+                    root, "research-analysis-argumentation"
+                )
+                payload["current_build"]["workflow_profile"][field] = value  # type: ignore[index]
+                result = self.evaluate(payload, root)
+                self.assertTrue(result["readiness"]["schema_valid"])
+                self.assertFalse(result["readiness"]["bindings_valid"])
+
+    def test_manifest_file_and_internal_build_identity_drift_fail_closed(self) -> None:
+        mutations = (
+            ("html_hash", lambda item: item["outputs"]["html"].__setitem__("sha256", "a" * 64)),
+            ("ir_hash", lambda item: item["outputs"]["normalized_ir"].__setitem__("sha256", "b" * 64)),
+            ("compiler", lambda item: item.__setitem__("compiler_version", "other-compiler")),
+            (
+                "profile_id",
+                lambda item: item["workflow_profile"].__setitem__(
+                    "primary_profile_id", "formal-submission-writing"
+                ),
+            ),
+            (
+                "profile_version",
+                lambda item: item["workflow_profile"].__setitem__(
+                    "definition_version", "9.9"
+                ),
+            ),
+            (
+                "profile_binding_hash",
+                lambda item: item["workflow_profile"].__setitem__(
+                    "binding_sha256", "f" * 64
+                ),
+            ),
+        )
+        for label, mutate in mutations:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                payload, _ = compiled_handoff_payload(
+                    root, "research-analysis-argumentation"
+                )
+                manifest_path = root / "build" / "build-manifest.json"
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                mutate(manifest)
+                write_json(manifest_path, manifest)
+                refresh_manifest_hash(payload, root)
+                result = self.evaluate(payload, root)
+                self.assertTrue(result["readiness"]["schema_valid"])
+                self.assertFalse(result["readiness"]["bindings_valid"])
+
+        for relative_path in (
+            "build/index.html",
+            "build/report.ir.normalized.json",
+            "build/build-manifest.json",
+        ):
+            with self.subTest(file_drift=relative_path), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                payload, _ = compiled_handoff_payload(
+                    root, "research-analysis-argumentation"
+                )
+                with (root / relative_path).open("ab") as handle:
+                    handle.write(b" ")
+                result = self.evaluate(payload, root)
+                self.assertFalse(result["readiness"]["bindings_valid"])
+                self.assertTrue(
+                    any(
+                        "hash drift" in issue
+                        for issue in result["blocking_reasons"]["bindings_valid"]
+                    )
+                )
+
+    def test_handoff_and_manifest_cannot_point_to_another_ir_or_html(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            other_ir = root / "build" / "other.ir.normalized.json"
+            other_ir.write_bytes((root / "build" / "report.ir.normalized.json").read_bytes())
+            current = artifact(payload, "current-html")
+            current["report_ir_ref"]["ref"]["value"] = "build/other.ir.normalized.json"  # type: ignore[index]
+            current["report_ir_ref"]["sha256"] = sha256(other_ir)  # type: ignore[index]
+            result = self.evaluate(payload, root)
+        self.assertFalse(result["readiness"]["bindings_valid"])
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            manifest_path = root / "build" / "build-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["outputs"]["html"]["ref"] = "other.html"
+            write_json(manifest_path, manifest)
+            refresh_manifest_hash(payload, root)
+            result = self.evaluate(payload, root)
+        self.assertFalse(result["readiness"]["bindings_valid"])
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            manifest_path = root / "build" / "build-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["outputs"]["normalized_ir"]["ref"] = "other.ir.json"
+            write_json(manifest_path, manifest)
+            refresh_manifest_hash(payload, root)
+            result = self.evaluate(payload, root)
+        self.assertFalse(result["readiness"]["bindings_valid"])
+
+    def test_enterprise_and_workflow_profiles_use_independent_bindings(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            payload["design_binding"] = {
+                "kind": "enterprise_profile",
+                "built_in_theme": None,
+                "project_theme": None,
+                "enterprise_profile": {
+                    "profile_ref": {
+                        "kind": "portable_path",
+                        "value": "artifacts/profile-use.json",
+                    },
+                    "profile_id": "portable-profile",
+                    "profile_version": 3,
+                    "theme_fingerprint": "d" * 64,
+                    "binding_sha256": sha256(root / "artifacts" / "profile-use.json"),
+                },
+            }
+            result = self.evaluate(payload, root)
+        self.assertTrue(
+            result["readiness"]["bindings_valid"],
+            result["blocking_reasons"]["bindings_valid"],
+        )
+        self.assertEqual(
+            payload["current_build"]["workflow_profile"]["primary_profile_id"],  # type: ignore[index]
+            "research-analysis-argumentation",
+        )
+
+    def test_current_build_portability_states_cannot_fake_readiness(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            payload["current_build"]["build_manifest_ref"]["ref"] = {  # type: ignore[index]
+                "kind": "stable_locator",
+                "value": "artifact://build-manifest/current",
+            }
+            result = self.evaluate(payload, root)
+        self.assertTrue(result["readiness"]["bindings_valid"])
+        self.assertFalse(result["readiness"]["continuation_ready"])
+        self.assertFalse(result["readiness"]["delivery_ready"])
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            (root / "build" / "build-manifest.json").unlink()
+            result = self.evaluate(payload, root)
+        self.assertFalse(result["readiness"]["bindings_valid"])
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            artifact(payload, "current-html")["availability_status"] = "handoff_record_only"
+            result = self.evaluate(payload, root)
+        self.assertTrue(result["readiness"]["bindings_valid"])
+        self.assertFalse(result["readiness"]["continuation_ready"])
+
+    def test_profile_binding_does_not_execute_qa_or_grant_delivery(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            result = self.evaluate(payload, root)
+        self.assertEqual(result["qa_execution_claim"], "not_executed_by_validator")
+        self.assertTrue(result["readiness"]["continuation_ready"])
+        self.assertFalse(result["readiness"]["delivery_ready"])
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payload, _ = compiled_handoff_payload(
+                root, "research-analysis-argumentation"
+            )
+            payload["task"] = {
+                "task_intent": "new_build",
+                "content_route": "existing_ppt_html",
+                "change_class": "not_applicable",
+                "requested_delta": {
+                    "summary": "Build after independent gates are satisfied.",
+                    "affected_source_refs": [],
+                    "affected_decision_ids": [],
+                    "preserves_meaning": None,
+                    "interpretation_basis": "not_applicable",
+                    "confirmation_ref": None,
+                },
+            }
+            result = self.evaluate(payload, root)
+        self.assertTrue(result["readiness"]["bindings_valid"])
+        self.assertFalse(result["readiness"]["continuation_ready"])
+        self.assertTrue(
+            any(
+                "production authorization" in reason
+                for reason in result["blocking_reasons"]["continuation_ready"]
+            )
+        )
+
     def test_cli_exit_codes_follow_the_requested_layer(self) -> None:
         ready = subprocess.run(
             [
@@ -843,7 +1225,12 @@ class ProjectHandoffValidatorTests(unittest.TestCase):
 
     def test_schema_reference_and_skill_route_are_present(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(schema["properties"]["schema_version"], {"const": "1.0"})
+        self.assertEqual(
+            schema["properties"]["schema_version"],
+            {"enum": ["1.0", "1.1"]},
+        )
+        self.assertEqual(schema["$id"], "urn:taohtml:project-handoff:1.1")
+        self.assertIn("current_build", schema["properties"])
         self.assertFalse(schema["additionalProperties"])
         self.assertTrue(REFERENCE_PATH.is_file())
         skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")

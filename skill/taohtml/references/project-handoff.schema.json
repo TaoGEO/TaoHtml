@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:taohtml:project-handoff:1.0",
+  "$id": "urn:taohtml:project-handoff:1.1",
   "title": "TaoHtml portable project handoff snapshot",
   "type": "object",
   "additionalProperties": false,
@@ -19,8 +19,26 @@
     "lineage",
     "audit_metadata"
   ],
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "schema_version": {"const": "1.0"}
+          },
+          "not": {"required": ["current_build"]}
+        },
+        {
+          "properties": {
+            "schema_version": {"const": "1.1"}
+          },
+          "required": ["current_build"]
+        }
+      ]
+    }
+  ],
   "properties": {
-    "schema_version": {"const": "1.0"},
+    "schema_version": {"enum": ["1.0", "1.1"]},
     "workspace_ref": {"$ref": "#/$defs/workspace_ref"},
     "project_identity": {"$ref": "#/$defs/project_identity"},
     "handoff_snapshot": {"$ref": "#/$defs/handoff_snapshot"},
@@ -39,6 +57,12 @@
     "qa_records": {
       "type": "array",
       "items": {"$ref": "#/$defs/qa_record"}
+    },
+    "current_build": {
+      "anyOf": [
+        {"$ref": "#/$defs/current_build"},
+        {"type": "null"}
+      ]
     },
     "lineage": {"$ref": "#/$defs/lineage"},
     "audit_metadata": {"$ref": "#/$defs/audit_metadata"}
@@ -71,6 +95,16 @@
     "nullable_sha256": {
       "type": ["string", "null"],
       "pattern": "^[0-9a-f]{64}$"
+    },
+    "workflow_profile_definition_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "nullable_workflow_profile_definition_version": {
+      "anyOf": [
+        {"$ref": "#/$defs/workflow_profile_definition_version"},
+        {"type": "null"}
+      ]
     },
     "string_list": {
       "type": "array",
@@ -571,6 +605,87 @@
       "properties": {
         "ref": {"$ref": "#/$defs/resource_locator"},
         "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "workflow_profile_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binding_state",
+        "primary_profile_id",
+        "definition_version",
+        "binding_sha256"
+      ],
+      "properties": {
+        "binding_state": {"enum": ["legacy_unbound", "bound"]},
+        "primary_profile_id": {
+          "enum": [
+            "formal-submission-writing",
+            "research-analysis-argumentation",
+            "periodic-operations-reporting",
+            "proposal-planning-decision",
+            "live-presentation-persuasion",
+            "teaching-training-knowledge-transfer",
+            "project-lifecycle-reporting",
+            "brand-communication-editorial-publishing",
+            "rule-response-application-defense",
+            null
+          ]
+        },
+        "definition_version": {
+          "$ref": "#/$defs/nullable_workflow_profile_definition_version"
+        },
+        "binding_sha256": {"$ref": "#/$defs/nullable_sha256"}
+      },
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "binding_state": {"const": "legacy_unbound"},
+                "primary_profile_id": {"const": null},
+                "definition_version": {"const": null},
+                "binding_sha256": {"const": null}
+              }
+            },
+            {
+              "properties": {
+                "binding_state": {"const": "bound"},
+                "primary_profile_id": {
+                  "enum": [
+                    "formal-submission-writing",
+                    "research-analysis-argumentation",
+                    "periodic-operations-reporting",
+                    "proposal-planning-decision",
+                    "live-presentation-persuasion",
+                    "teaching-training-knowledge-transfer",
+                    "project-lifecycle-reporting",
+                    "brand-communication-editorial-publishing",
+                    "rule-response-application-defense"
+                  ]
+                },
+                "definition_version": {
+                  "$ref": "#/$defs/workflow_profile_definition_version"
+                },
+                "binding_sha256": {"$ref": "#/$defs/sha256"}
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "current_build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_ref",
+        "build_manifest_ref",
+        "workflow_profile"
+      ],
+      "properties": {
+        "artifact_ref": {"$ref": "#/$defs/short_string"},
+        "build_manifest_ref": {"$ref": "#/$defs/report_ir_ref"},
+        "workflow_profile": {"$ref": "#/$defs/workflow_profile_summary"}
       }
     },
     "artifact": {

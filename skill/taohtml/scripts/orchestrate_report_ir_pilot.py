@@ -229,7 +229,10 @@ def _handoff_binding_issues(
     html_sha256: str,
     normalized_ir_ref: str,
     normalized_ir_sha256: str,
+    manifest_ref: str,
+    manifest_sha256: str,
     compiler_version: str,
+    workflow_profile: dict[str, Any],
     design_brief_sha256: str,
 ) -> list[str]:
     current = [
@@ -241,6 +244,8 @@ def _handoff_binding_issues(
         return ["handoff must contain exactly one current artifact"]
     artifact = current[0]
     issues: list[str] = []
+    if handoff.get("schema_version") != "1.1":
+        issues.append("pilot handoff must use Project Handoff schema_version 1.1")
     locator = artifact.get("locator")
     if locator != {"kind": "portable_path", "value": html_ref}:
         issues.append("current handoff artifact must point to the compiled pilot HTML")
@@ -256,6 +261,23 @@ def _handoff_binding_issues(
     if artifact.get("report_ir_ref") != expected_ir_ref:
         issues.append(
             "current handoff report_ir_ref must bind the compiled normalized Report IR"
+        )
+    expected_current_build = {
+        "artifact_ref": artifact.get("artifact_id"),
+        "build_manifest_ref": {
+            "ref": {"kind": "portable_path", "value": manifest_ref},
+            "sha256": manifest_sha256,
+        },
+        "workflow_profile": {
+            "binding_state": workflow_profile["binding_state"],
+            "primary_profile_id": workflow_profile["primary_profile_id"],
+            "definition_version": workflow_profile["definition_version"],
+            "binding_sha256": workflow_profile["binding_sha256"],
+        },
+    }
+    if handoff.get("current_build") != expected_current_build:
+        issues.append(
+            "current_build must bind the newly generated Build Manifest and Workflow Profile"
         )
     confirmations = handoff.get("confirmations")
     handoff_brief = (
@@ -391,11 +413,13 @@ def _run_pilot(
     html_ref = f"{output_ref}/index.html"
     normalized_ir_ref = f"{output_ref}/report.ir.normalized.json"
     manifest_ref = f"{output_ref}/build-manifest.json"
+    manifest_sha256 = report_ir_core.sha256_file(output_dir / "build-manifest.json")
     status["compiler"] = {
         "status": "compiled",
         "compiler_invocation": "local_compile_report_ir.compile_ir",
         "compiler_version": manifest["compiler_version"],
         "manifest_ref": manifest_ref,
+        "manifest_sha256": manifest_sha256,
         "html_ref": html_ref,
         "html_sha256": manifest["outputs"]["html"]["sha256"],
         "normalized_ir_ref": normalized_ir_ref,
@@ -446,7 +470,10 @@ def _run_pilot(
         html_sha256=manifest["outputs"]["html"]["sha256"],
         normalized_ir_ref=normalized_ir_ref,
         normalized_ir_sha256=manifest["outputs"]["normalized_ir"]["sha256"],
+        manifest_ref=manifest_ref,
+        manifest_sha256=manifest_sha256,
         compiler_version=manifest["compiler_version"],
+        workflow_profile=manifest["workflow_profile"],
         design_brief_sha256=production_state["design_brief"]["artifact_sha256"],
     )
     if binding_issues:

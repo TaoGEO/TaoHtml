@@ -12,7 +12,38 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
+SUPPORTED_REPORT_IR_VERSIONS = {"1.0", "1.1"}
+BUILD_MANIFEST_SCHEMA_VERSION = "1.0"
+WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION = "1.1"
+WORKFLOW_PROFILE_DEFINITION_VERSION = "2.0"
+WORKFLOW_PROFILE_IDS = {
+    "formal-submission-writing",
+    "research-analysis-argumentation",
+    "periodic-operations-reporting",
+    "proposal-planning-decision",
+    "live-presentation-persuasion",
+    "teaching-training-knowledge-transfer",
+    "project-lifecycle-reporting",
+    "brand-communication-editorial-publishing",
+    "rule-response-application-defense",
+}
+IR_WORKFLOW_PROFILE_KEYS = {
+    "primary_profile_id",
+    "definition_version",
+    "selection_basis",
+    "capability_overlays",
+}
+IR_WORKFLOW_OVERLAY_KEYS = {"profile_id", "reason"}
+MANIFEST_WORKFLOW_PROFILE_KEYS = {
+    "binding_contract_version",
+    "binding_state",
+    "primary_profile_id",
+    "definition_version",
+    "selection_basis",
+    "capability_overlays",
+    "binding_sha256",
+}
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 SCHEMA_PATH = SKILL_DIR / "references" / "project-handoff.schema.json"
@@ -157,6 +188,8 @@ def _schema_errors(
     errors: list[str] = []
     for branch in schema.get("allOf", []):
         errors.extend(_schema_errors(value, branch, schema_root, path))
+    if "not" in schema and not _schema_errors(value, schema["not"], schema_root, path):
+        errors.append(f"{path} matches a forbidden schema branch")
     if "anyOf" in schema:
         branch_errors = [
             _schema_errors(value, branch, schema_root, path)
@@ -238,6 +271,16 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _canonical_bytes(value: object) -> bytes:
+    return json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+
+
+def _canonical_sha256(value: object) -> str:
+    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
 def _snapshot_sha256(raw: object, handoff_bytes: bytes | None) -> str:
@@ -598,6 +641,358 @@ def _load_json_record(path: Path, label: str, issues: list[str]) -> dict[str, An
         issues.append(f"{label} must contain a JSON object")
         return None
     return value
+
+
+def _load_hashed_resource(
+    binding: dict[str, Any],
+    root: Path | None,
+    label: str,
+    issues: list[str],
+    verified_files: list[str],
+) -> Path | None:
+    locator = binding["ref"]
+    value = locator["value"]
+    if locator["kind"] == "stable_locator":
+        if _looks_local_absolute(value):
+            issues.append(f"{label} cannot use a local absolute path as identity")
+        return None
+    current = _current_local_file(
+        root,
+        value,
+        binding["sha256"],
+        label,
+        issues,
+    )
+    if current is not None:
+        verified_files.append(value)
+    return current
+
+
+def _workflow_profile_from_ir(
+    ir: dict[str, Any],
+    issues: list[str],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    version = ir.get("report_ir_version")
+    if version not in SUPPORTED_REPORT_IR_VERSIONS:
+        issues.append("current_build normalized IR report_ir_version is unsupported")
+        return None, None
+    binding = ir.get("workflow_profile")
+    if version == "1.0":
+        if "workflow_profile" in ir:
+            issues.append(
+                "Report IR v1.0 must remain legacy_unbound and cannot declare workflow_profile"
+            )
+            return None, None
+        record = {
+            "binding_contract_version": WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION,
+            "binding_state": "legacy_unbound",
+            "primary_profile_id": None,
+            "definition_version": None,
+            "selection_basis": None,
+            "capability_overlays": [],
+            "binding_sha256": None,
+        }
+        summary = {
+            "binding_state": "legacy_unbound",
+            "primary_profile_id": None,
+            "definition_version": None,
+            "binding_sha256": None,
+        }
+        return record, summary
+
+    if not isinstance(binding, dict) or set(binding) != IR_WORKFLOW_PROFILE_KEYS:
+        issues.append("Report IR v1.1 workflow_profile fields are missing or drifted")
+        return None, None
+    primary = binding["primary_profile_id"]
+    definition_version = binding["definition_version"]
+    selection_basis = binding["selection_basis"]
+    overlays = binding["capability_overlays"]
+    if not isinstance(primary, str) or primary not in WORKFLOW_PROFILE_IDS:
+        issues.append("Report IR workflow_profile primary_profile_id is unsupported")
+    if definition_version != WORKFLOW_PROFILE_DEFINITION_VERSION:
+        issues.append("Report IR workflow_profile definition_version is unsupported")
+    if not isinstance(selection_basis, str) or not selection_basis.strip():
+        issues.append("Report IR workflow_profile selection_basis is empty")
+    overlay_ids: list[str] = []
+    if not isinstance(overlays, list):
+        issues.append("Report IR workflow_profile capability_overlays must be an array")
+    else:
+        for index, overlay in enumerate(overlays):
+            if not isinstance(overlay, dict) or set(overlay) != IR_WORKFLOW_OVERLAY_KEYS:
+                issues.append(
+                    f"Report IR workflow_profile capability_overlays[{index}] fields drifted"
+                )
+                continue
+            overlay_id = overlay["profile_id"]
+            if not isinstance(overlay_id, str) or overlay_id not in WORKFLOW_PROFILE_IDS:
+                issues.append(
+                    f"Report IR workflow_profile capability_overlays[{index}] profile_id is unsupported"
+                )
+            if overlay_id == primary:
+                issues.append("Report IR workflow_profile overlay repeats the primary Profile")
+            if overlay_id in overlay_ids:
+                issues.append("Report IR workflow_profile contains duplicate overlays")
+            overlay_ids.append(overlay_id)
+            if not isinstance(overlay["reason"], str) or not overlay["reason"].strip():
+                issues.append(
+                    f"Report IR workflow_profile capability_overlays[{index}] reason is empty"
+                )
+    if any(issue.startswith("Report IR workflow_profile") for issue in issues):
+        return None, None
+    binding_sha256 = _canonical_sha256(binding)
+    record = {
+        "binding_contract_version": WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION,
+        "binding_state": "bound",
+        "primary_profile_id": primary,
+        "definition_version": definition_version,
+        "selection_basis": selection_basis,
+        "capability_overlays": overlays,
+        "binding_sha256": binding_sha256,
+    }
+    summary = {
+        "binding_state": "bound",
+        "primary_profile_id": primary,
+        "definition_version": definition_version,
+        "binding_sha256": binding_sha256,
+    }
+    return record, summary
+
+
+def _validate_manifest_workflow_profile(
+    record: object,
+    issues: list[str],
+) -> dict[str, Any] | None:
+    if not isinstance(record, dict) or set(record) != MANIFEST_WORKFLOW_PROFILE_KEYS:
+        issues.append("Build Manifest workflow_profile record fields drifted")
+        return None
+    if record["binding_contract_version"] != WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION:
+        issues.append("Build Manifest workflow_profile contract version is unsupported")
+        return None
+    state = record["binding_state"]
+    if state == "legacy_unbound":
+        expected = {
+            "binding_contract_version": WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION,
+            "binding_state": "legacy_unbound",
+            "primary_profile_id": None,
+            "definition_version": None,
+            "selection_basis": None,
+            "capability_overlays": [],
+            "binding_sha256": None,
+        }
+        if record != expected:
+            issues.append("Build Manifest legacy_unbound workflow_profile is inconsistent")
+            return None
+    elif state == "bound":
+        binding = {
+            "primary_profile_id": record["primary_profile_id"],
+            "definition_version": record["definition_version"],
+            "selection_basis": record["selection_basis"],
+            "capability_overlays": record["capability_overlays"],
+        }
+        probe_issues: list[str] = []
+        expected, _ = _workflow_profile_from_ir(
+            {"report_ir_version": "1.1", "workflow_profile": binding},
+            probe_issues,
+        )
+        if expected is None or probe_issues or record != expected:
+            issues.append("Build Manifest bound workflow_profile is inconsistent")
+            return None
+    else:
+        issues.append("Build Manifest workflow_profile binding_state is unsupported")
+        return None
+    return {
+        "binding_state": record["binding_state"],
+        "primary_profile_id": record["primary_profile_id"],
+        "definition_version": record["definition_version"],
+        "binding_sha256": record["binding_sha256"],
+    }
+
+
+def _manifest_output(
+    manifest: dict[str, Any],
+    name: str,
+    issues: list[str],
+) -> dict[str, str] | None:
+    outputs = manifest.get("outputs")
+    output = outputs.get(name) if isinstance(outputs, dict) else None
+    if (
+        not isinstance(output, dict)
+        or set(output) != {"ref", "sha256"}
+        or not isinstance(output.get("ref"), str)
+        or not _safe_relative(output["ref"])
+        or not isinstance(output.get("sha256"), str)
+        or not SHA256.fullmatch(output["sha256"])
+    ):
+        issues.append(f"Build Manifest outputs.{name} record is invalid")
+        return None
+    return output
+
+
+def _manifest_output_ref(manifest_ref: str, output_ref: str) -> str:
+    return (PurePosixPath(manifest_ref).parent / PurePosixPath(output_ref)).as_posix()
+
+
+def _validate_current_build(
+    raw: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    local_paths: dict[str, Path],
+    root: Path | None,
+    issues: list[str],
+    verified_files: list[str],
+) -> bool:
+    if raw["schema_version"] == "1.0":
+        return True
+
+    current_build = raw["current_build"]
+    current = _current_artifact(artifacts)
+    if current_build is None:
+        if current is not None and current["report_ir_ref"] is not None:
+            issues.append(
+                "Project Handoff v1.1 Report IR artifacts require a current_build binding"
+            )
+        return current is None or current["report_ir_ref"] is None
+
+    issue_start = len(issues)
+    artifact_ref = current_build["artifact_ref"]
+    if current is None:
+        issues.append("current_build requires one current HTML artifact")
+    elif artifact_ref != current["artifact_id"]:
+        issues.append("current_build.artifact_ref does not identify the current HTML artifact")
+    if current is None or current["report_ir_ref"] is None:
+        issues.append("current_build requires the current artifact report_ir_ref")
+        report_ir_binding = None
+    else:
+        report_ir_binding = current["report_ir_ref"]
+    if current is None or current["versions"]["compiler_version"] is None:
+        issues.append("current_build requires the current artifact compiler_version")
+
+    manifest_binding = current_build["build_manifest_ref"]
+    manifest_path = _load_hashed_resource(
+        manifest_binding,
+        root,
+        "current_build.build_manifest_ref",
+        issues,
+        verified_files,
+    )
+    ir_path = None
+    if report_ir_binding is not None:
+        ir_path = _load_hashed_resource(
+            report_ir_binding,
+            root,
+            "current artifact report_ir_ref",
+            issues,
+            verified_files,
+        )
+
+    manifest = (
+        _load_json_record(manifest_path, "current_build Build Manifest", issues)
+        if manifest_path is not None
+        else None
+    )
+    ir = (
+        _load_json_record(ir_path, "current artifact normalized Report IR", issues)
+        if ir_path is not None
+        else None
+    )
+    expected_profile_record = None
+    expected_profile_summary = None
+    if ir is not None:
+        expected_profile_record, expected_profile_summary = _workflow_profile_from_ir(
+            ir, issues
+        )
+        if (
+            expected_profile_summary is not None
+            and current_build["workflow_profile"] != expected_profile_summary
+        ):
+            issues.append(
+                "current_build workflow_profile summary does not match normalized Report IR"
+            )
+
+    if manifest is not None:
+        if manifest.get("schema_version") != BUILD_MANIFEST_SCHEMA_VERSION:
+            issues.append("Build Manifest schema_version is unsupported")
+        manifest_compiler = manifest.get("compiler_version")
+        artifact_compiler = (
+            current["versions"]["compiler_version"] if current is not None else None
+        )
+        if manifest_compiler != artifact_compiler:
+            issues.append(
+                "Build Manifest compiler_version does not match the current artifact"
+            )
+        manifest_report_ir = manifest.get("report_ir")
+        if not isinstance(manifest_report_ir, dict):
+            issues.append("Build Manifest report_ir record is invalid")
+        manifest_profile = manifest.get("workflow_profile")
+        profile_summary = _validate_manifest_workflow_profile(
+            manifest_profile, issues
+        )
+        if (
+            profile_summary is not None
+            and profile_summary != current_build["workflow_profile"]
+        ):
+            issues.append("Build Manifest workflow_profile does not match current_build")
+        html_output = _manifest_output(manifest, "html", issues)
+        normalized_output = _manifest_output(manifest, "normalized_ir", issues)
+        manifest_locator = manifest_binding["ref"]
+        if current is not None and html_output is not None:
+            if html_output["sha256"] != current["sha256"]:
+                issues.append(
+                    "Build Manifest HTML hash does not match the current artifact"
+                )
+            current_locator = current["locator"]
+            if (
+                manifest_locator["kind"] == "portable_path"
+                and current_locator["kind"] == "portable_path"
+                and _manifest_output_ref(
+                    manifest_locator["value"], html_output["ref"]
+                )
+                != current_locator["value"]
+            ):
+                issues.append(
+                    "Build Manifest HTML ref does not match the current artifact locator"
+                )
+        if report_ir_binding is not None and normalized_output is not None:
+            if normalized_output["sha256"] != report_ir_binding["sha256"]:
+                issues.append(
+                    "Build Manifest normalized IR file hash does not match report_ir_ref"
+                )
+            report_locator = report_ir_binding["ref"]
+            if (
+                manifest_locator["kind"] == "portable_path"
+                and report_locator["kind"] == "portable_path"
+                and _manifest_output_ref(
+                    manifest_locator["value"], normalized_output["ref"]
+                )
+                != report_locator["value"]
+            ):
+                issues.append(
+                    "Build Manifest normalized IR ref does not match report_ir_ref"
+                )
+        if ir is not None and isinstance(manifest_report_ir, dict):
+            if manifest_report_ir.get("version") != ir.get("report_ir_version"):
+                issues.append(
+                    "Build Manifest Report IR version does not match normalized Report IR"
+                )
+            if manifest_report_ir.get("normalized_sha256") != _canonical_sha256(ir):
+                issues.append(
+                    "Build Manifest normalized Report IR hash does not match canonical IR"
+                )
+        if (
+            expected_profile_record is not None
+            and isinstance(manifest_profile, dict)
+            and manifest_profile != expected_profile_record
+        ):
+            issues.append(
+                "Build Manifest workflow_profile record does not match normalized Report IR"
+            )
+
+    html_local = current is not None and current["artifact_id"] in local_paths
+    return bool(
+        html_local
+        and manifest_path is not None
+        and ir_path is not None
+        and len(issues) == issue_start
+    )
 
 
 def _validate_authorization(
@@ -986,10 +1381,17 @@ def _continuation_blockers(
     local_paths: dict[str, Path],
     authorization_verified: bool,
     design_binding_locally_verified: bool,
+    current_build_locally_verified: bool,
 ) -> list[str]:
     blockers: list[str] = []
     task = raw["task"]
     intent = task["task_intent"]
+    if (
+        raw["schema_version"] == "1.1"
+        and raw["current_build"] is not None
+        and not current_build_locally_verified
+    ):
+        blockers.append("current Report IR build identity is not locally hash-verified")
     if intent == "review_only":
         return blockers
     if task["content_route"] is None:
@@ -1092,6 +1494,7 @@ def _delivery_blockers(
     qa_passed: dict[str, str | None],
     authorization_verified: bool,
     design_binding_locally_verified: bool,
+    current_build_locally_verified: bool,
 ) -> list[str]:
     blockers: list[str] = []
     task = raw["task"]
@@ -1099,6 +1502,12 @@ def _delivery_blockers(
         blockers.append("review_only snapshots never claim delivery readiness")
     if not continuation_ready:
         blockers.append("continuation_ready is false")
+    if (
+        raw["schema_version"] == "1.1"
+        and raw["current_build"] is not None
+        and not current_build_locally_verified
+    ):
+        blockers.append("current Report IR build identity is not locally hash-verified")
     current = _current_artifact(artifacts)
     if current is None or current["artifact_id"] not in local_paths:
         blockers.append("current delivery artifact is not locally hash-verified")
@@ -1246,6 +1655,14 @@ def evaluate_handoff(
     qa_passed = _validate_qa_records(
         raw, artifacts, local_paths, binding_issues
     )
+    current_build_locally_verified = _validate_current_build(
+        raw,
+        artifacts,
+        local_paths,
+        root,
+        binding_issues,
+        verified_files,
+    )
 
     current = _current_artifact(artifacts)
     if (
@@ -1275,6 +1692,7 @@ def evaluate_handoff(
             local_paths,
             authorization_verified,
             design_binding_locally_verified,
+            current_build_locally_verified,
         )
         if bindings_valid
         else ["bindings_valid is false"]
@@ -1289,13 +1707,14 @@ def evaluate_handoff(
             qa_passed,
             authorization_verified,
             design_binding_locally_verified,
+            current_build_locally_verified,
         )
         if bindings_valid
         else ["bindings_valid is false"]
     )
     delivery_ready = bindings_valid and not delivery_blockers
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": raw["schema_version"],
         "status": "valid" if bindings_valid else "bindings_invalid",
         "handoff_sha256": snapshot_hash,
         "readiness": {

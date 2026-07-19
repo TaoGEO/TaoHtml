@@ -20,7 +20,8 @@ defines their strict portable serialization; it does not replace that workflow.
 
 ## Contract Files
 
-- `project-handoff.schema.json`: normative JSON Schema, currently version `1.0`.
+- `project-handoff.schema.json`: normative JSON Schema, current version `1.1`;
+  the exact original `1.0` shape remains accepted.
 - `../scripts/validate_project_handoff.py`: deterministic structural, binding,
   continuation, and delivery evaluator.
 
@@ -81,6 +82,7 @@ Every top-level object is closed: missing fields and additional fields fail
 | `design_binding` | Exactly one built-in, project-theme, enterprise-profile, or unresolved binding |
 | `artifacts` | Current, delivered-baseline, previous, supporting, and gate-record artifacts |
 | `qa_records` | Existing structured QA records bound to an artifact id and hash |
+| `current_build` | In `1.1`, `null` for Direct HTML or the small Report IR Build Manifest/Profile identity record |
 | `lineage` | Parent handoff, exact baseline, previous artifacts, and current delta |
 | `audit_metadata` | Optional platform/model/cost audit information, never readiness input |
 
@@ -157,7 +159,8 @@ Each artifact records:
 - stable `artifact_id`, kind, role, availability, locator, and SHA-256;
 - `baseline_identity` when it descends from an exact delivered baseline;
 - Runtime, editor, theme, and optional compiler versions; and
-- optional opaque `report_ir_ref` with its own hash.
+- optional `report_ir_ref` with its own hash; it stays opaque in `1.0` and is
+  cross-checked only when a `1.1 current_build` declares a Report IR build.
 
 TaoHtml's primary report source is HTML. Exactly the `current` and
 `delivered_baseline` roles identify primary report artifacts, so either role must
@@ -168,10 +171,35 @@ also ineligible for either primary role. A current artifact and a delivered
 baseline are separate roles even when their bytes happen to match. The current
 HTML's baseline identity must agree with `lineage`.
 
-`compiler_version` and `report_ir_ref` are versioned references only. Their presence
-does not make this handoff validator parse, validate, compile, or migrate the referenced
-Report IR. Use the separate Report IR validation and Compiler contracts when that
-experimental engineering route is explicitly active.
+In a `1.0` snapshot, `compiler_version` and `report_ir_ref` retain their original
+opaque-reference semantics. The validator never infers a Workflow Profile for that
+version.
+
+Version `1.1` adds `current_build` at the top level because it describes the identity
+of the current build rather than enterprise visual state. Direct HTML records set it
+to `null`; they do not gain a Report IR requirement or a new customer question. A
+Report IR build records only:
+
+- `artifact_ref`, pointing to the one current HTML artifact whose locator/hash and
+  `compiler_version` remain authoritative in `artifacts`;
+- `build_manifest_ref`, containing the portable Manifest locator and file SHA-256;
+  and
+- `workflow_profile`, containing only `binding_state`, `primary_profile_id`,
+  `definition_version`, and `binding_sha256`.
+
+The handoff does not copy the Manifest, Report IR, Profile definition,
+`selection_basis`, overlays, report content, or enterprise assets. When the current
+HTML, normalized IR, and Build Manifest are local hashed portable files, the
+validator cross-checks their refs/hashes, Compiler version, IR version and canonical
+hash, and the deterministic Manifest/Profile binding. A `1.0` IR must remain
+`legacy_unbound` with null Profile identity; a `1.1` IR must be `bound`. Any mismatch
+fails `bindings_valid`. The validator does not call the Compiler, run the Report IR
+Validator, reinterpret Profile semantics, or execute QA.
+
+`current_build.workflow_profile` is independent of
+`design_binding.enterprise_profile`: the former binds a workflow contract to the
+IR/build identity, while the latter binds enterprise visual assets. Neither field
+may substitute for, populate, or validate the other.
 
 For continuation or delivery through an enterprise profile, export only the small
 profile-use binding record as a hashed `portable_path`; keep the enterprise assets
@@ -257,11 +285,17 @@ all three formal actions in the same verified record.
 | Layer | Meaning | Explicit non-meaning |
 |---|---|---|
 | `schema_valid` | JSON shape, exact fields, enums, scalar constraints, and supported schema version pass | No file, hash, provenance, or readiness claim |
-| `bindings_valid` | References, role/support semantics, safe local paths, current hashes, lineage, confirmations, and recorded QA/authorization bindings are coherent | No claim that an incomplete workflow can continue or deliver |
+| `bindings_valid` | References, role/support semantics, safe local paths, current hashes, lineage, confirmations, recorded QA/authorization, and any declared current-build identity are coherent | No claim that an incomplete workflow can continue or deliver |
 | `continuation_ready` | The requested task branch has the minimum state needed for safe continuation | No claim that current QA or delivery passed |
 | `delivery_ready` | A non-review task has a hash-current artifact, applicable gates, no delivery blocker, and passed structured asset/browser/Runtime-editor/traceability/delivery records bound to that artifact | No claim that this validator executed those checks |
 
 The evaluator applies these branch rules:
+
+- Any non-null `1.1 current_build` must have its current HTML, normalized IR, and
+  Build Manifest locally hash-verified before it can contribute to
+  `continuation_ready` or `delivery_ready`. A stable locator or handoff-only current
+  artifact may preserve useful identity state, but cannot impersonate local build
+  verification.
 
 - `review_only`: may be schema-valid, bindings-valid, and continuation-ready with
   missing originals and unresolved content route. It is always
@@ -299,10 +333,18 @@ delivery ready until its exact bytes are locally bound and checked.
 
 ## Version Policy
 
-Version `1.0` is the only accepted schema. Unknown, newer, and legacy versions fail
-`schema_valid`; there is no implicit downgrade, permissive extra-field mode, or
-best-effort migration. A future migration must be an explicit tool that produces a
-new snapshot and preserves the old snapshot hash in lineage.
+Versions `1.0` and `1.1` are accepted with explicit, closed shapes:
+
+- `1.0` is the original contract. It forbids `current_build`, keeps Report IR and
+  Compiler fields opaque, and never receives a guessed Profile value.
+- `1.1` requires the `current_build` field. Direct HTML uses `null`; a Report IR
+  current artifact requires the small build/Profile binding described above.
+
+Unknown versions fail `schema_valid`. A `1.0` snapshot is not silently upgraded,
+and a `1.1` field cannot be smuggled into `1.0`; there is no implicit downgrade,
+permissive extra-field mode, or best-effort migration. A future migration must be
+an explicit tool that produces a new snapshot and preserves the old snapshot hash
+in lineage.
 
 ## Future Boundaries
 
@@ -312,8 +354,12 @@ validator:
 
 - `workspace_ref` is opaque; it is not a workspace database or asset store.
 - `project_identity` is identity only; it is not a mutable Project service.
-- `report_ir_ref` never embeds or validates a Report IR payload.
+- `report_ir_ref` never embeds a Report IR payload. Under `1.1 current_build`, the
+  validator reads only the local normalized IR identity/Profile fields needed for
+  deterministic cross-checking; it does not execute the full Report IR workflow.
 - `compiler_version` records provenance only; the validator does not compile.
+- `build_manifest_ref` binds one existing Manifest file; it never copies the
+  Manifest or turns the handoff into a build database.
 - `enterprise_profile` references immutable profile state and never copies the
   enterprise asset collection into the handoff.
 

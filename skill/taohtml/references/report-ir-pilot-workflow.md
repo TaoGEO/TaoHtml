@@ -85,9 +85,15 @@ python scripts/orchestrate_report_ir_pilot.py \
 Runtime/editor、追踪和 delivery verification 流程。使用现有 Project Handoff 合同生成记录，
 不要复制检查实现。Handoff 的 current HTML 必须：
 
+- 使用 Project Handoff `schema_version=1.1`；
 - `locator` 指向当前 `build/index.html` 并绑定其 SHA-256；
 - `versions.compiler_version` 等于 Build Manifest 的 Compiler 版本；
-- `report_ir_ref` 以 `portable_path` 指向当前 `build/report.ir.normalized.json` 并绑定其 SHA-256。
+- `report_ir_ref` 以 `portable_path` 指向当前 `build/report.ir.normalized.json` 并绑定其 SHA-256；
+- `current_build.artifact_ref` 指向上述 current HTML；
+- `current_build.build_manifest_ref` 以 `portable_path` 指向刚生成的
+  `build/build-manifest.json` 并绑定其文件 SHA-256；
+- `current_build.workflow_profile` 只抄录刚生成 Manifest 的 binding state、主 Profile id、
+  definition version 与 binding hash，不复制 selection basis、overlays 或 Profile 全文。
 
 记录完成后，使用同一命令加上：
 
@@ -98,7 +104,10 @@ Runtime/editor、追踪和 delivery verification 流程。使用现有 Project H
 编排器复用 `validate_project_handoff.py`，分别保留 `schema_valid`、`bindings_valid`、
 `continuation_ready` 和 `delivery_ready`。它只验证已有 QA/Handoff 记录，状态始终保留
 `not_executed_by_orchestrator` 与 Validator 的 `not_executed_by_validator` 声明；不得因此声称
-编排器或 Validator 执行过浏览器 QA。只有当前 Handoff 自身记录为 `delivery_ready=true`，
+编排器或 Validator 执行过浏览器 QA。提供 Handoff 时，编排器还要求这份最小记录与本次
+刚生成的 HTML、规范化 IR、Build Manifest、Compiler version 和 Workflow Profile binding
+完全一致；旧 `1.0` Handoff 不能冒充本次 build binding。只有当前 Handoff 自身记录为
+`delivery_ready=true`，
 才可进入既有正式交付动作。
 
 ## 普通流程不变

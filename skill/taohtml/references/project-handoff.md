@@ -121,6 +121,15 @@ handoff is not delivery evidence. The validator verifies existing path/hash and
 structured QA/authorization bindings only; it never claims to have executed
 browser, asset, Runtime/editor, traceability, or delivery QA.
 
+Use schema `1.0` unchanged for an existing legacy snapshot; do not add or infer a
+Workflow Profile. New structured exports use `1.1` and always include
+`current_build`: Direct HTML sets it to `null`, while a Report IR build binds the
+current HTML artifact id, one hashed Build Manifest reference, and only the small
+Workflow Profile identity summary. Keep full IR/Profile/Manifest content and
+enterprise visual assets outside the handoff. Workflow Profile identity and
+`design_binding.enterprise_profile` are separate contracts and never substitute for
+one another.
+
 Use only safe relative portable paths or stable non-local locators for identity.
 Local absolute paths may appear solely as optional current-environment
 observations. Unknown schema versions, extra fields, path escape, symlink traversal,

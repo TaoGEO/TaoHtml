@@ -250,6 +250,10 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
                 status["compiler"]["compiler_invocation"],
                 "local_compile_report_ir.compile_ir",
             )
+            self.assertEqual(
+                status["compiler"]["manifest_sha256"],
+                sha256(root / "build" / "build-manifest.json"),
+            )
             self.assertEqual(status["html_qa"]["status"], "not_executed")
             self.assertEqual(status["project_handoff"]["status"], "not_executed")
             self.assertEqual(
@@ -372,11 +376,13 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
             manifest = json.loads(
                 (root / "build" / "build-manifest.json").read_text(encoding="utf-8")
             )
+            manifest_hash = sha256(root / "build" / "build-manifest.json")
             html_hash = manifest["outputs"]["html"]["sha256"]
             normalized_hash = manifest["outputs"]["normalized_ir"]["sha256"]
             brief_hash = sha256(root / "brief" / "design-brief.md")
 
             payload = new_build_ready_payload()
+            payload["schema_version"] = "1.1"
             current = next(
                 item
                 for item in payload["artifacts"]
@@ -402,6 +408,23 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
             )
             current_source["identity"]["value"] = "build/index.html"
             current_source["identity"]["sha256"] = html_hash
+            profile = manifest["workflow_profile"]
+            payload["current_build"] = {
+                "artifact_ref": "current-html",
+                "build_manifest_ref": {
+                    "ref": {
+                        "kind": "portable_path",
+                        "value": "build/build-manifest.json",
+                    },
+                    "sha256": manifest_hash,
+                },
+                "workflow_profile": {
+                    "binding_state": profile["binding_state"],
+                    "primary_profile_id": profile["primary_profile_id"],
+                    "definition_version": profile["definition_version"],
+                    "binding_sha256": profile["binding_sha256"],
+                },
+            }
 
             copied_brief = root / "artifacts" / "design-brief.md"
             copied_brief.write_bytes((root / "brief" / "design-brief.md").read_bytes())
@@ -478,7 +501,14 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
             )
 
     def test_handoff_binding_requires_exact_html_and_normalized_ir(self) -> None:
+        workflow_profile = {
+            "binding_state": "bound",
+            "primary_profile_id": "research-analysis-argumentation",
+            "definition_version": "2.0",
+            "binding_sha256": "c" * 64,
+        }
         handoff = {
+            "schema_version": "1.1",
             "confirmations": {
                 "design_brief": {
                     "status": "confirmed",
@@ -487,6 +517,7 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
             },
             "artifacts": [
                 {
+                    "artifact_id": "current-html",
                     "role": "current",
                     "locator": {"kind": "portable_path", "value": "build/index.html"},
                     "sha256": "a" * 64,
@@ -499,7 +530,18 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
                         "sha256": "b" * 64,
                     },
                 }
-            ]
+            ],
+            "current_build": {
+                "artifact_ref": "current-html",
+                "build_manifest_ref": {
+                    "ref": {
+                        "kind": "portable_path",
+                        "value": "build/build-manifest.json",
+                    },
+                    "sha256": "e" * 64,
+                },
+                "workflow_profile": workflow_profile,
+            },
         }
         self.assertEqual(
             WORKFLOW._handoff_binding_issues(
@@ -508,7 +550,15 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
                 html_sha256="a" * 64,
                 normalized_ir_ref="build/report.ir.normalized.json",
                 normalized_ir_sha256="b" * 64,
+                manifest_ref="build/build-manifest.json",
+                manifest_sha256="e" * 64,
                 compiler_version="0.1.0-dev",
+                workflow_profile={
+                    **workflow_profile,
+                    "binding_contract_version": "1.1",
+                    "selection_basis": "confirmed basis",
+                    "capability_overlays": [],
+                },
                 design_brief_sha256="d" * 64,
             ),
             [],
@@ -521,10 +571,41 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
             html_sha256="a" * 64,
             normalized_ir_ref="build/report.ir.normalized.json",
             normalized_ir_sha256="b" * 64,
+            manifest_ref="build/build-manifest.json",
+            manifest_sha256="e" * 64,
             compiler_version="0.1.0-dev",
+            workflow_profile={
+                **workflow_profile,
+                "binding_contract_version": "1.1",
+                "selection_basis": "confirmed basis",
+                "capability_overlays": [],
+            },
             design_brief_sha256="d" * 64,
         )
         self.assertIn("normalized Report IR", issues[0])
+
+        legacy = copy.deepcopy(handoff)
+        legacy["schema_version"] = "1.0"
+        legacy.pop("current_build")
+        issues = WORKFLOW._handoff_binding_issues(
+            legacy,
+            html_ref="build/index.html",
+            html_sha256="a" * 64,
+            normalized_ir_ref="build/report.ir.normalized.json",
+            normalized_ir_sha256="b" * 64,
+            manifest_ref="build/build-manifest.json",
+            manifest_sha256="e" * 64,
+            compiler_version="0.1.0-dev",
+            workflow_profile={
+                **workflow_profile,
+                "binding_contract_version": "1.1",
+                "selection_basis": "confirmed basis",
+                "capability_overlays": [],
+            },
+            design_brief_sha256="d" * 64,
+        )
+        self.assertTrue(any("schema_version 1.1" in issue for issue in issues))
+        self.assertTrue(any("current_build" in issue for issue in issues))
 
     def test_skill_routes_pilot_details_to_one_direct_reference(self) -> None:
         skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
