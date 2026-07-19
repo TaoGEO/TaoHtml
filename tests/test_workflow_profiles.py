@@ -25,6 +25,9 @@ DETAILED_PROFILES = {
     "periodic-operations-reporting": "2.0",
     "proposal-planning-decision": "2.0",
     "live-presentation-persuasion": "2.0",
+    "teaching-training-knowledge-transfer": "2.0",
+    "project-lifecycle-reporting": "2.0",
+    "brand-communication-editorial-publishing": "2.0",
     "rule-response-application-defense": "2.0",
 }
 
@@ -310,7 +313,7 @@ class WorkflowProfileContractTests(unittest.TestCase):
                 r"(?:IR (?:engineering )?route is independently authorized|independently authorized IR route)",
             )
 
-    def test_engineering_nodes_implement_exactly_six_detailed_golden_paths(self) -> None:
+    def test_engineering_nodes_implement_exactly_nine_detailed_golden_paths(self) -> None:
         self.assertEqual(
             set(DETAILED_PROFILES),
             {
@@ -319,6 +322,9 @@ class WorkflowProfileContractTests(unittest.TestCase):
                 "periodic-operations-reporting",
                 "proposal-planning-decision",
                 "live-presentation-persuasion",
+                "teaching-training-knowledge-transfer",
+                "project-lifecycle-reporting",
+                "brand-communication-editorial-publishing",
                 "rule-response-application-defense",
             },
         )
@@ -335,18 +341,10 @@ class WorkflowProfileContractTests(unittest.TestCase):
             self.assertIn("### Golden Path", text)
             self.assertIn("### 设计简报增量", text)
 
-        for profile_id, _, definition_ref in EXPECTED_PROFILES:
-            if profile_id in DETAILED_PROFILES:
-                continue
-            identity = definition_text(definition_ref).split(
-                "## 身份与版本", 1
-            )[1].split("## 适用目标", 1)[0]
-            self.assertIn("foundation definition", identity, profile_id)
-            self.assertNotIn("Status: detailed/implemented Golden Path", identity)
-
-        self.assertEqual(len(EXPECTED_PROFILES) - len(DETAILED_PROFILES), 3)
-        self.assertIn("six detailed/implemented Golden Paths", CONTRACT)
-        self.assertIn("the other\n  three Profiles remain foundation definitions", CONTRACT)
+        self.assertEqual(len(EXPECTED_PROFILES) - len(DETAILED_PROFILES), 0)
+        self.assertIn("all nine Profiles are\n  detailed/implemented Golden Paths", CONTRACT)
+        self.assertIn("zero current Profiles remain foundation\n  definitions", CONTRACT)
+        self.assertIn("A foundation definition remains usable", CONTRACT)
 
     def test_long_detailed_profiles_have_top_level_contents(self) -> None:
         for profile_id in DETAILED_PROFILES:
@@ -704,6 +702,395 @@ class WorkflowProfileContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, qa_flat)
 
+    def test_teaching_routes_by_learning_transfer_and_records_brief_increment(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-teaching-training-knowledge-transfer.md"
+        )
+        flat = " ".join(text.split())
+        for marker in (
+            "main job is to help a defined learner group",
+            "acquire, understand, retain, practice, or apply specific knowledge",
+            "“Make a training PPT”",
+            "presence of an instructor",
+            "does not by itself establish this Profile",
+            "use `live-presentation-persuasion` or `brand-communication-editorial-publishing`",
+            "use `research-analysis-argumentation`",
+            "read or presented under the already confirmed `use_mode`",
+            "does not by itself prove that any learner has attended, mastered, passed",
+            "no required course length, chapter count, page count, exercise count",
+        ):
+            self.assertIn(marker, flat)
+
+        for field in (
+            "`学习者与已有基础`",
+            "`目标能力/可观察表现`",
+            "`先备知识与范围边界`",
+            "`学习进阶/概念依赖`",
+            "`关键示例、误解与失败模式`",
+            "`练习/回顾与反馈方式`",
+            "`授课/自学环境及讲师支持`",
+            "`完成/评价边界`",
+            "`关键风险与交付边界`",
+        ):
+            self.assertIn(field, text)
+
+    def test_teaching_design_golden_path_evidence_and_qa_are_separate(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-teaching-training-knowledge-transfer.md"
+        )
+        required = text.split("## 所需信息", 1)[1].split(
+            "## design-ready 条件", 1
+        )[0]
+        design_ready = text.split("## design-ready 条件", 1)[1].split(
+            "## 叙事任务", 1
+        )[0]
+        golden_path = text.split("### Golden Path", 1)[1].split(
+            "### 页面任务与学习表达", 1
+        )[0]
+        evidence = text.split("## 证据规则", 1)[1].split(
+            "## 横向参数默认值", 1
+        )[0]
+        qa = text.split("## QA 验收", 1)[1].split(
+            "## 能力叠加与冲突处理", 1
+        )[0]
+
+        required_flat = " ".join(required.split())
+        for marker in (
+            "learner group and relevant differences",
+            "existing baseline, prerequisite knowledge",
+            "target capability and observable performance",
+            "having seen or heard something, understanding it, being able to explain it",
+            "concept, rule, procedure, or skill dependencies",
+            "correct examples, worked examples, counterexamples, failure modes",
+            "high-risk knowledge, operational steps, safety/compliance points",
+            "Do not ask for mode, duration, instructor support, practice, or assessment by default",
+            "one largest still-missing item",
+            "Never creatively complete a real rule, factual teaching claim",
+        ):
+            self.assertIn(marker, required_flat)
+
+        design_ready_flat = " ".join(design_ready.split())
+        for marker in (
+            "learner group, existing baseline, prerequisite knowledge",
+            "concept/procedure dependencies, progression logic",
+            "source identity, checked scope, and actual strength",
+            "practice or review need, instructions, expected response, answer/feedback behavior",
+            "does not mean a learner has completed or mastered it",
+            "disclosure cannot turn invented knowledge into instruction",
+        ):
+            self.assertIn(marker, design_ready_flat)
+
+        golden_path_flat = " ".join(golden_path.split())
+        for marker in (
+            "Audit knowledge and dependencies",
+            "Derive the learning progression",
+            "activating prior knowledge or establishing meaning",
+            "stepwise demonstration or worked example",
+            "learner practice, judgment, or review",
+            "misconception correction",
+            "Align examples, practice, and feedback",
+            "Do not assign a unique model answer to an open question",
+            "Do not implement automatic scoring, learner state, completion tracking, certificates, an LMS, or a quiz engine",
+        ):
+            self.assertIn(marker, golden_path_flat)
+
+        evidence_flat = " ".join(evidence.split())
+        for marker in (
+            "Bind target knowledge, factual rules, operational procedures",
+            "Keep source fact, interpretation, editorial simplification, illustrative situation",
+            "Never invent knowledge, a source, quotation, customer, learner record",
+            "Practice instructions, answer, feedback, explanation, and review must not contradict",
+            "For an open question, state the evaluation lens",
+        ):
+            self.assertIn(marker, evidence_flat)
+
+        qa_flat = " ".join(qa.split())
+        for marker in (
+            "`objective-content-example-practice-review alignment`",
+            "learner baseline, prerequisite order, concept/procedure dependency",
+            "worked examples, counterexamples, failure modes, fictional situations",
+            "practice instruction, prompt, expected response, answer, feedback",
+            "reading mode exposes every necessary final state",
+            "no learner attendance, completion, score, pass, mastery, certification, or effect is claimed",
+        ):
+            self.assertIn(marker, qa_flat)
+
+    def test_project_routes_by_specific_governance_and_records_brief_increment(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-project-lifecycle-reporting.md"
+        )
+        flat = " ".join(text.split())
+        for marker in (
+            "govern one specific project",
+            "objective, scope, baseline, phase, progress, changes, risks, decisions, results, or closeout state",
+            "A project name, timeline, milestone list",
+            "does not by itself establish this Profile",
+            "Use `periodic-operations-reporting`",
+            "Use `proposal-planning-decision`",
+            "Use `rule-response-application-defense`",
+            "adapted to the project's actual phase",
+            "delivered, accepted, and closed states kept distinct",
+            "no required project method, phase count, chapter count, page count",
+        ):
+            self.assertIn(marker, flat)
+
+        for field in (
+            "`项目目标、sponsor/受众与治理目的`",
+            "`baseline/范围版本`",
+            "`当前阶段与 reporting cutoff`",
+            "`里程碑/交付物及状态证据`",
+            "`变化/偏差与影响`",
+            "`issue/risk/dependency`",
+            "`所需决策、行动与 owner`",
+            "`验收/收尾条件、未结义务`",
+            "`关键缺口与状态结论`",
+            "`交付边界`",
+        ):
+            self.assertIn(field, text)
+
+    def test_project_design_golden_path_evidence_and_qa_are_separate(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-project-lifecycle-reporting.md"
+        )
+        required = text.split("## 所需信息", 1)[1].split(
+            "## design-ready 条件", 1
+        )[0]
+        design_ready = text.split("## design-ready 条件", 1)[1].split(
+            "## 叙事任务", 1
+        )[0]
+        golden_path = text.split("### Golden Path", 1)[1].split(
+            "### 页面任务与项目治理表达", 1
+        )[0]
+        evidence = text.split("## 证据规则", 1)[1].split(
+            "## 横向参数默认值", 1
+        )[0]
+        qa = text.split("## QA 验收", 1)[1].split(
+            "## 能力叠加与冲突处理", 1
+        )[0]
+
+        required_flat = " ".join(required.split())
+        for marker in (
+            "scope baseline, baseline version/date",
+            "current phase and the evidence that establishes it",
+            "reporting cutoff and applicable timezone",
+            "`planned`",
+            "`in progress`",
+            "`blocked`",
+            "`delivered`",
+            "`accepted`",
+            "`closed`",
+            "Project Handoff is a continuation and transition index, not external project acceptance evidence",
+            "`baseline`, `current`, and `forecast`",
+            "`proposed change`",
+            "`approved change`",
+            "`implemented change`",
+            "`issue`, `risk`, `dependency`, `decision`, and `action`",
+            "`progress / closeout-readiness draft`",
+        ):
+            self.assertIn(marker, required_flat)
+
+        design_ready_flat = " ".join(design_ready.split())
+        for marker in (
+            "scope baseline, version/date",
+            "baseline/current/forecast distinctions",
+            "proposed/approved/implemented changes",
+            "issues, risks, dependencies, decisions, and actions classified honestly",
+            "only when delivery, acceptance, remaining obligations, and closure conditions are evidenced",
+            "must not be packaged as accepted or closed",
+        ):
+            self.assertIn(marker, design_ready_flat)
+
+        golden_path_flat = " ".join(golden_path.split())
+        for marker in (
+            "Reconstruct the evidence-backed state",
+            "Keep file existence, delivered, accepted, and closed distinct",
+            "Separate time and change layers",
+            "Reconcile governance categories",
+            "Choose the honest project branch",
+            "At closeout, emphasize delivery, acceptance, unresolved obligations",
+            "A deliverable's existence does not establish acceptance, benefit, or impact",
+        ):
+            self.assertIn(marker, golden_path_flat)
+
+        evidence_flat = " ".join(evidence.split())
+        for marker in (
+            "Bind every material baseline, phase, milestone, deliverable, date, completion percentage",
+            "Project Handoff does not equal stakeholder acceptance",
+            "Keep planned, in progress, blocked, delivered, accepted, and closed distinct",
+            "Classify issue, risk, dependency, decision, and action honestly",
+            "Do not invent milestones, dates, percentages, status, owners, approvals, results, benefits, acceptance, or closure",
+        ):
+            self.assertIn(marker, evidence_flat)
+
+        qa_flat = " ".join(qa.split())
+        for marker in (
+            "`baseline/current/forecast`",
+            "milestone/deliverable identity, planned and actual dates, state, owner, completion percentage",
+            "proposed, approved, or implemented",
+            "issues, risks, dependencies, decisions, and actions are classified distinctly",
+            "neither file existence nor Project Handoff is used as acceptance",
+            "remains unaccepted and unclosed throughout",
+        ):
+            self.assertIn(marker, qa_flat)
+
+    def test_brand_routes_by_external_communication_and_records_brief_increment(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-brand-communication-editorial-publishing.md"
+        )
+        flat = " ".join(text.split())
+        for marker in (
+            "communicate a brand, idea, product launch, event/project story, or editorial subject",
+            "external or broad audience",
+            "A desire for a beautiful page, brand colors, a Logo",
+            "does not by itself establish this Profile",
+            "Use `live-presentation-persuasion`",
+            "Use `formal-submission-writing` or `rule-response-application-defense`",
+            "Use `teaching-training-knowledge-transfer`",
+            "high-quality offline editorial HTML artifact or presentation-ready brand deck",
+            "TaoHtml delivery does not mean the artifact has been hosted, published, distributed",
+            "no required campaign structure, chapter count, page count, magazine layout",
+        ):
+            self.assertIn(marker, flat)
+
+        for field in (
+            "`外部受众与传播/出版场景`",
+            "`核心传播目标、central message 与 story angle`",
+            "`品牌/主体身份、语气与视觉边界`",
+            "`approved/source-backed/unverified claims`",
+            "`素材来源、权利与真实资产保护`",
+            "`引用/证言状态`",
+            "`CTA/action path`",
+            "`公开/内部使用边界、分发限制`",
+            "`关键缺口、风险与交付边界`",
+        ):
+            self.assertIn(field, text)
+
+    def test_brand_design_golden_path_evidence_and_qa_are_separate(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-brand-communication-editorial-publishing.md"
+        )
+        required = text.split("## 所需信息", 1)[1].split(
+            "## design-ready 条件", 1
+        )[0]
+        design_ready = text.split("## design-ready 条件", 1)[1].split(
+            "## 叙事任务", 1
+        )[0]
+        golden_path = text.split("### Golden Path", 1)[1].split(
+            "### 页面任务与传播表达", 1
+        )[0]
+        evidence = text.split("## 证据规则", 1)[1].split(
+            "## 横向参数默认值", 1
+        )[0]
+        qa = text.split("## QA 验收", 1)[1].split(
+            "## 能力叠加与冲突处理", 1
+        )[0]
+
+        required_flat = " ".join(required.split())
+        for marker in (
+            "central message, story angle",
+            "brand, entity, product, project, or event identity",
+            "`approved claim`",
+            "`source-backed fact`",
+            "`interpretation / editorial framing`",
+            "`projection`",
+            "`illustrative content`",
+            "`unverified claim`",
+            "Access to an image does not equal permission to use it",
+            "Do not replace or materially alter a real Logo, screenshot, photograph",
+            "Bind a quotation or testimonial to its exact original text",
+            "Add a CTA or conversion path only when",
+            "Call the artifact `public / publication-ready` only when",
+            "`internal review / editorial draft`",
+        ):
+            self.assertIn(marker, required_flat)
+
+        design_ready_flat = " ".join(design_ready.split())
+        for marker in (
+            "brand/entity/product/project identity, naming, tone, validated visual binding",
+            "every key approved/source-backed/unverified claim",
+            "usage-rights or permission boundary",
+            "exact quotation/testimonial text, identity, permission/public status",
+            "exact verified real action path only when",
+            "must not be packaged as public or publication-ready",
+        ):
+            self.assertIn(marker, design_ready_flat)
+
+        golden_path_flat = " ".join(golden_path.split())
+        for marker in (
+            "Audit claims before amplification",
+            "Audit assets and rights",
+            "Protect real Logos, screenshots, photographs",
+            "Verify quotations and optional action",
+            "without forcing a sales CTA",
+            "Choose the honest publication branch",
+            "earning attention",
+            "building credibility through proof, story, and identity",
+            "does not automatically create a magazine style",
+        ):
+            self.assertIn(marker, golden_path_flat)
+
+        evidence_flat = " ".join(evidence.split())
+        for marker in (
+            "Bind every material brand/entity/product/project identity, key claim",
+            "Keep approved claim, source-backed fact, editorial interpretation",
+            "Record asset provenance separately from usage rights",
+            "Accessibility, download, or public visibility does not equal permission",
+            "Never replace, redraw, or factually alter a real Logo",
+            "Bind quotations and testimonials to exact text",
+            "preserve the exact verified link, decoded QR value, email, phone number",
+        ):
+            self.assertIn(marker, evidence_flat)
+
+        qa_flat = " ".join(qa.split())
+        for marker in (
+            "brand/entity/product/project identity, naming, Logo, brand bar, header/footer",
+            "every key claim, quotation, testimonial, customer, case, data point, award, ranking",
+            "each asset records provenance, inspection coverage, usage/permission status",
+            "quotation/testimonial text, identity, permission/public state",
+            "every applicable CTA/action path has matching visible text, link or decoded QR",
+            "has no forced sales CTA",
+            "remains not for publication or external use throughout",
+            "without claiming hosting, publication, distribution, tracking, analytics, or conversion",
+        ):
+            self.assertIn(marker, qa_flat)
+
+    def test_final_golden_paths_keep_shared_gates_direct_html_and_no_new_systems(self) -> None:
+        for profile_id, forbidden_systems in (
+            (
+                "teaching-training-knowledge-transfer",
+                ("LMS", "quiz engine", "automatic scoring", "learner state"),
+            ),
+            (
+                "project-lifecycle-reporting",
+                ("project database", "live timeline", "Gantt engine", "automatic refresh"),
+            ),
+            (
+                "brand-communication-editorial-publishing",
+                ("CMS", "public website", "hosting", "tracking", "analytics"),
+            ),
+        ):
+            definition_ref = next(
+                ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
+            )
+            text = definition_text(definition_ref)
+            flat = " ".join(text.split())
+            for marker in (
+                "one existing Report Design Brief",
+                "do not create a second brief",
+                "Profile-specific confirmation round",
+                "Profile selection, complete-brief confirmation, and current-file Production Authorization remain three independent facts",
+                "Direct HTML remains the default",
+                "IR engineering route is independently authorized",
+                "Do not add",
+                "Report IR Schema",
+                "Profile-triggered IR path",
+                "Compiler branch",
+                "first runnable direct-HTML artifact",
+            ):
+                self.assertIn(marker, flat, profile_id)
+            for forbidden_system in forbidden_systems:
+                self.assertIn(forbidden_system, flat, profile_id)
+
     def test_new_golden_paths_keep_one_brief_direct_html_and_engineering_boundaries(self) -> None:
         for profile_id, forbidden_runtime in (
             ("research-analysis-argumentation", "citation engine"),
@@ -858,6 +1245,13 @@ class WorkflowProfileContractTests(unittest.TestCase):
             "rule_requirement",
             "compliance_status",
             "score_weight",
+            "learner_state",
+            "quiz_score",
+            "project_status",
+            "acceptance_status",
+            "publication_ready",
+            "asset_rights",
+            "conversion_tracking",
         ):
             self.assertNotIn(forbidden_property, schema_properties)
 

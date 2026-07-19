@@ -24,11 +24,14 @@ engine.
 - Contract version: `1.0`
 - Catalog: `workflow-profiles.md`
 - Cardinality: exactly one primary Profile per project after routing is resolved
-- Definition status in this engineering node: six detailed/implemented Golden Paths
-  (`formal-submission-writing`, `research-analysis-argumentation`,
-  `periodic-operations-reporting`, `proposal-planning-decision`,
-  `live-presentation-persuasion`, and `rule-response-application-defense`); the other
-  three Profiles remain foundation definitions
+- Definition status in this engineering node: all nine Profiles are
+  detailed/implemented Golden Paths (`formal-submission-writing`,
+  `research-analysis-argumentation`, `periodic-operations-reporting`,
+  `proposal-planning-decision`, `live-presentation-persuasion`,
+  `teaching-training-knowledge-transfer`, `project-lifecycle-reporting`,
+  `brand-communication-editorial-publishing`, and
+  `rule-response-application-defense`); zero current Profiles remain foundation
+  definitions
 
 Each Profile has one stable `profile_id`, one exact customer-facing Chinese name, and
 one definition version. The definition version is an internal Profile-contract
