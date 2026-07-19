@@ -21,7 +21,7 @@ engine.
 ## Contract Identity
 
 - Contract id: `taohtml.workflow-profile`
-- Contract version: `1.0`
+- Contract version: `1.1`
 - Catalog: `workflow-profiles.md`
 - Cardinality: exactly one primary Profile per project after routing is resolved
 - Definition status in this engineering node: all nine Profiles are
@@ -189,18 +189,35 @@ create empty placeholders.
 
 ## IR Mapping Boundary
 
-Workflow Profiles are upstream semantic guidance, not Report IR:
+Workflow Profiles are upstream semantic guidance, not Report IR routes or Compiler
+modes:
 
-- Do not add or change Report IR schema fields for Profile routing.
-- Do not expose Report IR as a user choice or add an IR questionnaire.
-- Do not invoke the Report IR route merely because a Profile was selected.
+- Profile selection itself never activates Report IR or changes Direct HTML from the
+  default production path. It adds no IR questionnaire.
 - Only an explicit Report IR engineering request or current project pilot
-  authorization may use the existing IR workflow after the Report Design Brief is
-  confirmed.
-- When that route is already authorized, a Profile may guide the selection of existing
+  authorization may use the IR workflow after the Report Design Brief is confirmed
+  and current-file Production Authorization independently permits the action.
+- Only an independently authorized Report IR engineering pilot may derive and write
+  the confirmed Profile result into a new `1.1` IR. A separate explicit engineering
+  request may inspect, validate, compile, or patch an already supplied `1.0`/`1.1`
+  source, but it must not infer or manufacture a missing binding.
+- On that separately authorized route, Report IR `1.1` writes the already resolved
+  result into the one generic top-level `workflow_profile` binding. The binding owns
+  only `primary_profile_id`, Profile `definition_version`, semantic
+  `selection_basis`, and bounded `capability_overlays`; it never embeds a Profile
+  definition, scenario-specific brief fields, HTML, CSS, JavaScript, theme state, or
+  enterprise assets.
+- Report IR `1.0` remains legacy unbound. Validator and Compiler must not infer a
+  Profile from filenames, titles, archetypes, keywords, themes, enterprise bindings,
+  material contents, or any other project state.
+- The generic binding records upstream identity and provenance. It does not replace
+  the Report Design Brief reference/hash/confirmation, authorize production, choose
+  pages or layouts, switch themes or Runtime, increase evidence strength, or ask the
+  Compiler to reinterpret `selection_basis`.
+- A Profile may still guide the model's authorized upstream derivation of existing
   semantic combinations such as report prototype, evidence rigor, narrative units,
-  Projection intent, or optional entities. It must not invent unsupported fields,
-  mutate the Compiler, or bypass validation.
+  Projection intent, or optional entities. It must not create scenario-specific IR
+  fields, a Profile-triggered Compiler branch, or a Validator bypass.
 
 The Report Design Brief remains the customer-readable source of confirmed business
 decisions. IR derivation, when separately authorized, remains downstream and does not
@@ -210,7 +227,10 @@ Record the exact customer-facing name, stable `profile_id`, definition version,
 semantic selection basis, and bounded capability overlays in the Report Design Brief.
 Profile selection, confirmation of the complete current Report Design Brief, and
 Production Authorization are three independent facts. Profile routing adds no
-questionnaire or separate confirmation round.
+questionnaire or separate confirmation round. Changing the generic binding changes
+the IR/build identity and deterministic Build Manifest record, but the Compiler must
+not use that change to rewrite content, select pages, alter visual composition, switch
+the enterprise or theme binding, or change Runtime behavior.
 
 ## Existing Gates And Implementations
 

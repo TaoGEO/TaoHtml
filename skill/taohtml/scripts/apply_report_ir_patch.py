@@ -28,6 +28,7 @@ from report_ir_core import (  # noqa: E402
     sha256_bytes,
     strict_json_loads,
     validate_ir,
+    workflow_profile_record,
     write_json,
 )
 
@@ -479,6 +480,7 @@ def apply_patch(
         ),
         "base_ir_sha256": base_hash,
         "patch_sha256": patch_sha256,
+        "workflow_profile": workflow_profile_record(ir),
         "meaning_impact": meaning_impact,
         "design_brief_reconfirmation_required": meaning_impact == "changing",
         "compiler_authorized": meaning_impact == "preserving",

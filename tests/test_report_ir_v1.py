@@ -25,6 +25,17 @@ def load_script(name: str) -> ModuleType:
 
 
 CORE = load_script("report_ir_core")
+WORKFLOW_PROFILE_IDS = (
+    "formal-submission-writing",
+    "research-analysis-argumentation",
+    "periodic-operations-reporting",
+    "proposal-planning-decision",
+    "live-presentation-persuasion",
+    "teaching-training-knowledge-transfer",
+    "project-lifecycle-reporting",
+    "brand-communication-editorial-publishing",
+    "rule-response-application-defense",
+)
 
 
 def sha256(value: bytes) -> str:
@@ -254,6 +265,37 @@ def _page(
     return page
 
 
+def workflow_profile_binding(
+    primary_profile_id: str = "research-analysis-argumentation",
+    *,
+    selection_basis: str = "已确认目标是以可检查的方法、证据与推理形成专业结论。",
+    capability_overlays: list[dict] | None = None,
+) -> dict:
+    return {
+        "primary_profile_id": primary_profile_id,
+        "definition_version": "2.0",
+        "selection_basis": selection_basis,
+        "capability_overlays": copy.deepcopy(capability_overlays or []),
+    }
+
+
+def bound_ir(
+    ir: dict,
+    primary_profile_id: str = "research-analysis-argumentation",
+    *,
+    selection_basis: str = "已确认目标是以可检查的方法、证据与推理形成专业结论。",
+    capability_overlays: list[dict] | None = None,
+) -> dict:
+    candidate = copy.deepcopy(ir)
+    candidate["report_ir_version"] = "1.1"
+    candidate["workflow_profile"] = workflow_profile_binding(
+        primary_profile_id,
+        selection_basis=selection_basis,
+        capability_overlays=capability_overlays,
+    )
+    return candidate
+
+
 class ReportIrV1Tests(unittest.TestCase):
     def setUp(self) -> None:
         self.source_bytes = b"segment,value\nenterprise,28\nother,7\n"
@@ -271,6 +313,141 @@ class ReportIrV1Tests(unittest.TestCase):
         self.assertEqual(result["counts"]["chapters"], 2)
         self.assertEqual(result["counts"]["pages"], 7)
         self.assertEqual(result["qa_execution_claim"], "not_executed_by_validator")
+        self.assertEqual(
+            result["workflow_profile"]["binding_state"], "legacy_unbound"
+        )
+        self.assertIsNone(result["workflow_profile"]["binding_sha256"])
+
+    def test_v1_1_accepts_every_stable_primary_profile_id(self) -> None:
+        self.assertEqual(set(WORKFLOW_PROFILE_IDS), CORE.WORKFLOW_PROFILE_IDS)
+        self.assertEqual(CORE.WORKFLOW_PROFILE_DEFINITION_VERSION, "2.0")
+        binding_hashes: set[str] = set()
+        for profile_id in WORKFLOW_PROFILE_IDS:
+            with self.subTest(profile_id=profile_id):
+                result = self.validate(bound_ir(self.ir, profile_id))
+                self.assertTrue(result["compiler_ready"], result["issues"])
+                self.assertEqual(result["report_ir_version"], "1.1")
+                self.assertEqual(
+                    result["workflow_profile"]["binding_state"], "bound"
+                )
+                self.assertEqual(
+                    result["workflow_profile"]["primary_profile_id"], profile_id
+                )
+                self.assertEqual(
+                    result["workflow_profile"]["definition_version"], "2.0"
+                )
+                binding_hashes.add(
+                    result["workflow_profile"]["binding_sha256"]
+                )
+        self.assertEqual(len(binding_hashes), len(WORKFLOW_PROFILE_IDS))
+
+    def test_version_and_binding_cardinality_fail_closed(self) -> None:
+        missing = copy.deepcopy(self.ir)
+        missing["report_ir_version"] = "1.1"
+        self.assertFalse(self.validate(missing)["schema_valid"])
+
+        disguised = copy.deepcopy(self.ir)
+        disguised["workflow_profile"] = workflow_profile_binding()
+        self.assertFalse(self.validate(disguised)["schema_valid"])
+
+        unknown_version = copy.deepcopy(self.ir)
+        unknown_version["report_ir_version"] = "1.2"
+        self.assertFalse(self.validate(unknown_version)["schema_valid"])
+
+    def test_workflow_profile_binding_is_closed_and_deterministic(self) -> None:
+        invalid_cases: list[tuple[str, dict, str]] = []
+
+        unknown_id = bound_ir(self.ir)
+        unknown_id["workflow_profile"]["primary_profile_id"] = "unknown-profile"
+        invalid_cases.append(("unknown primary", unknown_id, "schema"))
+
+        wrong_version = bound_ir(self.ir)
+        wrong_version["workflow_profile"]["definition_version"] = "1.0"
+        invalid_cases.append(("wrong definition", wrong_version, "schema"))
+
+        extra_field = bound_ir(self.ir)
+        extra_field["workflow_profile"]["full_profile"] = {"copied": True}
+        invalid_cases.append(("embedded full profile", extra_field, "schema"))
+
+        missing_field = bound_ir(self.ir)
+        del missing_field["workflow_profile"]["selection_basis"]
+        invalid_cases.append(("missing binding field", missing_field, "schema"))
+
+        blank_basis = bound_ir(self.ir, selection_basis="   \n")
+        invalid_cases.append(("blank selection basis", blank_basis, "semantics"))
+
+        unknown_overlay = bound_ir(
+            self.ir,
+            capability_overlays=[
+                {
+                    "source_profile_id": "unknown-profile",
+                    "bounded_capability": "现场讲解",
+                    "reason": "当前结论需要口头呈现。",
+                    "affected_scope": "结论页",
+                }
+            ],
+        )
+        invalid_cases.append(("unknown overlay source", unknown_overlay, "schema"))
+
+        overlay_extra = bound_ir(
+            self.ir,
+            capability_overlays=[
+                {
+                    "source_profile_id": "live-presentation-persuasion",
+                    "bounded_capability": "现场讲解",
+                    "reason": "当前结论需要口头呈现。",
+                    "affected_scope": "结论页",
+                    "complete_profile": {"copied": True},
+                }
+            ],
+        )
+        invalid_cases.append(("overlay extra field", overlay_extra, "schema"))
+
+        self_overlay = bound_ir(
+            self.ir,
+            capability_overlays=[
+                {
+                    "source_profile_id": "research-analysis-argumentation",
+                    "bounded_capability": "完整研究流程",
+                    "reason": "尝试自引用主 Profile。",
+                    "affected_scope": "整份报告",
+                }
+            ],
+        )
+        invalid_cases.append(("self overlay", self_overlay, "semantics"))
+
+        duplicate_overlay = {
+            "source_profile_id": "live-presentation-persuasion",
+            "bounded_capability": "现场讲解",
+            "reason": "让关键证据适合现场说明。",
+            "affected_scope": "结论页",
+        }
+        duplicates = bound_ir(
+            self.ir,
+            capability_overlays=[
+                duplicate_overlay,
+                {**duplicate_overlay, "reason": "使用不同理由重复同一有界能力。"},
+            ],
+        )
+        invalid_cases.append(("duplicate overlay", duplicates, "semantics"))
+
+        blank_overlay = bound_ir(
+            self.ir,
+            capability_overlays=[
+                {
+                    "source_profile_id": "live-presentation-persuasion",
+                    "bounded_capability": " ",
+                    "reason": "现场说明。",
+                    "affected_scope": "结论页",
+                }
+            ],
+        )
+        invalid_cases.append(("blank overlay capability", blank_overlay, "semantics"))
+
+        for label, candidate, layer in invalid_cases:
+            with self.subTest(label=label):
+                result = self.validate(candidate)
+                self.assertFalse(result[f"{layer}_valid"])
 
     def test_normalization_adds_only_neutral_defaults(self) -> None:
         result = self.validate(self.ir)

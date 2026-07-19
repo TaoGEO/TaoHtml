@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
-from tests.test_report_ir_v1 import valid_ir
+from tests.test_report_ir_v1 import bound_ir, valid_ir
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +71,7 @@ class ReportIrCompilerTests(unittest.TestCase):
             source_map = json.loads((output / "source-map.json").read_text(encoding="utf-8"))
 
             self.assertEqual(manifest["counts"]["pages"], 7)
+            self.assertEqual(manifest["compiler_version"], "0.2.0-dev")
             self.assertEqual(manifest["counts"]["output_pages"], 7)
             self.assertEqual(rendered.count('class="slide ri-page'), 7)
             self.assertIn('data-report-ir-version="1.0"', rendered)
@@ -81,6 +82,10 @@ class ReportIrCompilerTests(unittest.TestCase):
             self.assertIn("客户增长数据 · 客户研究组 · 2026-07 · 数据表 1", rendered)
             self.assertEqual(len(source_map["pages"]), 7)
             self.assertEqual(manifest["qa_execution_claim"], "not_executed_by_compiler")
+            self.assertEqual(
+                manifest["workflow_profile"]["binding_state"], "legacy_unbound"
+            )
+            self.assertIsNone(manifest["workflow_profile"]["primary_profile_id"])
             self.assertEqual(
                 manifest["runtime"]["report_ir_patch_contract"],
                 "embedded-html-v1",
@@ -108,6 +113,80 @@ class ReportIrCompilerTests(unittest.TestCase):
             self.assertEqual(
                 first_manifest["outputs"]["html"]["sha256"],
                 second_manifest["outputs"]["html"]["sha256"],
+            )
+
+    def test_workflow_profile_binding_changes_identity_but_not_compiler_decisions(self) -> None:
+        first_ir = bound_ir(
+            self.ir,
+            "research-analysis-argumentation",
+            selection_basis="已确认目标是形成证据与推理可检查的专业结论。",
+        )
+        second_ir = bound_ir(
+            self.ir,
+            "proposal-planning-decision",
+            selection_basis="已确认目标是支持管理层在真实选项之间作出决策。",
+            capability_overlays=[
+                {
+                    "source_profile_id": "live-presentation-persuasion",
+                    "bounded_capability": "现场讲解关键取舍",
+                    "reason": "决策会在会议中现场说明。",
+                    "affected_scope": "推荐与风险页",
+                }
+            ],
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            first_output = root / "first-profile"
+            second_output = root / "second-profile"
+            first_manifest = COMPILER.compile_ir(first_ir, root, first_output)
+            second_manifest = COMPILER.compile_ir(second_ir, root, second_output)
+
+            self.assertNotEqual(
+                first_manifest["report_ir"]["normalized_sha256"],
+                second_manifest["report_ir"]["normalized_sha256"],
+            )
+            self.assertNotEqual(
+                first_manifest["workflow_profile"]["binding_sha256"],
+                second_manifest["workflow_profile"]["binding_sha256"],
+            )
+            self.assertNotEqual(
+                first_manifest["outputs"]["html"]["sha256"],
+                second_manifest["outputs"]["html"]["sha256"],
+            )
+            self.assertEqual(
+                first_manifest["report_ir"]["semantic_graph_sha256"],
+                second_manifest["report_ir"]["semantic_graph_sha256"],
+            )
+            self.assertEqual(first_manifest["theme"], second_manifest["theme"])
+            self.assertEqual(first_manifest["runtime"], second_manifest["runtime"])
+            self.assertEqual(
+                first_manifest["degradations"], second_manifest["degradations"]
+            )
+            first_html = (first_output / "index.html").read_text(encoding="utf-8")
+            second_html = (second_output / "index.html").read_text(encoding="utf-8")
+            first_pages = first_html.split(COMPILER.START_MARKER, 1)[1].split(
+                COMPILER.END_MARKER, 1
+            )[0]
+            second_pages = second_html.split(COMPILER.START_MARKER, 1)[1].split(
+                COMPILER.END_MARKER, 1
+            )[0]
+            self.assertEqual(first_pages, second_pages)
+            first_source_map = json.loads(
+                (first_output / "source-map.json").read_text(encoding="utf-8")
+            )
+            second_source_map = json.loads(
+                (second_output / "source-map.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(first_source_map["pages"], second_source_map["pages"])
+            self.assertIn('data-report-ir-version="1.1"', first_html)
+            self.assertEqual(
+                second_manifest["workflow_profile"]["capability_overlays"],
+                second_ir["workflow_profile"]["capability_overlays"],
+            )
+            self.assertEqual(
+                second_manifest["workflow_profile"],
+                COMPILER.workflow_profile_record(second_ir),
             )
 
     def test_same_ir_semantics_compile_through_all_four_themes(self) -> None:
@@ -236,6 +315,11 @@ class ReportIrCompilerTests(unittest.TestCase):
                 "profile_version": 1,
                 "shell_policy": "fidelity",
             }
+            self.ir = bound_ir(
+                self.ir,
+                "brand-communication-editorial-publishing",
+                selection_basis="已确认目标是形成面向外部受众的品牌叙事。",
+            )
             output = root / "build"
             manifest = COMPILER.compile_ir(
                 self.ir,
@@ -279,6 +363,14 @@ class ReportIrCompilerTests(unittest.TestCase):
                 manifest["enterprise_shell"]["protected_shell_policy"],
                 "fixed_descendants_preserved",
             )
+            self.assertEqual(
+                manifest["workflow_profile"]["primary_profile_id"],
+                "brand-communication-editorial-publishing",
+            )
+            self.assertEqual(
+                manifest["enterprise_shell"]["profile_ref"], "enterprise-orbital"
+            )
+            self.assertNotIn("profile_ref", manifest["workflow_profile"])
             self.assertNotIn(
                 "project_theme_and_enterprise_shell_compilation_not_implemented",
                 manifest["open_boundaries"],

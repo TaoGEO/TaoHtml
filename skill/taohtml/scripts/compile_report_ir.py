@@ -32,12 +32,13 @@ from report_ir_core import (  # noqa: E402
     sha256_bytes,
     sha256_file,
     validate_ir,
+    workflow_profile_record,
     write_json,
 )
 from theme_runtime import load_built_in_theme, load_project_theme  # noqa: E402
 
 
-COMPILER_VERSION = "0.1.0-dev"
+COMPILER_VERSION = "0.2.0-dev"
 RUNTIME_BUNDLE_VERSION = "fragment-v1+editor-v1+ir-patch-v1"
 SKILL_ROOT = SCRIPT_DIR.parent
 REPORT_IR_ASSET_ROOT = SKILL_ROOT / "assets" / "report-ir"
@@ -978,7 +979,8 @@ def _render_shell(
     new_deck = (
         f'<main class="deck" id="deck" data-theme="{_escape(theme_id)}" '
         f'data-theme-name="{_escape(theme_name)}" data-theme-kind="{_escape(theme_kind)}" '
-        f'data-mode="{_escape(mode)}" data-report-ir-version="1.0" '
+        f'data-mode="{_escape(mode)}" '
+        f'data-report-ir-version="{_escape(ir["report_ir_version"])}" '
         f'data-report-ir-sha256="{report_ir_sha256}" '
         f'data-report-id="{_escape(ir["report"]["id"])}" '
         f'data-projection-id="{_escape(ir["projection"]["id"])}" '
@@ -1101,6 +1103,7 @@ def compile_ir(
             "normalized_sha256": normalized_hash,
             "semantic_graph_sha256": _semantic_graph_sha256(ir),
         },
+        "workflow_profile": workflow_profile_record(ir),
         "theme": {
             "kind": theme_binding["kind"],
             "id": theme.theme_id,

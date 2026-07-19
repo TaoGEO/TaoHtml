@@ -198,6 +198,7 @@ def _public_ir_validation(result: dict[str, Any]) -> dict[str, object]:
         "compiler_ready": result["compiler_ready"],
         "issues": result["issues"],
         "normalized_sha256": result.get("identity", {}).get("normalized_sha256"),
+        "workflow_profile": result["workflow_profile"],
     }
 
 
@@ -399,6 +400,7 @@ def _run_pilot(
         "html_sha256": manifest["outputs"]["html"]["sha256"],
         "normalized_ir_ref": normalized_ir_ref,
         "normalized_ir_sha256": manifest["outputs"]["normalized_ir"]["sha256"],
+        "workflow_profile": manifest["workflow_profile"],
         "qa_execution_claim": manifest["qa_execution_claim"],
     }
 

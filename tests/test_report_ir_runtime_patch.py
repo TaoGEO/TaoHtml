@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
-from tests.test_report_ir_v1 import valid_ir
+from tests.test_report_ir_v1 import bound_ir, valid_ir
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -130,7 +130,67 @@ class ReportIrRuntimePatchTests(unittest.TestCase):
                     meaning_impact="preserving",
                 )
 
+    def test_text_patch_preserves_profile_binding_without_making_it_editable(self) -> None:
+        self.ir = bound_ir(
+            self.ir,
+            "research-analysis-argumentation",
+            capability_overlays=[
+                {
+                    "source_profile_id": "live-presentation-persuasion",
+                    "bounded_capability": "现场讲解关键证据",
+                    "reason": "当前交付需要会议说明。",
+                    "affected_scope": "证据页",
+                }
+            ],
+        )
+        original_binding = copy.deepcopy(self.ir["workflow_profile"])
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            patch = self._patch(
+                root,
+                {
+                    "op": "replace_text",
+                    "target": {
+                        "entity": "block",
+                        "id": "block-cover-title",
+                        "field": "text",
+                        "key": "block:block-cover-title:text",
+                    },
+                    "before": "增长来自结构，而不是平均值",
+                    "value": "增长来自结构，而非平均水平",
+                },
+            )
+            PATCHER._validate_patch_schema(patch)
+            updated, report, _staged = PATCHER.apply_patch(
+                self.ir,
+                patch,
+                root,
+                meaning_impact="preserving",
+            )
+            self.assertEqual(updated["workflow_profile"], original_binding)
+            self.assertEqual(report["workflow_profile"]["binding_state"], "bound")
+            self.assertEqual(
+                report["workflow_profile"]["binding_sha256"],
+                CORE.workflow_profile_record(self.ir)["binding_sha256"],
+            )
+
+            forbidden = copy.deepcopy(patch)
+            forbidden["operations"][0]["target"] = {
+                "entity": "workflow_profile",
+                "id": "research-analysis-argumentation",
+                "field": "selection_basis",
+                "key": "workflow_profile:research-analysis-argumentation:selection_basis",
+            }
+            with self.assertRaises(PATCHER.PatchApplyError):
+                PATCHER._validate_patch_schema(forbidden)
+
     def test_meaning_change_requires_design_brief_reconfirmation(self) -> None:
+        self.ir = bound_ir(
+            self.ir,
+            "research-analysis-argumentation",
+        )
+        original_binding = copy.deepcopy(self.ir["workflow_profile"])
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             self._project(root)
@@ -162,6 +222,7 @@ class ReportIrRuntimePatchTests(unittest.TestCase):
                 updated["traceability"]["design_brief_confirmation"],
                 "reconfirmation_required",
             )
+            self.assertEqual(updated["workflow_profile"], original_binding)
             output_ir = root / "report.ir.draft.json"
             final = PATCHER._write_applied_result(
                 updated,

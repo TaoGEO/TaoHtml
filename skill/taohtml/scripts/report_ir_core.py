@@ -13,7 +13,20 @@ from typing import Any, Iterable
 from urllib.parse import urlparse
 
 
-REPORT_IR_VERSION = "1.0"
+SUPPORTED_REPORT_IR_VERSIONS = ("1.0", "1.1")
+WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION = "1.1"
+WORKFLOW_PROFILE_DEFINITION_VERSION = "2.0"
+WORKFLOW_PROFILE_IDS = {
+    "formal-submission-writing",
+    "research-analysis-argumentation",
+    "periodic-operations-reporting",
+    "proposal-planning-decision",
+    "live-presentation-persuasion",
+    "teaching-training-knowledge-transfer",
+    "project-lifecycle-reporting",
+    "brand-communication-editorial-publishing",
+    "rule-response-application-defense",
+}
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 SCHEMA_PATH = SKILL_DIR / "references" / "report-ir-v1.schema.json"
@@ -229,6 +242,8 @@ def schema_errors(
     errors: list[str] = []
     for branch in schema.get("allOf", []):
         errors.extend(schema_errors(value, branch, schema_root, path))
+    if "not" in schema and not schema_errors(value, schema["not"], schema_root, path):
+        errors.append(f"{path} matches a forbidden schema branch")
     if "anyOf" in schema:
         branches = [schema_errors(value, item, schema_root, path) for item in schema["anyOf"]]
         if not any(not item for item in branches):
@@ -448,6 +463,35 @@ def _semantic_validation(
     semantic_issues: list[str] = []
     compiler_issues: list[str] = []
     verified_files: list[str] = []
+
+    if ir["report_ir_version"] == "1.1":
+        workflow_profile = ir["workflow_profile"]
+        if not workflow_profile["selection_basis"].strip():
+            semantic_issues.append(
+                "workflow_profile.selection_basis must contain non-whitespace semantic evidence"
+            )
+        overlay_keys: set[tuple[str, str, str]] = set()
+        for index, overlay in enumerate(workflow_profile["capability_overlays"]):
+            label = f"workflow_profile.capability_overlays[{index}]"
+            for field in ("bounded_capability", "reason", "affected_scope"):
+                if not overlay[field].strip():
+                    semantic_issues.append(
+                        f"{label}.{field} must contain non-whitespace text"
+                    )
+            if overlay["source_profile_id"] == workflow_profile["primary_profile_id"]:
+                semantic_issues.append(
+                    f"{label}.source_profile_id cannot reference the primary Profile"
+                )
+            duplicate_key = (
+                overlay["source_profile_id"],
+                overlay["bounded_capability"].strip(),
+                overlay["affected_scope"].strip(),
+            )
+            if duplicate_key in overlay_keys:
+                semantic_issues.append(
+                    f"{label} duplicates a source Profile, bounded capability, and affected scope"
+                )
+            overlay_keys.add(duplicate_key)
 
     chapters = _index(ir["chapters"], "chapter", reference_issues)
     units = _index(ir["narrative_units"], "narrative unit", reference_issues)
@@ -745,6 +789,51 @@ def _semantic_validation(
     return reference_issues, semantic_issues, compiler_issues, sorted(set(verified_files))
 
 
+def workflow_profile_record(ir: dict[str, Any]) -> dict[str, Any]:
+    """Return the deterministic build record without interpreting Profile semantics."""
+    version = ir.get("report_ir_version")
+    binding = ir.get("workflow_profile")
+    if version == "1.0" and binding is None:
+        return {
+            "binding_contract_version": WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION,
+            "binding_state": "legacy_unbound",
+            "primary_profile_id": None,
+            "definition_version": None,
+            "selection_basis": None,
+            "capability_overlays": [],
+            "binding_sha256": None,
+        }
+    valid_binding_shape = (
+        version in SUPPORTED_REPORT_IR_VERSIONS
+        and version == "1.1"
+        and isinstance(binding, dict)
+        and binding.get("primary_profile_id") in WORKFLOW_PROFILE_IDS
+        and binding.get("definition_version") == WORKFLOW_PROFILE_DEFINITION_VERSION
+        and isinstance(binding.get("selection_basis"), str)
+        and isinstance(binding.get("capability_overlays"), list)
+    )
+    if valid_binding_shape:
+        assert isinstance(binding, dict)
+        return {
+            "binding_contract_version": WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION,
+            "binding_state": "bound",
+            "primary_profile_id": binding["primary_profile_id"],
+            "definition_version": binding["definition_version"],
+            "selection_basis": binding["selection_basis"],
+            "capability_overlays": copy.deepcopy(binding["capability_overlays"]),
+            "binding_sha256": sha256_bytes(canonical_bytes(binding)),
+        }
+    return {
+        "binding_contract_version": WORKFLOW_PROFILE_BINDING_CONTRACT_VERSION,
+        "binding_state": "invalid",
+        "primary_profile_id": None,
+        "definition_version": None,
+        "selection_basis": None,
+        "capability_overlays": [],
+        "binding_sha256": None,
+    }
+
+
 def validate_ir(
     raw: dict[str, Any],
     artifact_root: Path | None = None,
@@ -768,8 +857,9 @@ def validate_ir(
     semantics_valid = references_valid and not semantic_issues
     compiler_ready = semantics_valid and not compiler_issues
     status = "PASS" if compiler_ready else "FAIL"
+    workflow_profile = workflow_profile_record(normalized)
     return {
-        "report_ir_version": REPORT_IR_VERSION,
+        "report_ir_version": normalized.get("report_ir_version"),
         "status": status,
         "schema_valid": schema_valid,
         "references_valid": references_valid,
@@ -786,7 +876,9 @@ def validate_ir(
             "projection_id": normalized.get("projection", {}).get("id"),
             "revision_id": normalized.get("traceability", {}).get("revision_id"),
             "normalized_sha256": sha256_bytes(canonical_bytes(normalized)),
+            "workflow_profile_binding_sha256": workflow_profile["binding_sha256"],
         },
+        "workflow_profile": workflow_profile,
         "counts": {
             key: len(normalized.get(key, []))
             for key in (

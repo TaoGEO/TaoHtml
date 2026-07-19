@@ -15,8 +15,27 @@
     "build_binding",
     "traceability"
   ],
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "report_ir_version": {"const": "1.0"}
+          },
+          "not": {"required": ["workflow_profile"]}
+        },
+        {
+          "properties": {
+            "report_ir_version": {"const": "1.1"}
+          },
+          "required": ["workflow_profile"]
+        }
+      ]
+    }
+  ],
   "properties": {
-    "report_ir_version": {"const": "1.0"},
+    "report_ir_version": {"enum": ["1.0", "1.1"]},
+    "workflow_profile": {"$ref": "#/$defs/workflow_profile_binding"},
     "report": {"$ref": "#/$defs/report"},
     "projection": {"$ref": "#/$defs/projection"},
     "chapters": {
@@ -92,6 +111,56 @@
       "type": "array",
       "uniqueItems": true,
       "items": {"$ref": "#/$defs/id"}
+    },
+    "workflow_profile_id": {
+      "enum": [
+        "formal-submission-writing",
+        "research-analysis-argumentation",
+        "periodic-operations-reporting",
+        "proposal-planning-decision",
+        "live-presentation-persuasion",
+        "teaching-training-knowledge-transfer",
+        "project-lifecycle-reporting",
+        "brand-communication-editorial-publishing",
+        "rule-response-application-defense"
+      ]
+    },
+    "workflow_profile_overlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_profile_id",
+        "bounded_capability",
+        "reason",
+        "affected_scope"
+      ],
+      "properties": {
+        "source_profile_id": {"$ref": "#/$defs/workflow_profile_id"},
+        "bounded_capability": {"$ref": "#/$defs/short_text"},
+        "reason": {"$ref": "#/$defs/long_text"},
+        "affected_scope": {"$ref": "#/$defs/long_text"}
+      }
+    },
+    "workflow_profile_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_profile_id",
+        "definition_version",
+        "selection_basis",
+        "capability_overlays"
+      ],
+      "properties": {
+        "primary_profile_id": {"$ref": "#/$defs/workflow_profile_id"},
+        "definition_version": {"const": "2.0"},
+        "selection_basis": {"$ref": "#/$defs/long_text"},
+        "capability_overlays": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/workflow_profile_overlay"}
+        }
+      }
     },
     "report": {
       "type": "object",

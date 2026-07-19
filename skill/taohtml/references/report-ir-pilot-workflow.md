@@ -30,6 +30,12 @@ direct-HTML 正式流程；不得根据项目类型、模型偏好或 Report IR 
 只有 `check_production_authorization.py --action formal-html` 对当前任务、当前文件返回允许后，
 才创建 Report IR。读取 `references/report-ir-v1.md`，从已确认简报和已有选择派生 Report IR：
 
+- 新建 pilot 使用 `report_ir_version=1.1`，把简报中已确认的主 Workflow Profile
+  稳定 id、`definition_version=2.0`、语义选择依据和 bounded capability overlays
+  写入一个通用顶层 `workflow_profile`；不复制完整 Profile 或场景特有简报；
+- 既有 `1.0` 工程仅作为 `legacy_unbound` 继续验证/编译，不从简报、标题、主题、
+  企业 Profile 或材料内容补猜 binding；升级必须由上游明确生成新的 `1.1` IR；
+
 - 从交付用途派生 `delivery_mode`、报告原型、信息密度和 Runtime 目标模式；
 - 从证据边界派生 evidence rigor、Claim—Evidence—Source 关系和待核实项；
 - 从已选视觉路线派生四套内置系统之一、客户参考 Project Theme 或企业模板绑定；
@@ -40,6 +46,10 @@ direct-HTML 正式流程；不得根据项目类型、模型偏好或 Report IR 
 不得重复询问这些已知选择。内置视觉路线仍执行 `references/visual-systems.md`：客户未明确
 缩小范围时先完整展示四套；客户参考、企业模板和企业档案的优先级不变。模型负责把已确认
 内容表达成 IR，但不得在 IR 之后再次完整手写 HTML。
+
+Profile binding、设计简报确认、pilot 授权与 current-file Production Authorization 是
+独立事实：binding 不授权 pilot，pilot 授权不确认简报，简报确认也不替代
+Production Authorization。普通 direct-HTML 路由不读取或创建 binding。
 
 ## 确定性编排
 
@@ -61,7 +71,8 @@ python scripts/orchestrate_report_ir_pilot.py \
 2. 复用 Production Authorization 检查当前 confirmed brief 和 `formal-html` 权限；
 3. 要求 IR 的简报路径和哈希与当前确认文件完全一致；
 4. 复用 Report IR Validator 的四层结果；
-5. 调用本地 `compile_report_ir.py` 编译核心并记录 HTML、规范化 IR 和 Manifest 哈希；
+5. 调用本地 `compile_report_ir.py` 编译核心并记录 HTML、规范化 IR、Manifest 哈希及
+   `workflow_profile.binding_state/binding_sha256`；
 6. 把 QA 与 Handoff 明确记录为 `not_executed`，直到真实记录被提供。
 
 `compiled_pending_qa_handoff` 只说明本地 Compiler 已产生候选 HTML，不表示完成浏览器 QA、

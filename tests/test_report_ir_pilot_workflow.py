@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
-from tests.test_report_ir_v1 import valid_ir
+from tests.test_report_ir_v1 import bound_ir, valid_ir
 from tests.test_project_handoff_validator import new_build_ready_payload
 
 
@@ -64,7 +64,13 @@ def write_json(path: Path, value: object) -> None:
 class ReportIrPilotWorkflowTests(unittest.TestCase):
     task_id = "pilot-task-one"
 
-    def _project(self, root: Path, *, brief_confirmed: bool = True) -> None:
+    def _project(
+        self,
+        root: Path,
+        *,
+        brief_confirmed: bool = True,
+        legacy_ir: bool = False,
+    ) -> None:
         materials = root / "materials"
         materials.mkdir(parents=True, exist_ok=True)
         source = materials / "growth.csv"
@@ -112,6 +118,12 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
             },
         )
         ir = valid_ir(sha256(source))
+        if not legacy_ir:
+            ir = bound_ir(
+                ir,
+                "research-analysis-argumentation",
+                selection_basis="已确认目标是形成证据、方法与推理可检查的专业结论。",
+            )
         ir["traceability"]["design_brief_ref"] = "brief/design-brief.md"
         ir["traceability"]["design_brief_sha256"] = sha256(brief)
         write_json(root / "report-ir.json", ir)
@@ -149,6 +161,7 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
     def test_direct_route_is_default_and_does_not_create_or_read_ir(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
+            self._project(root)
             result = self._command(root)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             status = json.loads(
@@ -167,7 +180,7 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
     def test_pilot_only_inputs_without_authorization_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            (root / "report-ir.json").write_text("{}\n", encoding="utf-8")
+            self._project(root)
             result = self._command(root, "--report-ir", "report-ir.json")
             self.assertEqual(result.returncode, 1)
             status = json.loads(
@@ -226,6 +239,14 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
                 self.assertTrue(status["report_ir_validation"][field], field)
             self.assertEqual(status["compiler"]["status"], "compiled")
             self.assertEqual(
+                status["report_ir_validation"]["workflow_profile"]["binding_state"],
+                "bound",
+            )
+            self.assertEqual(
+                status["compiler"]["workflow_profile"]["primary_profile_id"],
+                "research-analysis-argumentation",
+            )
+            self.assertEqual(
                 status["compiler"]["compiler_invocation"],
                 "local_compile_report_ir.compile_ir",
             )
@@ -242,6 +263,26 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
                 "build-manifest.json",
             ):
                 self.assertTrue((root / "build" / name).is_file(), name)
+
+    def test_authorized_legacy_v1_0_pilot_remains_compilable_without_inference(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root, legacy_ir=True)
+            result = self._command(root, *self._pilot_args())
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            status = json.loads(
+                (root / "records" / "report-ir-pilot-status.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(status["status"], "compiled_pending_qa_handoff")
+            self.assertEqual(
+                status["report_ir_validation"]["workflow_profile"]["binding_state"],
+                "legacy_unbound",
+            )
+            self.assertIsNone(
+                status["compiler"]["workflow_profile"]["primary_profile_id"]
+            )
 
     def test_invalid_ir_stays_on_pilot_and_never_falls_back(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

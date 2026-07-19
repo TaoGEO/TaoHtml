@@ -205,7 +205,7 @@ class WorkflowProfileContractTests(unittest.TestCase):
         self.assertIn("which business goal", CONTRACT)
         self.assertIn("never a Profile id, Report IR field", CONTRACT)
         self.assertIn("does not create a\nnew intake cycle", CONTRACT)
-        self.assertIn("Do not expose Report IR as a user choice", CONTRACT)
+        self.assertIn("adds no IR questionnaire", CONTRACT)
         self.assertIn("Do not ask the user to fill these as a Profile form", CONTRACT)
 
     def test_primary_profile_and_horizontal_parameters_are_independent(self) -> None:
@@ -300,8 +300,12 @@ class WorkflowProfileContractTests(unittest.TestCase):
             self.assertIn(marker, CONTRACT)
 
     def test_profile_contract_does_not_activate_implementation_layers(self) -> None:
-        self.assertIn("Do not add or change Report IR schema fields", CONTRACT)
-        self.assertIn("Do not invoke the Report IR route merely because a Profile", CONTRACT)
+        self.assertIn("Profile selection itself never activates Report IR", CONTRACT)
+        self.assertIn("Direct HTML from the\n  default production path", CONTRACT)
+        self.assertIn("one generic top-level `workflow_profile` binding", CONTRACT)
+        self.assertIn("Report IR `1.0` remains legacy unbound", CONTRACT)
+        self.assertIn("does not replace\n  the Report Design Brief", CONTRACT)
+        self.assertIn("Profile-triggered Compiler branch", CONTRACT)
         self.assertIn("must not copy their schemas, scripts,\nalgorithms", CONTRACT)
         for _, _, definition_ref in EXPECTED_PROFILES:
             text = definition_text(definition_ref)
@@ -1236,8 +1240,20 @@ class WorkflowProfileContractTests(unittest.TestCase):
 
     def test_detailed_profiles_stay_inside_ir_runtime_and_layout_boundaries(self) -> None:
         schema_properties = REPORT_IR_SCHEMA["properties"]
+        self.assertIn("workflow_profile", schema_properties)
+        binding = REPORT_IR_SCHEMA["$defs"]["workflow_profile_binding"]
+        self.assertFalse(binding["additionalProperties"])
+        self.assertEqual(
+            set(binding["required"]),
+            {
+                "primary_profile_id",
+                "definition_version",
+                "selection_basis",
+                "capability_overlays",
+            },
+        )
+        self.assertNotIn("profile_ref", binding["properties"])
         for forbidden_property in (
-            "workflow_profile",
             "decision_score",
             "audience_movement",
             "formal_recipient",
