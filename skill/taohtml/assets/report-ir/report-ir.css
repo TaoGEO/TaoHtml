@@ -1,4 +1,4 @@
-.deck[data-report-ir-version="1.0"] {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) {
   --ri-accent: var(--signal, #d8ff19);
   --ri-accent-2: var(--risk, #ff6500);
   --ri-canvas: var(--bg, #f5f5ee);
@@ -10,12 +10,12 @@
   --ri-radius: 0;
 }
 
-.deck[data-report-ir-version="1.0"] .ri-page {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-page {
   padding: clamp(34px, 3.5vw, 58px) clamp(48px, 4.25vw, 72px) clamp(48px, 4vw, 68px);
   color: var(--ri-ink);
 }
 
-.deck[data-report-ir-version="1.0"] .ri-page::before { display: none; }
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-page::before { display: none; }
 
 .ri-page-shell {
   position: relative;
@@ -28,7 +28,7 @@
 
 .ri-header { min-height: 0; }
 
-.deck[data-report-ir-version="1.0"] .ri-kicker {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-kicker {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -47,7 +47,7 @@
   background: var(--ri-accent);
 }
 
-.deck[data-report-ir-version="1.0"] .ri-title {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-title {
   max-width: 1160px;
   margin: 0;
   font-size: clamp(38px, 4.25vw, 68px);
@@ -55,7 +55,7 @@
   letter-spacing: -.035em;
 }
 
-.deck[data-report-ir-version="1.0"] .ri-task {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-task {
   max-width: 1020px;
   margin: clamp(10px, 1.1vw, 16px) 0 0;
   color: var(--ri-muted);
@@ -248,7 +248,7 @@
 
 /* Corporate fidelity pages keep the project theme's outer shell geometry exact.
    Report IR only owns descendants of the validated editable safe region. */
-.deck[data-report-ir-version="1.0"] .ri-corporate-page .pt-corporate-editable {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-corporate-page .pt-corporate-editable {
   overflow: hidden;
 }
 
@@ -257,12 +257,12 @@
   height: 100%;
 }
 
-.deck[data-report-ir-version="1.0"] .ri-corporate-page .ri-title {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-corporate-page .ri-title {
   font-size: clamp(28px, 3.15vw, 50px);
   line-height: 1.04;
 }
 
-.deck[data-report-ir-version="1.0"] .ri-corporate-page .ri-task {
+.deck:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) .ri-corporate-page .ri-task {
   font-size: clamp(12px, 1vw, 16px);
 }
 
@@ -283,7 +283,7 @@
 
 .ri-corporate-page .ri-page-number { display: none; }
 
-.deck[data-theme="black-white-fluorescent-cards"][data-report-ir-version="1.0"] {
+.deck[data-theme="black-white-fluorescent-cards"]:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) {
   --ri-accent: #d8ff19;
   --ri-accent-2: #ff6500;
   --ri-surface: rgba(255, 253, 245, .9);
@@ -292,7 +292,7 @@
 }
 .deck[data-theme="black-white-fluorescent-cards"] .ri-block:nth-child(even) { transform: translateY(8px); }
 
-.deck[data-theme="rigorous-consulting-report"][data-report-ir-version="1.0"] {
+.deck[data-theme="rigorous-consulting-report"]:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) {
   --ri-accent: #2a7f82;
   --ri-accent-2: #d79b2d;
   --ri-canvas: #fff;
@@ -307,7 +307,7 @@
 .deck[data-theme="rigorous-consulting-report"] .ri-page::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 8px; background: linear-gradient(90deg, #123c69 0 64%, #2a7f82 64% 86%, #d79b2d 86%); }
 .deck[data-theme="rigorous-consulting-report"] .ri-title { font-family: Georgia, "Songti SC", serif; font-weight: 700; }
 
-.deck[data-theme="corporate-annual-report"][data-report-ir-version="1.0"] {
+.deck[data-theme="corporate-annual-report"]:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) {
   --ri-accent: #b89a5b;
   --ri-accent-2: #486b82;
   --ri-canvas: #f4f0e7;
@@ -321,7 +321,7 @@
 .deck[data-theme="corporate-annual-report"] .ri-title { font-family: Georgia, "Songti SC", serif; font-weight: 700; }
 .deck[data-theme="corporate-annual-report"] .ri-layout-hero .ri-content { padding: 18px 22px; border-left: 6px solid var(--ri-accent); background: var(--ri-surface); }
 
-.deck[data-theme="editorial-collage"][data-report-ir-version="1.0"] {
+.deck[data-theme="editorial-collage"]:is([data-report-ir-version="1.0"], [data-report-ir-version="1.1"]) {
   --ri-accent: #f1c84b;
   --ri-accent-2: #e64b38;
   --ri-canvas: #eee9df;

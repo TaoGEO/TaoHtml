@@ -6,6 +6,7 @@ import importlib.util
 import json
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -210,6 +211,138 @@ class ReportIrCompilerTests(unittest.TestCase):
             self.assertEqual(len(normalized_hashes), 4)
             self.assertEqual(len(semantic_hashes), 1)
             self.assertEqual(len(html_hashes), 4)
+
+    def test_v10_and_v11_share_computed_header_and_built_in_theme_styles(self) -> None:
+        from playwright.sync_api import sync_playwright
+
+        expected_accents = {
+            "black-white-fluorescent-cards": "#d8ff19",
+            "rigorous-consulting-report": "#2a7f82",
+            "corporate-annual-report": "#b89a5b",
+            "editorial-collage": "#f1c84b",
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            outputs: dict[tuple[str, str], Path] = {}
+            for theme_id in THEME_IDS:
+                legacy = copy.deepcopy(self.ir)
+                legacy["build_binding"]["theme"]["ref"] = theme_id
+                current = bound_ir(
+                    legacy,
+                    "research-analysis-argumentation",
+                    selection_basis="已确认目标是形成证据与推理可检查的专业结论。",
+                )
+                for version, candidate in (("1.0", legacy), ("1.1", current)):
+                    output = root / f"{theme_id}-{version}"
+                    COMPILER.compile_ir(candidate, root, output)
+                    outputs[(theme_id, version)] = output / "index.html"
+
+            snapshots: dict[tuple[str, str], dict[str, object]] = {}
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(args=["--disable-gpu"])
+                page = browser.new_page(viewport={"width": 1600, "height": 900})
+                for identity, html_path in outputs.items():
+                    page.goto(html_path.resolve().as_uri(), wait_until="load")
+                    snapshots[identity] = page.locator(".slide.active").evaluate(
+                        """slide => {
+                          const deckStyle = getComputedStyle(document.querySelector('.deck'));
+                          const pick = selector => {
+                            const style = getComputedStyle(slide.querySelector(selector));
+                            return {
+                              display: style.display,
+                              fontSize: style.fontSize,
+                              lineHeight: style.lineHeight,
+                              marginTop: style.marginTop,
+                              marginBottom: style.marginBottom,
+                              maxWidth: style.maxWidth,
+                            };
+                          };
+                          return {
+                            accent: deckStyle.getPropertyValue('--ri-accent').trim(),
+                            pagePadding: getComputedStyle(slide).padding,
+                            kicker: pick('.ri-kicker'),
+                            title: pick('.ri-title'),
+                            task: pick('.ri-task'),
+                          };
+                        }"""
+                    )
+                browser.close()
+
+            for theme_id, expected_accent in expected_accents.items():
+                with self.subTest(theme=theme_id):
+                    legacy = snapshots[(theme_id, "1.0")]
+                    current = snapshots[(theme_id, "1.1")]
+                    self.assertEqual(current, legacy)
+                    self.assertEqual(current["accent"], expected_accent)
+                    self.assertEqual(current["pagePadding"], "56px 68px 64px")
+                    self.assertEqual(current["kicker"]["display"], "flex")
+                    self.assertEqual(current["kicker"]["fontSize"], "14px")
+                    self.assertEqual(current["title"]["fontSize"], "68px")
+                    self.assertEqual(current["title"]["marginTop"], "0px")
+                    self.assertEqual(current["task"]["fontSize"], "19.52px")
+                    self.assertEqual(current["task"]["marginTop"], "16px")
+
+    def test_v10_and_v11_corporate_headers_pass_browser_collision_qa(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            theme_dir = PROJECT_THEME_COMPILER.compile_theme(
+                FIXTURES / "corporate-family-handoff.json", root / "theme"
+            )
+            theme_manifest = json.loads(
+                (theme_dir / "theme.json").read_text(encoding="utf-8")
+            )
+            legacy = copy.deepcopy(self.ir)
+            legacy["build_binding"]["theme"] = {
+                "kind": "project_theme",
+                "ref": theme_manifest["id"],
+                "version": theme_manifest["schema_version"],
+            }
+            legacy["build_binding"]["enterprise"] = {
+                "profile_ref": "enterprise-orbital",
+                "profile_version": 1,
+                "shell_policy": "fidelity",
+            }
+            current = bound_ir(
+                legacy,
+                "periodic-operations-reporting",
+                selection_basis="已确认目标是形成周期运营复盘。",
+            )
+            checker = SCRIPT_DIR / "check_html_deck.py"
+            for version, candidate in (("1.0", legacy), ("1.1", current)):
+                with self.subTest(report_ir_version=version):
+                    output = root / f"corporate-{version}"
+                    COMPILER.compile_ir(
+                        candidate,
+                        root,
+                        output,
+                        project_theme_dir=theme_dir,
+                    )
+                    qa_output = root / f"corporate-{version}-qa"
+                    completed = subprocess.run(
+                        [
+                            sys.executable,
+                            str(checker),
+                            str(output / "index.html"),
+                            str(qa_output),
+                            "--width",
+                            "1600",
+                            "--height",
+                            "900",
+                            "--max-pages",
+                            "1",
+                        ],
+                        cwd=ROOT,
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    report = json.loads(
+                        (qa_output / "qa-report.json").read_text(encoding="utf-8")
+                    )
+                    self.assertEqual(completed.returncode, 0, completed.stdout)
+                    self.assertEqual(report["pages"][0]["text_collisions"], [])
 
     def test_appendix_is_a_deterministic_derived_page(self) -> None:
         self.ir["appendices"] = [
