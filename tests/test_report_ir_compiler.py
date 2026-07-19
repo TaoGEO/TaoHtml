@@ -24,6 +24,9 @@ THEME_IDS = (
     "corporate-annual-report",
     "editorial-collage",
 )
+DENSE_LAYOUT_CASES = json.loads(
+    (FIXTURES / "report-ir" / "dense-layout-cases.json").read_text(encoding="utf-8")
+)["cases"]
 
 
 def load_script(name: str) -> ModuleType:
@@ -37,6 +40,7 @@ def load_script(name: str) -> ModuleType:
 
 COMPILER = load_script("compile_report_ir")
 PROJECT_THEME_COMPILER = load_script("compile_project_theme")
+HTML_QA = load_script("check_html_deck")
 
 
 def sha256(value: bytes) -> str:
@@ -52,6 +56,65 @@ class ReportIrCompilerTests(unittest.TestCase):
         materials = root / "materials"
         materials.mkdir(parents=True)
         (materials / "growth.csv").write_bytes(self.source_bytes)
+
+    def _dense_layout_ir(self, case: dict, *, profile_bound: bool) -> dict:
+        candidate = copy.deepcopy(self.ir)
+        title = next(
+            block for block in candidate["blocks"] if block["id"] == "block-compare-title"
+        )
+        title["text"] = case["title"]
+        items = next(
+            block for block in candidate["blocks"] if block["id"] == "block-compare"
+        )
+        items.clear()
+        items.update(
+            {
+                "id": "block-compare",
+                "kind": case["kind"],
+                "items": copy.deepcopy(case["items"]),
+                "claim_refs": ["claim-growth"],
+            }
+        )
+        page = next(page for page in candidate["pages"] if page["id"] == "page-compare")
+        page["form"] = case["form"]
+        page["task"] = case["task"]
+        block_refs = ["block-compare-title", "block-compare"]
+        if case["auxiliary_block"]:
+            candidate["blocks"].append(
+                {
+                    "id": "block-density-boundary",
+                    "kind": "body_text",
+                    "text": (
+                        "本页保留一项独立的边界说明，用来验证高密度条目不会挤压"
+                        "相邻内容，也不会把说明移出固定画布。"
+                    ),
+                    "claim_refs": ["claim-growth"],
+                }
+            )
+            block_refs.append("block-density-boundary")
+        page["block_refs"] = block_refs
+        page["visual_intent"].update(
+            {
+                "primary_focus_ref": "block-compare",
+                "reading_order": list(block_refs),
+                "relationships": [],
+                "composition_family": f"{case['form']}-adaptive-density",
+            }
+        )
+        unit = next(
+            unit
+            for unit in candidate["narrative_units"]
+            if unit["id"] == "unit-compare"
+        )
+        unit["block_refs"] = list(block_refs)
+        unit["takeaway"] = case["title"]
+        if profile_bound:
+            candidate = bound_ir(
+                candidate,
+                "research-analysis-argumentation",
+                selection_basis="已确认目标是形成证据与推理可检查的专业结论。",
+            )
+        return candidate
 
     def test_compiles_variable_seven_page_report_into_runtime(self) -> None:
         self.ir["sources"][0].update(
@@ -115,6 +178,207 @@ class ReportIrCompilerTests(unittest.TestCase):
                 first_manifest["outputs"]["html"]["sha256"],
                 second_manifest["outputs"]["html"]["sha256"],
             )
+
+    def test_data_visualization_caption_is_preserved(self) -> None:
+        chart = next(
+            block
+            for block in self.ir["blocks"]
+            if block["id"] == "block-growth-chart"
+        )
+        chart["caption"] = "图注保留数据范围、比较口径与阅读边界。"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            output = root / "build"
+            COMPILER.compile_ir(self.ir, root, output)
+            rendered = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn('class="ri-chart-caption"', rendered)
+            self.assertIn(chart["caption"], rendered)
+            self.assertIn(
+                'data-ir-edit-key="block:block-growth-chart:caption"', rendered
+            )
+
+    def test_generalized_density_cases_select_readable_item_layouts(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            for case in DENSE_LAYOUT_CASES:
+                for version, profile_bound in (("1.0", False), ("1.1", True)):
+                    with self.subTest(case=case["id"], report_ir_version=version):
+                        candidate = self._dense_layout_ir(
+                            case,
+                            profile_bound=profile_bound,
+                        )
+                        output = root / f"{case['id']}-{version}"
+                        COMPILER.compile_ir(candidate, root, output)
+                        rendered = (output / "index.html").read_text(encoding="utf-8")
+                        source_map = json.loads(
+                            (output / "source-map.json").read_text(encoding="utf-8")
+                        )
+                        plan = source_map["pages"]["page-compare"]["layout_plan"]
+                        self.assertEqual(
+                            plan["arrangement"], case["expected_arrangement"]
+                        )
+                        self.assertEqual(
+                            plan["item_columns"]["block-compare"],
+                            case["expected_item_columns"],
+                        )
+                        self.assertIn(
+                            f'ri-arrangement-{case["expected_arrangement"]}', rendered
+                        )
+                        self.assertIn(
+                            f'ri-item-columns-{case["expected_item_columns"]}', rendered
+                        )
+                        self.assertIn(case["title"], rendered)
+                        for item in case["items"]:
+                            self.assertIn(item["label"], rendered)
+                            self.assertIn(item["value"], rendered)
+
+    def test_density_layout_fails_closed_beyond_safe_item_budget(self) -> None:
+        case = copy.deepcopy(DENSE_LAYOUT_CASES[-1])
+        case["items"][0]["label"] = "无法在固定画布安全容纳的完整条目" * 20
+        candidate = self._dense_layout_ir(case, profile_bound=True)
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            with self.assertRaisesRegex(
+                COMPILER.CompileError,
+                "safe item layout budget",
+            ):
+                COMPILER.compile_ir(candidate, root, root / "build")
+
+    def test_project_theme_narrow_editable_region_limits_item_columns(self) -> None:
+        from playwright.sync_api import sync_playwright
+
+        case = copy.deepcopy(DENSE_LAYOUT_CASES[1])
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            theme_dir = PROJECT_THEME_COMPILER.compile_theme(
+                FIXTURES / "corporate-family-handoff.json", root / "theme"
+            )
+            theme_manifest = json.loads(
+                (theme_dir / "theme.json").read_text(encoding="utf-8")
+            )
+            candidate = self._dense_layout_ir(case, profile_bound=True)
+            page = next(
+                page for page in candidate["pages"] if page["id"] == "page-compare"
+            )
+            page["form"] = "section"
+            page["visual_intent"]["composition_family"] = "section-adaptive-density"
+            candidate["build_binding"]["theme"] = {
+                "kind": "project_theme",
+                "ref": theme_manifest["id"],
+                "version": theme_manifest["schema_version"],
+            }
+            candidate["build_binding"]["enterprise"] = {
+                "profile_ref": "enterprise-orbital",
+                "profile_version": 1,
+                "shell_policy": "fidelity",
+            }
+            project_output = root / "project-build"
+            COMPILER.compile_ir(
+                candidate,
+                root,
+                project_output,
+                project_theme_dir=theme_dir,
+            )
+            project_source_map = json.loads(
+                (project_output / "source-map.json").read_text(encoding="utf-8")
+            )
+            project_plan = project_source_map["pages"]["page-compare"]["layout_plan"]
+            section_shell = next(
+                shell
+                for shell in theme_manifest["corporate_template_family"]["shell_variants"]
+                if shell["role"] == "section"
+            )
+            expected_width = (
+                COMPILER.MIN_LAYOUT_VIEWPORT_WIDTH
+                * section_shell["editable_region"]["bbox"][2]
+                - COMPILER.CORPORATE_EDITABLE_HORIZONTAL_PADDING
+            )
+            self.assertAlmostEqual(project_plan["content_width"], expected_width, places=2)
+            self.assertEqual(project_plan["item_columns"]["block-compare"], 2)
+
+            built_in = copy.deepcopy(candidate)
+            built_in["build_binding"].pop("enterprise")
+            built_in["build_binding"]["theme"] = {
+                "kind": "built_in",
+                "ref": "rigorous-consulting-report",
+            }
+            built_in_output = root / "built-in-build"
+            COMPILER.compile_ir(built_in, root, built_in_output)
+            built_in_source_map = json.loads(
+                (built_in_output / "source-map.json").read_text(encoding="utf-8")
+            )
+            built_in_plan = built_in_source_map["pages"]["page-compare"]["layout_plan"]
+            self.assertGreater(
+                built_in_plan["content_width"], project_plan["content_width"]
+            )
+            self.assertEqual(built_in_plan["item_columns"]["block-compare"], 4)
+
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(args=["--disable-gpu"])
+                browser_page = browser.new_page(viewport={"width": 1366, "height": 768})
+                browser_page.goto(
+                    (project_output / "index.html").resolve().as_uri(),
+                    wait_until="load",
+                )
+                browser_page.evaluate("() => window.TaoHtmlRuntime.showPage(3)")
+                browser_page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+                columns = browser_page.locator(
+                    ".slide.active .ri-item-columns-2"
+                ).evaluate(
+                    "element => getComputedStyle(element).gridTemplateColumns.split(' ').length"
+                )
+                self.assertEqual(columns, 2)
+                self.assertEqual(browser_page.evaluate(HTML_QA.OVERFLOW_CHECK), [])
+                collisions = browser_page.evaluate(HTML_QA.TEXT_COLLISION_CHECK)
+                self.assertEqual(collisions["collisions"], [])
+                self.assertEqual(collisions["intra_element_collisions"], [])
+                browser.close()
+
+    def test_high_density_fixture_passes_browser_qa_across_viewports(self) -> None:
+        from playwright.sync_api import sync_playwright
+
+        case = copy.deepcopy(DENSE_LAYOUT_CASES[-1])
+        candidate = self._dense_layout_ir(case, profile_bound=True)
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            output = root / "build"
+            COMPILER.compile_ir(candidate, root, output)
+            rendered = (output / "index.html").read_text(encoding="utf-8")
+            for item in case["items"]:
+                self.assertIn(item["label"], rendered)
+                self.assertIn(item["value"], rendered)
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(args=["--disable-gpu"])
+                for width, height in ((1366, 768), (1600, 900), (1920, 1080)):
+                    with self.subTest(viewport=(width, height)):
+                        page = browser.new_page(viewport={"width": width, "height": height})
+                        console_errors: list[str] = []
+                        page_errors: list[str] = []
+                        page.on(
+                            "console",
+                            lambda message: console_errors.append(message.text)
+                            if message.type == "error"
+                            else None,
+                        )
+                        page.on("pageerror", lambda error: page_errors.append(str(error)))
+                        page.goto((output / "index.html").resolve().as_uri(), wait_until="load")
+                        page.evaluate("() => window.TaoHtmlRuntime.showPage(3)")
+                        page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+                        overflow = page.evaluate(HTML_QA.OVERFLOW_CHECK)
+                        collisions = page.evaluate(HTML_QA.TEXT_COLLISION_CHECK)
+                        self.assertEqual(overflow, [])
+                        self.assertEqual(collisions["collisions"], [])
+                        self.assertEqual(collisions["intra_element_collisions"], [])
+                        self.assertEqual(collisions["invalid_opt_outs"], [])
+                        self.assertEqual(console_errors, [])
+                        self.assertEqual(page_errors, [])
+                        page.close()
+                browser.close()
 
     def test_workflow_profile_binding_changes_identity_but_not_compiler_decisions(self) -> None:
         first_ir = bound_ir(

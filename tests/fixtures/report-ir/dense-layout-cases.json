@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {
+      "id": "three-short-items",
+      "title": "三个简短步骤保持并列阅读",
+      "task": "展示简短条目。",
+      "kind": "process",
+      "form": "process",
+      "auxiliary_block": false,
+      "expected_item_columns": 3,
+      "expected_arrangement": "standard",
+      "items": [
+        {"id": "short-three-a", "label": "收集输入", "value": "完成"},
+        {"id": "short-three-b", "label": "核对边界", "value": "完成"},
+        {"id": "short-three-c", "label": "形成结论", "value": "待办"}
+      ]
+    },
+    {
+      "id": "four-short-items",
+      "title": "四个简短选项保留横向比较",
+      "task": "比较简短选项。",
+      "kind": "comparison",
+      "form": "comparison",
+      "auxiliary_block": false,
+      "expected_item_columns": 4,
+      "expected_arrangement": "standard",
+      "items": [
+        {"id": "short-four-a", "label": "方案甲", "value": "稳定"},
+        {"id": "short-four-b", "label": "方案乙", "value": "灵活"},
+        {"id": "short-four-c", "label": "方案丙", "value": "快速"},
+        {"id": "short-four-d", "label": "方案丁", "value": "节制"}
+      ]
+    },
+    {
+      "id": "three-long-items",
+      "title": "在证据边界尚未稳定之前，三个复杂解释需要按实际文字占用重新排列",
+      "task": "同时保留解释、限制和下一步核验条件。",
+      "kind": "comparison",
+      "form": "comparison",
+      "auxiliary_block": true,
+      "expected_item_columns": 2,
+      "expected_arrangement": "wide-items",
+      "items": [
+        {"id": "long-three-a", "label": "第一种解释依赖尚未统一的记录口径与观察时点", "value": "需要补充连续记录后再判断是否成立"},
+        {"id": "long-three-b", "label": "第二种解释涉及执行流程中未被审计的人工环节", "value": "需要把责任链和原始事件逐项对应"},
+        {"id": "long-three-c", "label": "第三种解释可能受到样本范围与选择方式共同影响", "value": "需要扩大样本并保留反例检查"}
+      ]
+    },
+    {
+      "id": "four-long-items",
+      "title": "当长标题与四项高密度研究清单同时出现时，页面必须保留完整标题并选择可读的二乘二布局",
+      "task": "在固定画布内完整呈现四项核验工作，不删减信息。",
+      "kind": "process",
+      "form": "process",
+      "auxiliary_block": true,
+      "expected_item_columns": 2,
+      "expected_arrangement": "wide-items",
+      "items": [
+        {"id": "long-four-a", "label": "先统一来自不同采集环节的时间标签和记录口径", "value": "保留原始值并记录每次转换理由"},
+        {"id": "long-four-b", "label": "再核对关键事件是否拥有可追溯的原始记录与责任人", "value": "缺失项必须继续保持待核验状态"},
+        {"id": "long-four-c", "label": "比较主要解释与能够推翻当前判断的反向证据", "value": "不得只收集支持既有结论的材料"},
+        {"id": "long-four-d", "label": "最后检查建议是否超出样本和方法真正支持的边界", "value": "任何更强表述都需要新的证据授权"}
+      ]
+    }
+  ]
+}

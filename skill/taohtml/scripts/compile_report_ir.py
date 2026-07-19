@@ -10,6 +10,7 @@ import json
 import math
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -66,6 +67,17 @@ STANDARD_LAYOUT_BY_FORM = {
 SUPPORTED_LAYOUTS = {"hero", "grid", "sequence", "evidence", "comparison"}
 RASTER_OR_VECTOR_IMAGE = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
 PROJECT_SHELL_ROLES = ("cover", "toc", "section", "content", "data")
+ADAPTIVE_ITEM_KINDS = {"list", "process", "comparison", "timeline"}
+MIN_LAYOUT_VIEWPORT_WIDTH = 1366
+BUILT_IN_SAFE_CONTENT_WIDTH = 1240
+PROJECT_THEME_FALLBACK_CONTENT_WIDTH = 640
+CORPORATE_EDITABLE_HORIZONTAL_PADDING = 36
+CONTENT_COLUMN_GAP = 18
+BLOCK_HORIZONTAL_PADDING = 48
+MIN_READABLE_ITEM_COLUMN = 240
+MAX_SAFE_TITLE_UNITS = 150
+MAX_SAFE_ITEM_UNITS = 240
+MAX_SAFE_PAGE_UNITS = 1600
 
 
 class CompileError(RuntimeError):
@@ -160,6 +172,7 @@ def _project_theme_profile(theme: Any) -> dict[str, Any]:
         and isinstance(item.get("id"), str)
     }
     fallback = role_variants.get("content", variant_ids[0])
+    content_width_by_role = _project_theme_content_widths(theme.manifest)
     return {
         "display_name": theme.display_name,
         "profile_version": "project-theme-1.0",
@@ -171,7 +184,56 @@ def _project_theme_profile(theme: Any) -> dict[str, Any]:
             "comparison": role_variants.get("content", fallback),
         },
         "supported_transition_intents": ["initial", "reveal", "final"],
+        "content_width_by_role": content_width_by_role,
     }
+
+
+def _normalized_editable_width(editable: object) -> float | None:
+    if not isinstance(editable, dict):
+        return None
+    bbox = editable.get("bbox")
+    if (
+        not isinstance(bbox, list)
+        or len(bbox) != 4
+        or isinstance(bbox[2], bool)
+        or not isinstance(bbox[2], (int, float))
+        or not 0 < float(bbox[2]) <= 1
+    ):
+        return None
+    return max(
+        MIN_READABLE_ITEM_COLUMN,
+        MIN_LAYOUT_VIEWPORT_WIDTH * float(bbox[2])
+        - CORPORATE_EDITABLE_HORIZONTAL_PADDING,
+    )
+
+
+def _project_theme_content_widths(manifest: dict[str, Any]) -> dict[str, float]:
+    family = manifest.get("corporate_template_family")
+    if isinstance(family, dict):
+        widths = {
+            str(shell["role"]): width
+            for shell in family.get("shell_variants", [])
+            if isinstance(shell, dict)
+            and isinstance(shell.get("role"), str)
+            and (width := _normalized_editable_width(shell.get("editable_region")))
+            is not None
+        }
+        if set(widths) == set(PROJECT_SHELL_ROLES):
+            return {**widths, "default": min(widths.values())}
+
+    corporate = manifest.get("corporate_shell")
+    if isinstance(corporate, dict):
+        width = _normalized_editable_width(corporate.get("editable_region"))
+        if width is not None:
+            return {role: width for role in (*PROJECT_SHELL_ROLES, "default")}
+
+    tokens = manifest.get("tokens", {})
+    canvas_x = tokens.get("canvas_x") if isinstance(tokens, dict) else None
+    match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)px\s*", str(canvas_x))
+    if match is not None:
+        width = MIN_LAYOUT_VIEWPORT_WIDTH - 2 * float(match.group(1))
+        return {"default": max(PROJECT_THEME_FALLBACK_CONTENT_WIDTH, width)}
+    return {"default": PROJECT_THEME_FALLBACK_CONTENT_WIDTH}
 
 
 def _class_tokens(opening_tag: str) -> list[str]:
@@ -260,7 +322,9 @@ def _generic_page_parts(section: str) -> tuple[str, str, list[str], dict[str, st
     classes = [
         token
         for token in _class_tokens(opening)
-        if token.startswith("ri-layout-") or token.startswith("ri-block-count-")
+        if token.startswith(
+            ("ri-layout-", "ri-block-count-", "ri-density-", "ri-arrangement-")
+        )
     ]
     return html.unescape(title_match.group(1)), section[shell_start:shell_end], classes, attributes
 
@@ -340,6 +404,37 @@ def _format_number(value: float) -> str:
     if math.isfinite(value) and value.is_integer():
         return f"{int(value):,}"
     return f"{value:,.2f}".rstrip("0").rstrip(".")
+
+
+def _text_units(value: object) -> float:
+    """Approximate rendered em width without assuming a particular language."""
+    units = 0.0
+    for character in str(value):
+        if character.isspace():
+            units += 0.35
+        elif unicodedata.east_asian_width(character) in {"W", "F"}:
+            units += 1.0
+        elif character.isalnum():
+            units += 0.58
+        else:
+            units += 0.7
+    return units
+
+
+def _item_units(item: dict[str, Any]) -> tuple[float, float]:
+    segments = [
+        _text_units(item[field])
+        for field in ("label", "value", "detail")
+        if field in item
+    ]
+    return sum(segments), max(segments, default=0.0)
+
+
+def _block_units(block: dict[str, Any]) -> float:
+    total = sum(_text_units(block.get(field, "")) for field in ("text", "caption"))
+    for item in block.get("items", []):
+        total += _item_units(item)[0]
+    return total
 
 
 def _motion_plan(
@@ -449,6 +544,156 @@ class ReportRenderer:
         layout = STANDARD_LAYOUT_BY_FORM.get(form, "grid")
         return layout, self.theme_profile["layout_variants"][layout]
 
+    def _base_block_columns(self, layout: str, block_count: int) -> int:
+        if block_count <= 1 or layout == "hero":
+            return 1
+        if layout == "sequence":
+            return block_count
+        if layout == "evidence":
+            return 2
+        if layout == "grid" and block_count in {3, 5, 6}:
+            return 3
+        return 2
+
+    def _content_width(self, page: dict[str, Any], output_index: int) -> float:
+        widths = self.theme_profile.get("content_width_by_role", {})
+        if not isinstance(widths, dict):
+            return PROJECT_THEME_FALLBACK_CONTENT_WIDTH
+        role = _route_project_shell_role(page, output_index)
+        raw = widths.get(role, widths.get("default"))
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)) or raw <= 0:
+            return PROJECT_THEME_FALLBACK_CONTENT_WIDTH
+        return float(raw)
+
+    def _item_column_count(
+        self,
+        block: dict[str, Any],
+        *,
+        parent_width: float,
+    ) -> int:
+        items = block.get("items", [])
+        if not items:
+            return 1
+        footprints = [_item_units(item) for item in items]
+        maximum_total = max((total for total, _ in footprints), default=0.0)
+        maximum_segment = max((segment for _, segment in footprints), default=0.0)
+        if maximum_total > MAX_SAFE_ITEM_UNITS:
+            raise CompileError(
+                f"block.{block['id']} exceeds the safe item layout budget "
+                f"({maximum_total:.1f} > {MAX_SAFE_ITEM_UNITS} text units)"
+            )
+        if maximum_total > 60 or maximum_segment > 42:
+            minimum_width = 520
+        elif maximum_total > 32 or maximum_segment > 20:
+            minimum_width = 390
+        elif maximum_total > 20 or maximum_segment > 14:
+            minimum_width = 310
+        else:
+            minimum_width = MIN_READABLE_ITEM_COLUMN
+        available = max(MIN_READABLE_ITEM_COLUMN, parent_width - BLOCK_HORIZONTAL_PADDING)
+        possible = max(
+            1,
+            math.floor(
+                (available + CONTENT_COLUMN_GAP)
+                / (minimum_width + CONTENT_COLUMN_GAP)
+            ),
+        )
+        return min(len(items), 4, possible)
+
+    def _layout_plan(
+        self,
+        page: dict[str, Any],
+        *,
+        title_text: str,
+        body_refs: list[str],
+        layout: str,
+        output_index: int,
+    ) -> dict[str, Any]:
+        blocks = [self.blocks[ref] for ref in body_refs]
+        title_units = _text_units(title_text)
+        page_units = title_units + _text_units(page["task"]) + sum(
+            _block_units(block) for block in blocks
+        )
+        if title_units > MAX_SAFE_TITLE_UNITS:
+            raise CompileError(
+                f"page.{page['id']} title exceeds the safe fixed-canvas layout budget "
+                f"({title_units:.1f} > {MAX_SAFE_TITLE_UNITS} text units)"
+            )
+        if page_units > MAX_SAFE_PAGE_UNITS:
+            raise CompileError(
+                f"page.{page['id']} exceeds the safe fixed-canvas layout budget "
+                f"({page_units:.1f} > {MAX_SAFE_PAGE_UNITS} text units)"
+            )
+
+        adaptive_blocks = [
+            block
+            for block in blocks
+            if block["kind"] in ADAPTIVE_ITEM_KINDS
+            and 3 <= len(block.get("items", [])) <= 4
+        ]
+        dense_adaptive_ids = {
+            block["id"]
+            for block in adaptive_blocks
+            if max((_item_units(item)[0] for item in block["items"]), default=0) > 32
+        }
+        content_width = self._content_width(page, output_index)
+        base_columns = self._base_block_columns(layout, len(blocks))
+        default_parent_width = (
+            content_width
+            if base_columns == 1
+            else (content_width - (base_columns - 1) * CONTENT_COLUMN_GAP)
+            / base_columns
+        )
+        default_item_columns = {
+            block["id"]: self._item_column_count(
+                block,
+                parent_width=default_parent_width,
+            )
+            for block in adaptive_blocks
+        }
+        full_width_item_columns = {
+            block["id"]: self._item_column_count(
+                block,
+                parent_width=content_width,
+            )
+            for block in adaptive_blocks
+        }
+        wide_item_ids = {
+            block["id"]
+            for block in adaptive_blocks
+            if len(blocks) > 1
+            and (
+                block["id"] in dense_adaptive_ids
+                or full_width_item_columns[block["id"]]
+                > default_item_columns[block["id"]]
+            )
+        }
+        item_columns: dict[str, int] = {}
+        for block in adaptive_blocks:
+            item_columns[block["id"]] = (
+                full_width_item_columns[block["id"]]
+                if block["id"] in wide_item_ids
+                else default_item_columns[block["id"]]
+            )
+
+        if title_units > 72 or page_units > 760:
+            density = "compact"
+        elif title_units > 46 or page_units > 430:
+            density = "dense"
+        else:
+            density = "standard"
+        arrangement = "wide-items" if wide_item_ids else "standard"
+        return {
+            "density": density,
+            "arrangement": arrangement,
+            "item_columns": item_columns,
+            "wide_item_ids": wide_item_ids,
+            "title_units": round(title_units, 2),
+            "page_units": round(page_units, 2),
+            "content_width": round(content_width, 2),
+            "minimum_readable_item_column": MIN_READABLE_ITEM_COLUMN,
+        }
+
     def _source_ids_for_claim(self, claim_ref: str) -> set[str]:
         result: set[str] = set()
         for link in self.links_by_claim.get(claim_ref, []):
@@ -513,7 +758,7 @@ class ReportRenderer:
             )
         return "；".join(values)
 
-    def _render_items(self, block: dict[str, Any]) -> str:
+    def _render_items(self, block: dict[str, Any], columns: int | None = None) -> str:
         items: list[str] = []
         for index, item in enumerate(block["items"], start=1):
             value = (
@@ -539,7 +784,8 @@ class ReportRenderer:
                 f'data-taohtml-edit="text">'
                 f'{_escape(item["label"])}</span>{value}{detail}</li>'
             )
-        return f'<ol class="ri-items">{"".join(items)}</ol>'
+        column_class = f" ri-item-columns-{columns}" if columns is not None else ""
+        return f'<ol class="ri-items{column_class}">{"".join(items)}</ol>'
 
     def _render_metrics(self, block: dict[str, Any]) -> str:
         if "items" not in block:
@@ -591,12 +837,21 @@ class ReportRenderer:
             )
             if value
         )
-        return (
+        chart = (
             '<div class="ri-chart" data-taohtml-edit-lock>'
             f'<h3 class="ri-chart-title">{_escape(dataset["title"])}</h3>'
             f'{"".join(rows)}'
             f'<p class="ri-chart-meta">{_escape(meta)}</p>'
             '</div>'
+        )
+        caption = block.get("caption", "")
+        if not caption:
+            return chart
+        return (
+            chart
+            + f'<p class="ri-chart-caption" '
+            f'{_edit_attributes("text", "block", block["id"], "caption")} '
+            f'data-taohtml-edit="text">{_escape(caption)}</p>'
         )
 
     def _render_table(self, block: dict[str, Any]) -> str:
@@ -699,12 +954,22 @@ class ReportRenderer:
         block: dict[str, Any],
         plan: dict[str, dict[str, str]],
         emphasized_refs: set[str],
+        *,
+        item_columns: int | None = None,
+        wide_items: bool = False,
     ) -> str:
         extra_classes, motion_attrs = _motion_attributes(
             block["id"], plan, emphasized_refs
         )
         kind = block["kind"]
-        classes = f"ri-block ri-block-{kind} {extra_classes}".strip()
+        layout_classes = []
+        if item_columns is not None:
+            layout_classes.append("ri-adaptive-items")
+        if wide_items:
+            layout_classes.append("ri-wide-items")
+        classes = (
+            f"ri-block ri-block-{kind} {' '.join(layout_classes)} {extra_classes}"
+        ).strip()
         if kind == "body_text":
             body = (
                 f'<p class="ri-copy" {_edit_attributes("text", "block", block["id"], "text")} '
@@ -736,7 +1001,7 @@ class ReportRenderer:
                 f'data-taohtml-edit="text">{_escape(block["text"])}</p>'
             )
         elif kind in {"list", "process", "comparison", "timeline"}:
-            body = self._render_items(block)
+            body = self._render_items(block, item_columns)
         elif kind == "metric":
             body = self._render_metrics(block)
         elif kind == "data_visualization":
@@ -792,8 +1057,21 @@ class ReportRenderer:
             title_edit_attrs = _edit_attributes("text", "block", title_ref, "text")
         body_refs = [ref for ref in reading_order if ref != title_ref]
         layout, theme_variant = self._layout(page)
+        layout_plan = self._layout_plan(
+            page,
+            title_text=title_text,
+            body_refs=body_refs,
+            layout=layout,
+            output_index=output_index,
+        )
         rendered_blocks = "".join(
-            self.render_block(self.blocks[ref], plan, emphasized_refs)
+            self.render_block(
+                self.blocks[ref],
+                plan,
+                emphasized_refs,
+                item_columns=layout_plan["item_columns"].get(ref),
+                wide_items=ref in layout_plan["wide_item_ids"],
+            )
             for ref in body_refs
         )
         source_ids = self._page_source_ids(page)
@@ -806,6 +1084,8 @@ class ReportRenderer:
             source_text = ""
         classes = (
             f"slide ri-page ri-layout-{layout} ri-block-count-{len(body_refs)}"
+            f" ri-density-{layout_plan['density']}"
+            f" ri-arrangement-{layout_plan['arrangement']}"
             + (" active" if output_index == 0 else "")
         )
         header_title_class = f"ri-title {title_motion_classes}".strip()
@@ -830,6 +1110,11 @@ class ReportRenderer:
             "requested_composition_family": page["visual_intent"]["composition_family"],
             "resolved_layout_family": layout,
             "resolved_theme_variant": theme_variant,
+            "layout_plan": {
+                key: value
+                for key, value in layout_plan.items()
+                if key != "wide_item_ids"
+            },
         }
         return (
             f'<section class="{classes}" data-title="{_escape(title_text)}" '
@@ -1032,7 +1317,10 @@ def compile_ir(
             raise CompileError(
                 f"Built-in theme lacks a Report IR compiler profile: {theme.theme_id}"
             )
-        profile = profiles[theme.theme_id]
+        profile = copy.deepcopy(profiles[theme.theme_id])
+        profile["content_width_by_role"] = {
+            "default": BUILT_IN_SAFE_CONTENT_WIDTH
+        }
         if profile["display_name"] != theme.display_name:
             raise CompileError(f"Theme profile display name drift: {theme.theme_id}")
         reference_mode = None
