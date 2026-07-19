@@ -21,6 +21,8 @@ REPORT_IR_SCHEMA = json.loads(
 
 DETAILED_PROFILES = {
     "formal-submission-writing": "2.0",
+    "research-analysis-argumentation": "2.0",
+    "periodic-operations-reporting": "2.0",
     "proposal-planning-decision": "2.0",
     "live-presentation-persuasion": "2.0",
     "rule-response-application-defense": "2.0",
@@ -308,11 +310,13 @@ class WorkflowProfileContractTests(unittest.TestCase):
                 r"(?:IR (?:engineering )?route is independently authorized|independently authorized IR route)",
             )
 
-    def test_engineering_nodes_implement_exactly_four_detailed_golden_paths(self) -> None:
+    def test_engineering_nodes_implement_exactly_six_detailed_golden_paths(self) -> None:
         self.assertEqual(
             set(DETAILED_PROFILES),
             {
                 "formal-submission-writing",
+                "research-analysis-argumentation",
+                "periodic-operations-reporting",
                 "proposal-planning-decision",
                 "live-presentation-persuasion",
                 "rule-response-application-defense",
@@ -340,9 +344,9 @@ class WorkflowProfileContractTests(unittest.TestCase):
             self.assertIn("foundation definition", identity, profile_id)
             self.assertNotIn("Status: detailed/implemented Golden Path", identity)
 
-        self.assertEqual(len(EXPECTED_PROFILES) - len(DETAILED_PROFILES), 5)
-        self.assertIn("four detailed/implemented Golden Paths", CONTRACT)
-        self.assertIn("the other\n  five Profiles remain foundation definitions", CONTRACT)
+        self.assertEqual(len(EXPECTED_PROFILES) - len(DETAILED_PROFILES), 3)
+        self.assertIn("six detailed/implemented Golden Paths", CONTRACT)
+        self.assertIn("the other\n  three Profiles remain foundation definitions", CONTRACT)
 
     def test_long_detailed_profiles_have_top_level_contents(self) -> None:
         for profile_id in DETAILED_PROFILES:
@@ -492,6 +496,251 @@ class WorkflowProfileContractTests(unittest.TestCase):
             "`关键缺口与风险`",
         ):
             self.assertIn(field, text)
+
+    def test_research_golden_path_routes_by_real_question_and_deliverable(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-research-analysis-argumentation.md"
+        )
+        flat = " ".join(text.split())
+        for marker in (
+            "main job is to answer a substantive question",
+            "test or bound a hypothesis",
+            "explain a mechanism",
+            "form a professional conclusion",
+            "Many citations, professional tone, data charts",
+            "use `proposal-planning-decision`",
+            "use `rule-response-application-defense`",
+            "use `periodic-operations-reporting`",
+            "read independently or presented under the already confirmed `use_mode`",
+            "methods actually used",
+            "Claim–Evidence–Source relationships",
+            "Its delivery class must remain honest",
+            "no required chapter count, page count, thesis format, or journal structure",
+        ):
+            self.assertIn(marker, flat)
+
+        for field in (
+            "`研究问题与决策语境`",
+            "`范围与术语口径`",
+            "`方法与已检查材料`",
+            "`核心 Claim–Evidence 状态`",
+            "`替代解释/冲突`",
+            "`目标结论强度`",
+            "`关键局限/缺口`",
+            "`交付边界`",
+        ):
+            self.assertIn(field, text)
+
+    def test_research_method_evidence_causality_and_provisional_boundaries(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-research-analysis-argumentation.md"
+        )
+        required = text.split("## 所需信息", 1)[1].split(
+            "## design-ready 条件", 1
+        )[0]
+        design_ready = text.split("## design-ready 条件", 1)[1].split(
+            "## 叙事任务", 1
+        )[0]
+        evidence = text.split("## 证据规则", 1)[1].split(
+            "## 横向参数默认值", 1
+        )[0]
+        qa = text.split("## QA 验收", 1)[1].split(
+            "## 能力叠加与冲突处理", 1
+        )[0]
+
+        required_flat = " ".join(required.split())
+        for marker in (
+            "methods actually used and their execution status",
+            "methods only planned, proposed, described by a source, or not completed",
+            "File availability, a method section, or an earlier summary does not prove method completion",
+            "观察/事实 (observation / fact)",
+            "推论 (inference)",
+            "假设 (hypothesis)",
+            "推演/模拟 (projection / simulation)",
+            "建议 (recommendation)",
+            "未决冲突 (unresolved conflict)",
+            "one largest still-missing item",
+            "Critical facts, source identity, method completion, sample, data, calculations",
+        ):
+            self.assertIn(marker, required_flat)
+
+        design_ready_flat = " ".join(design_ready.split())
+        for marker in (
+            "method execution, evidence, and claim-fit reach the claimed strength",
+            "do not pretend verification is complete",
+            "explicitly accepts an exploratory/preliminary scope",
+            "must remain visible in the brief, every conclusion-bearing page, delivery wording, and Handoff",
+            "must not be packaged as a validated final study",
+        ):
+            self.assertIn(marker, design_ready_flat)
+
+        evidence_flat = " ".join(evidence.split())
+        for marker in (
+            "File existence is not fact verification",
+            "a secondary summary is not automatically original evidence",
+            "source credibility is not proof that the source fits the current Claim",
+            "supporting evidence together with limitations, counterevidence, and alternative explanations",
+            "supports, limits, refutes, or supplies background",
+            "Correlation or timing alone cannot be upgraded to proved causation",
+            "Never invent data, samples, interviews, surveys, experiments",
+        ):
+            self.assertIn(marker, evidence_flat)
+
+        qa_flat = " ".join(qa.split())
+        for marker in (
+            "`question-to-conclusion`",
+            "`method-to-result`",
+            "`Claim–Evidence–Source`",
+            "correlation, mechanism evidence, and causal conclusions remain distinct",
+            "counterevidence, alternative explanations, conflicts",
+            "conclusion strength never exceeds the completed method, evidence, or claim-fit",
+            "exploratory/preliminary results remain non-final",
+            "no file's existence, polished citation, or secondary summary is treated as proof",
+        ):
+            self.assertIn(marker, qa_flat)
+
+    def test_periodic_operations_routes_by_operating_cadence_and_management_need(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-periodic-operations-reporting.md"
+        )
+        flat = " ".join(text.split())
+        for marker in (
+            "weekly, monthly, quarterly, annual, or other real operating cadence",
+            "presence of KPIs, dates, charts, or an “annual report” label does not by itself",
+            "Use `brand-communication-editorial-publishing`",
+            "Use `project-lifecycle-reporting`",
+            "Use `proposal-planning-decision`",
+            "what happened in the current period",
+            "which drivers are directly supported",
+            "which decisions and next actions are required, who owns them",
+            "no required chapter count, page count, KPI-card count, dashboard shape",
+        ):
+            self.assertIn(marker, flat)
+
+        for field in (
+            "`经营周期与 cutoff`",
+            "`管理问题`",
+            "`指标与口径`",
+            "`比较基准`",
+            "`数据完整性与修订`",
+            "`关键差异/驱动`",
+            "`风险机会`",
+            "`决策/行动/owner`",
+            "`关键限制`",
+            "`交付边界`",
+        ):
+            self.assertIn(field, text)
+
+    def test_periodic_metric_comparison_driver_and_data_gap_boundaries(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-periodic-operations-reporting.md"
+        )
+        required = text.split("## 所需信息", 1)[1].split(
+            "## design-ready 条件", 1
+        )[0]
+        design_ready = text.split("## design-ready 条件", 1)[1].split(
+            "## 叙事任务", 1
+        )[0]
+        evidence = text.split("## 证据规则", 1)[1].split(
+            "## 横向参数默认值", 1
+        )[0]
+        qa = text.split("## QA 验收", 1)[1].split(
+            "## 能力叠加与冲突处理", 1
+        )[0]
+
+        required_flat = " ".join(required.split())
+        for marker in (
+            "reporting period, reporting cutoff, and timezone",
+            "whether data is frozen, final, provisional, still updating, restated",
+            "exact definition, unit/currency, numerator and denominator",
+            "source identity/version, cutoff, aggregation level and method, and revision status",
+            "`actual`",
+            "`target / budget`",
+            "`forecast`",
+            "`projection / simulation`",
+            "`restated / revised data`",
+            "`unknown | withheld | pending`",
+            "recalculate on a common basis, provide an honest bridge, or label the comparison `not comparable`",
+            "`数据直接支持的 driver`",
+            "`基于材料的解释`",
+            "`待验证 hypothesis`",
+            "one largest still-missing data item",
+            "explicitly accepts a `preliminary / data-gap review`",
+            "Do not invent performance, targets, budgets, causes, risks, owners, actions",
+        ):
+            self.assertIn(marker, required_flat)
+
+        design_ready_flat = " ".join(design_ready.split())
+        for marker in (
+            "definition, unit/currency, numerator/denominator",
+            "selected for the real management question without cherry-picking",
+            "recalculated, bridged, or labeled not comparable",
+            "Supported metrics may remain visible while affected conclusions are withheld or pending",
+            "must not be packaged as a complete formal period review",
+        ):
+            self.assertIn(marker, design_ready_flat)
+
+        evidence_flat = " ".join(evidence.split())
+        for marker in (
+            "Do not mix total and component, growth rate and percentage-point change",
+            "actual, target/budget, forecast, projection/simulation, restated/revised data",
+            "Correlation and timing do not automatically prove causation",
+            "not to maximize a favorable narrative",
+            "Never turn a plan or ongoing action into completed work or verified effect",
+            "Do not leave an old chart beside a newly restated figure",
+        ):
+            self.assertIn(marker, evidence_flat)
+
+        qa_flat = " ".join(qa.split())
+        for marker in (
+            "`metric math`",
+            "numerator/denominator, unit/currency, aggregation, time interval, cutoff",
+            "year-over-year/period-over-period, percentage/percentage point",
+            "data source/version, cutoff, revision/restatement",
+            "comparisons preserve definition, scope, currency, time window, denominator",
+            "driver language matches evidence strength",
+            "never used silently for a formal conclusion",
+            "preliminary/data-gap results remain explicitly non-final",
+        ):
+            self.assertIn(marker, qa_flat)
+
+    def test_new_golden_paths_keep_one_brief_direct_html_and_engineering_boundaries(self) -> None:
+        for profile_id, forbidden_runtime in (
+            ("research-analysis-argumentation", "citation engine"),
+            ("periodic-operations-reporting", "data connector"),
+        ):
+            definition_ref = next(
+                ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
+            )
+            text = definition_text(definition_ref)
+            flat = " ".join(text.split())
+            for marker in (
+                "one existing Report Design Brief",
+                "do not create a second brief",
+                "Profile-specific confirmation round",
+                "Profile selection, complete-brief confirmation, and current-file Production Authorization remain three independent facts",
+                "Direct HTML remains the default",
+                "IR engineering route is independently authorized",
+                "Do not add",
+                "Report IR Schema",
+                "Profile-triggered IR path",
+                "Compiler branch",
+            ):
+                self.assertIn(marker, flat, profile_id)
+            self.assertIn(forbidden_runtime, flat, profile_id)
+
+        operations = definition_text(
+            "references/workflow-profile-periodic-operations-reporting.md"
+        )
+        operations_flat = " ".join(operations.split())
+        for forbidden_extension in (
+            "real-time dashboard",
+            "data connector",
+            "automatic refresh",
+            "online analysis system",
+            "new chart component",
+        ):
+            self.assertIn(forbidden_extension, operations_flat)
 
     def test_rule_response_golden_path_covers_traceability_and_honest_gaps(self) -> None:
         text = definition_text(
