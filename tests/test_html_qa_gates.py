@@ -130,6 +130,33 @@ class HtmlQAGateTests(unittest.TestCase):
         self.assertEqual(collision["second"]["kind"], "html")
         self.assertIn("text collision between", completed.stdout)
 
+    def test_multiline_cjk_collision_inside_one_owner_fails_all_viewports(self) -> None:
+        for width, height in VIEWPORTS:
+            with self.subTest(viewport=(width, height)):
+                completed, report = self.run_fixture(
+                    "html-multiline-cjk-overlap.html", width, height
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assertIn("multiline text collision inside", completed.stdout)
+                collisions = report["pages"][0]["intra_element_text_collisions"]
+                self.assertTrue(collisions)
+                self.assertEqual(collisions[0]["collision_scope"], "same-owner-lines")
+                self.assertEqual(collisions[0]["first"]["selector"], collisions[0]["second"]["selector"])
+                self.assertGreater(collisions[0]["overlap"]["y"], 0)
+                self.assertIn(collisions[0], report["pages"][0]["text_collisions"])
+
+    def test_multiline_cjk_with_safe_line_height_passes_all_viewports(self) -> None:
+        for width, height in VIEWPORTS:
+            with self.subTest(viewport=(width, height)):
+                completed, report = self.run_fixture(
+                    "html-multiline-cjk-valid.html", width, height
+                )
+                self.assertEqual(completed.returncode, 0, completed.stdout)
+                self.assertEqual(
+                    report["pages"][0]["intra_element_text_collisions"], []
+                )
+                self.assertEqual(report["pages"][0]["text_collisions"], [])
+
     def test_static_normal_flow_font_metrics_pass_with_auditable_exclusion(self) -> None:
         for width, height in VIEWPORTS:
             with self.subTest(viewport=(width, height)):

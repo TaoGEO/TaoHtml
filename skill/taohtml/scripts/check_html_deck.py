@@ -81,7 +81,8 @@ CANVAS_COVERAGE_CHECK = f"""() => {{
 
 TEXT_COLLISION_CHECK = rf"""() => {{
   const root = document.querySelector('.slide.active');
-  if (!root) return {{ collisions: [], opt_outs: [], invalid_opt_outs: [], normal_flow_metric_exclusions: [] }};
+  if (!root) return {{ collisions: [], intra_element_collisions: [], opt_outs: [],
+    invalid_opt_outs: [], normal_flow_metric_exclusions: [] }};
   const safetyGap = {TEXT_COLLISION_GAP_PX};
   const fontMetricSlack = {TEXT_COLLISION_FONT_METRIC_SLACK_PX};
   const blockSelector = 'p,h1,h2,h3,h4,h5,h6,li,button,label,figcaption,td,th,caption,dt,dd,summary,legend,[data-qa-text-label]';
@@ -231,6 +232,73 @@ TEXT_COLLISION_CHECK = rf"""() => {{
     }};
   }}
 
+  function lineBands(rects) {{
+    const bands = [];
+    for (const rect of [...rects].sort((a, b) => a.top - b.top || a.left - b.left)) {{
+      const center = (rect.top + rect.bottom) / 2;
+      const band = bands.find(candidate => {{
+        const tolerance = Math.max(1, Math.min(candidate.maxHeight, rect.height) * .35);
+        return Math.abs(candidate.center - center) <= tolerance;
+      }});
+      if (band) {{
+        band.left = Math.min(band.left, rect.left);
+        band.top = Math.min(band.top, rect.top);
+        band.right = Math.max(band.right, rect.right);
+        band.bottom = Math.max(band.bottom, rect.bottom);
+        band.maxHeight = Math.max(band.maxHeight, rect.height);
+        band.center = (band.top + band.bottom) / 2;
+      }} else {{
+        bands.push({{
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          maxHeight: rect.height,
+          center,
+        }});
+      }}
+    }}
+    return bands.sort((a, b) => a.top - b.top || a.left - b.left);
+  }}
+
+  const intraElementCollisions = [];
+  for (const label of active) {{
+    if (label.kind !== 'html') continue;
+    const bands = lineBands(label.rects);
+    if (bands.length < 2) continue;
+    const style = getComputedStyle(label.owner);
+    for (let index = 0; index < bands.length - 1; index += 1) {{
+      const firstLine = bands[index];
+      const secondLine = bands[index + 1];
+      const overlapX = Math.min(firstLine.right, secondLine.right) -
+        Math.max(firstLine.left, secondLine.left);
+      const verticalGap = secondLine.top - firstLine.bottom;
+      if (overlapX <= 0 || verticalGap >= safetyGap) continue;
+      intraElementCollisions.push({{
+        collision_scope: 'same-owner-lines',
+        first: {{
+          text: `${{label.text}} [line ${{index + 1}}]`,
+          selector: label.selector,
+          kind: 'html',
+        }},
+        second: {{
+          text: `${{label.text}} [line ${{index + 2}}]`,
+          selector: label.selector,
+          kind: 'html',
+        }},
+        overlap: {{ x: round(overlapX), y: round(Math.max(-verticalGap, 0)) }},
+        clearance: {{ x: 0, y: round(Math.max(verticalGap, 0)) }},
+        safety_gap: safetyGap,
+        lines: {{ first: index + 1, second: index + 2, total: bands.length }},
+        typography: {{
+          font_size: style.fontSize,
+          line_height: style.lineHeight,
+          font_family: style.fontFamily,
+        }},
+      }});
+    }}
+  }}
+
   const collisions = [];
   const normalFlowMetricExclusions = [];
   for (let i = 0; i < active.length; i += 1) {{
@@ -277,7 +345,8 @@ TEXT_COLLISION_CHECK = rf"""() => {{
       }}
     }}
   }}
-  return {{ collisions, opt_outs: optOuts, invalid_opt_outs: invalidOptOuts,
+  return {{ collisions, intra_element_collisions: intraElementCollisions,
+    opt_outs: optOuts, invalid_opt_outs: invalidOptOuts,
     normal_flow_metric_exclusions: normalFlowMetricExclusions }};
 }}"""
 
@@ -686,7 +755,15 @@ def main() -> int:
             text_collisions = [
                 {"state": state["state"], **collision}
                 for state in text_collision_states
-                for collision in state["collisions"]
+                for collision in [
+                    *state["collisions"],
+                    *state["intra_element_collisions"],
+                ]
+            ]
+            intra_element_text_collisions = [
+                {"state": state["state"], **collision}
+                for state in text_collision_states
+                for collision in state["intra_element_collisions"]
             ]
             opt_out_records = {
                 (item["selector"], item["reason"], item["text"]): item
@@ -730,6 +807,7 @@ def main() -> int:
                 "canvas_coverage": canvas_coverage,
                 "text_collision_states": text_collision_states,
                 "text_collisions": text_collisions,
+                "intra_element_text_collisions": intra_element_text_collisions,
                 "text_collision_opt_outs": list(opt_out_records.values()),
                 "invalid_text_collision_opt_outs": list(invalid_opt_outs.values()),
                 "normal_flow_text_metric_exclusions": list(
@@ -772,14 +850,26 @@ def main() -> int:
                     f"{invalid['text']!r} ({invalid['selector']})."
                 )
             for collision in text_collisions:
-                failures.append(
-                    f"Page {i + 1} state {collision['state']}: text collision between "
-                    f"{collision['first']['text']!r} ({collision['first']['selector']}) and "
-                    f"{collision['second']['text']!r} ({collision['second']['selector']}): "
-                    f"overlap={collision['overlap']['x']}px x {collision['overlap']['y']}px; "
-                    f"clearance={collision['clearance']['x']}px x {collision['clearance']['y']}px; "
-                    f"required_gap={collision['safety_gap']}px."
-                )
+                if collision.get("collision_scope") == "same-owner-lines":
+                    failures.append(
+                        f"Page {i + 1} state {collision['state']}: multiline text collision "
+                        f"inside {collision['first']['selector']} between lines "
+                        f"{collision['lines']['first']} and {collision['lines']['second']}: "
+                        f"overlap_y={collision['overlap']['y']}px; "
+                        f"clearance_y={collision['clearance']['y']}px; "
+                        f"required_gap={collision['safety_gap']}px; "
+                        f"font_size={collision['typography']['font_size']}; "
+                        f"line_height={collision['typography']['line_height']}."
+                    )
+                else:
+                    failures.append(
+                        f"Page {i + 1} state {collision['state']}: text collision between "
+                        f"{collision['first']['text']!r} ({collision['first']['selector']}) and "
+                        f"{collision['second']['text']!r} ({collision['second']['selector']}): "
+                        f"overlap={collision['overlap']['x']}px x {collision['overlap']['y']}px; "
+                        f"clearance={collision['clearance']['x']}px x {collision['clearance']['y']}px; "
+                        f"required_gap={collision['safety_gap']}px."
+                    )
             if current_console_errors:
                 failures.append(f"Page {i + 1}: console errors: {current_console_errors}")
             if current_page_errors:

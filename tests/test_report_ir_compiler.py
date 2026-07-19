@@ -278,10 +278,155 @@ class ReportIrCompilerTests(unittest.TestCase):
                     self.assertEqual(current["pagePadding"], "56px 68px 64px")
                     self.assertEqual(current["kicker"]["display"], "flex")
                     self.assertEqual(current["kicker"]["fontSize"], "14px")
-                    self.assertEqual(current["title"]["fontSize"], "68px")
+                    self.assertEqual(current["title"]["fontSize"], "76px")
+                    expected_line_height = (
+                        "95.76px" if theme_id == "editorial-collage" else "89.68px"
+                    )
+                    self.assertEqual(current["title"]["lineHeight"], expected_line_height)
                     self.assertEqual(current["title"]["marginTop"], "0px")
                     self.assertEqual(current["task"]["fontSize"], "19.52px")
                     self.assertEqual(current["task"]["marginTop"], "16px")
+
+    def test_cjk_single_two_and_three_line_titles_are_safe_across_themes_and_viewports(
+        self,
+    ) -> None:
+        from playwright.sync_api import sync_playwright
+
+        title_texts = {
+            "block-cover-title": (
+                "观察记录、访谈感受与预约事件链尚未对齐，"
+                "当前证据不足以对释放规则作出因果归因"
+            ),
+            "block-growth-title": "共享会议室现有观察仍不足以支持释放规则因果归因",
+            "block-method-title": "证据责任边界",
+        }
+        candidate = bound_ir(
+            self.ir,
+            "research-analysis-argumentation",
+            selection_basis="已确认目标是形成证据与推理可检查的专业结论。",
+        )
+        for block in candidate["blocks"]:
+            if block["id"] in title_texts:
+                block["text"] = title_texts[block["id"]]
+            if block["id"] == "block-method-process":
+                block.clear()
+                block.update(
+                    {
+                        "id": "block-method-process",
+                        "kind": "metric",
+                        "items": [
+                            {
+                                "id": "item-method-one",
+                                "label": "North",
+                                "value": "31 / 168 · 18.5% · 当前观察比例",
+                            },
+                            {
+                                "id": "item-method-two",
+                                "label": "South",
+                                "value": "18 / 144 · 12.5% · 当前观察比例",
+                            },
+                            {
+                                "id": "item-method-three",
+                                "label": "合计",
+                                "value": "49 / 312 · 15.7% · 当前观察比例",
+                            },
+                        ],
+                    }
+                )
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            outputs: dict[str, Path] = {}
+            for theme_id in THEME_IDS:
+                themed = copy.deepcopy(candidate)
+                themed["build_binding"]["theme"]["ref"] = theme_id
+                output = root / theme_id
+                COMPILER.compile_ir(themed, root, output)
+                outputs[theme_id] = output / "index.html"
+
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(args=["--disable-gpu"])
+                saw_multiline_metric = False
+                for width, height in ((1366, 768), (1600, 900), (1920, 1080)):
+                    for theme_id, html_path in outputs.items():
+                        with self.subTest(theme=theme_id, viewport=(width, height)):
+                            page = browser.new_page(
+                                viewport={"width": width, "height": height}
+                            )
+                            page.goto(html_path.resolve().as_uri(), wait_until="load")
+                            measurements = [
+                                page.evaluate(
+                                    """index => {
+                                      window.TaoHtmlRuntime.showPage(index);
+                                      const slide = document.querySelectorAll('.slide')[index];
+                                      const title = slide.querySelector('.ri-title');
+                                      const task = slide.querySelector('.ri-task');
+                                      const content = slide.querySelector('.ri-content');
+                                      const titleRange = document.createRange();
+                                      titleRange.selectNodeContents(title);
+                                      const titleRects = [...titleRange.getClientRects()]
+                                        .filter(rect => rect.width > 0 && rect.height > 0)
+                                        .map(rect => ({
+                                          top: rect.top,
+                                          bottom: rect.bottom,
+                                        }));
+                                      const taskRange = document.createRange();
+                                      taskRange.selectNodeContents(task);
+                                      const taskRects = [...taskRange.getClientRects()]
+                                        .filter(rect => rect.width > 0 && rect.height > 0);
+                                      const slideRect = slide.getBoundingClientRect();
+                                      const titleRect = title.getBoundingClientRect();
+                                      const contentRect = content.getBoundingClientRect();
+                                      const metricLineGaps = [...slide.querySelectorAll(
+                                        '.ri-metric-value'
+                                      )].flatMap(metric => {
+                                        const range = document.createRange();
+                                        range.selectNodeContents(metric);
+                                        const rects = [...range.getClientRects()]
+                                          .filter(rect => rect.width > 0 && rect.height > 0);
+                                        return rects.slice(1).map((rect, line) =>
+                                          rect.top - rects[line].bottom);
+                                      });
+                                      const inside = rect => rect.left >= slideRect.left - 2 &&
+                                        rect.top >= slideRect.top - 2 &&
+                                        rect.right <= slideRect.right + 2 &&
+                                        rect.bottom <= slideRect.bottom + 2;
+                                      return {
+                                        lines: titleRects.length,
+                                        lineGaps: titleRects.slice(1).map((rect, line) =>
+                                          rect.top - titleRects[line].bottom),
+                                        titleTaskGap: taskRects[0].top - titleRects.at(-1).bottom,
+                                        taskContentGap: contentRect.top - taskRects.at(-1).bottom,
+                                        metricLineGaps,
+                                        titleInside: inside(titleRect),
+                                        contentInside: inside(contentRect),
+                                      };
+                                    }""",
+                                    index,
+                                )
+                                for index in range(3)
+                            ]
+                            self.assertEqual(
+                                [item["lines"] for item in measurements], [3, 2, 1]
+                            )
+                            for item in measurements:
+                                saw_multiline_metric = (
+                                    saw_multiline_metric or bool(item["metricLineGaps"])
+                                )
+                                self.assertTrue(
+                                    all(gap >= 1 for gap in item["lineGaps"]), item
+                                )
+                                self.assertTrue(
+                                    all(gap >= 1 for gap in item["metricLineGaps"]), item
+                                )
+                                self.assertGreaterEqual(item["titleTaskGap"], 1, item)
+                                self.assertGreaterEqual(item["taskContentGap"], 1, item)
+                                self.assertTrue(item["titleInside"], item)
+                                self.assertTrue(item["contentInside"], item)
+                            page.close()
+                browser.close()
+                self.assertTrue(saw_multiline_metric)
 
     def test_v10_and_v11_corporate_headers_pass_browser_collision_qa(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
