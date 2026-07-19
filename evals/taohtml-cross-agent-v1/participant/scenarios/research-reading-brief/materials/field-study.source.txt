@@ -1,0 +1,37 @@
+SHARED ROOM FIELD STUDY
+Synthetic business fixture. It contains no real organization or personal data.
+
+Study question
+How often were reserved shared rooms visibly unused during the sampled periods?
+
+Observation design
+Two buildings were observed for five business days. Researchers checked 12 shared rooms at 10:00, 14:00, and 16:00. A slot was counted as "reserved and visibly unused" when the booking display showed an active reservation and no occupant was visible during a three-minute observation window.
+
+The observation does not establish why a room was empty. It cannot distinguish late arrival, a brief absence, an incorrect display, or a reservation that should have been released.
+
+---PAGE---
+OBSERVATION RESULTS
+
+Building North
+Observed reserved slots: 168
+Reserved and visibly unused observations: 31
+
+Building South
+Observed reserved slots: 144
+Reserved and visibly unused observations: 18
+
+Combined
+Observed reserved slots: 312
+Reserved and visibly unused observations: 49
+
+Field-sheet note
+One North observation sheet labels the final check as 15:30, while the study protocol says 16:00. The 12 slots on that sheet are included in the totals above. The time-label discrepancy should remain visible until the field team reconciles it.
+
+---PAGE---
+INTERPRETATION BOUNDARY
+
+The study shows that reserved rooms were sometimes visibly unused during sampled windows. It does not prove that the current automatic-release rule caused the observations.
+
+A follow-up could compare rooms with and without reminder prompts, record actual check-in events, and reconcile the 15:30 versus 16:00 field-sheet label before estimating an effect.
+
+The material contains no financial estimate, employee identity, external citation, or recommendation to purchase a product.

@@ -1,0 +1,45 @@
+{
+  "answer_key_version": "1.0",
+  "scenario_id": "research-reading-brief",
+  "expected_profile": {
+    "primary_profile_id": "research-analysis-argumentation",
+    "customer_facing_name": "研究分析与专业论证",
+    "definition_version": "2.0"
+  },
+  "hard_assertions": {
+    "report_ir": [
+      {"path": "report_ir_version", "equals": "1.1"},
+      {"path": "report.evidence_rigor", "equals": "formal"},
+      {"path": "projection.delivery_mode", "equals": "reading"},
+      {"path": "workflow_profile.primary_profile_id", "equals": "research-analysis-argumentation"},
+      {"path": "workflow_profile.definition_version", "equals": "2.0"}
+    ],
+    "build_manifest": [
+      {"path": "workflow_profile.binding_state", "equals": "bound"},
+      {"path": "workflow_profile.primary_profile_id", "equals": "research-analysis-argumentation"},
+      {"path": "runtime.target_mode", "equals": "reading"}
+    ],
+    "project_handoff": [
+      {"path": "schema_version", "equals": "1.1"},
+      {"path": "task.task_intent", "equals": "new_build"},
+      {"path": "task.content_route", "equals": "word_pdf"},
+      {"path": "current_build.workflow_profile.binding_state", "equals": "bound"},
+      {"path": "current_build.workflow_profile.primary_profile_id", "equals": "research-analysis-argumentation"}
+    ]
+  },
+  "leakage_markers": [
+    "research-analysis-argumentation",
+    "研究分析与专业论证",
+    "control-key-research-reading-brief"
+  ],
+  "follow_up_policy": {
+    "answers_must_come_from_user": true,
+    "notes": "Material-summary and complete-brief confirmations remain separate. Do not resolve the time-label discrepancy for the Agent."
+  },
+  "human_review_dimensions": [
+    "visual_finish",
+    "reading_structure",
+    "evidence_readability",
+    "fact_inference_boundary"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "answer_key_version": "1.0",
+  "scenario_id": "corporate-ops-rebuild",
+  "expected_profile": {
+    "primary_profile_id": "periodic-operations-reporting",
+    "customer_facing_name": "周期经营与数据汇报",
+    "definition_version": "2.0"
+  },
+  "hard_assertions": {
+    "report_ir": [
+      {"path": "report_ir_version", "equals": "1.1"},
+      {"path": "projection.delivery_mode", "equals": "presentation"},
+      {"path": "workflow_profile.primary_profile_id", "equals": "periodic-operations-reporting"},
+      {"path": "workflow_profile.definition_version", "equals": "2.0"},
+      {"path": "build_binding.theme.kind", "equals": "project_theme"}
+    ],
+    "build_manifest": [
+      {"path": "workflow_profile.binding_state", "equals": "bound"},
+      {"path": "workflow_profile.primary_profile_id", "equals": "periodic-operations-reporting"},
+      {"path": "theme.kind", "equals": "project_theme"},
+      {"path": "theme.reference_mode", "equals": "corporate_fidelity"}
+    ],
+    "project_handoff": [
+      {"path": "schema_version", "equals": "1.1"},
+      {"path": "task.task_intent", "equals": "new_build"},
+      {"path": "task.content_route", "equals": "existing_ppt_html"},
+      {"path": "current_build.workflow_profile.binding_state", "equals": "bound"},
+      {"path": "current_build.workflow_profile.primary_profile_id", "equals": "periodic-operations-reporting"}
+    ]
+  },
+  "leakage_markers": [
+    "periodic-operations-reporting",
+    "周期经营与数据汇报",
+    "control-key-corporate-ops-rebuild"
+  ],
+  "follow_up_policy": {
+    "answers_must_come_from_user": true,
+    "notes": "Confirm only screenshot-observed fidelity. Do not promise the original master, vector logo, font files, or assets outside the screenshot."
+  },
+  "human_review_dimensions": [
+    "visual_finish",
+    "presentation_flow",
+    "corporate_template_fidelity",
+    "protected_content_fidelity"
+  ]
+}

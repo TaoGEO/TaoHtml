@@ -1,0 +1,17 @@
+{
+  "scenario_contract_version": "1.0",
+  "scenario_id": "research-reading-brief",
+  "request": "request.md",
+  "materials": [
+    {
+      "source": "materials/field-study.source.txt",
+      "output": "materials/field-study.pdf",
+      "transform": "text_to_pdf"
+    },
+    {
+      "source": "materials/interview-notes.source.txt",
+      "output": "materials/interview-notes.docx",
+      "transform": "text_to_docx"
+    }
+  ]
+}

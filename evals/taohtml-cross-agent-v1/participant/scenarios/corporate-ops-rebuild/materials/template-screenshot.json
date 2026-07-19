@@ -1,0 +1,32 @@
+{
+  "width": 1600,
+  "height": 900,
+  "background": "#F3F0E8",
+  "header": {
+    "height": 82,
+    "background": "#143C46",
+    "label": "CHENGWAN OPERATIONS"
+  },
+  "accent": {
+    "x": 92,
+    "y": 142,
+    "width": 16,
+    "height": 590,
+    "color": "#E8A23A"
+  },
+  "content": {
+    "x": 154,
+    "y": 154,
+    "width": 1280,
+    "height": 560,
+    "title": "MONTHLY REVIEW / CONTENT SAFE AREA",
+    "ink": "#143C46",
+    "muted": "#6B7778"
+  },
+  "footer": {
+    "y": 810,
+    "rule": "#B8B2A6",
+    "label": "INTERNAL OPERATIONS REVIEW",
+    "page": "05 / 12"
+  }
+}

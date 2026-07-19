@@ -1,0 +1,31 @@
+{
+  "matrix_contract_version": "1.0",
+  "platforms": ["codex", "workbuddy"],
+  "smoke": {
+    "enabled": true,
+    "gate_requires": ["automatic_pass", "human_pass"],
+    "scenarios": [
+      "idea-change-pitch",
+      "research-reading-brief",
+      "corporate-ops-rebuild"
+    ],
+    "expected_run_count": 6
+  },
+  "full": {
+    "enabled": false,
+    "enable_only_after": "all_smoke_rows_pass",
+    "scenario_fixtures_in_this_node": false,
+    "profile_ids": [
+      "formal-submission-writing",
+      "research-analysis-argumentation",
+      "periodic-operations-reporting",
+      "proposal-planning-decision",
+      "live-presentation-persuasion",
+      "teaching-training-knowledge-transfer",
+      "project-lifecycle-reporting",
+      "brand-communication-editorial-publishing",
+      "rule-response-application-defense"
+    ],
+    "expected_run_count": 18
+  }
+}

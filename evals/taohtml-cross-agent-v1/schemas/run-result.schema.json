@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taohtml.local/evals/cross-agent/run-result.schema.json",
+  "title": "TaoHtml cross-Agent black-box result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "result_contract_version",
+    "evaluated_at",
+    "run",
+    "audit",
+    "automatic_status",
+    "human_review",
+    "overall_status",
+    "checks",
+    "claims"
+  ],
+  "properties": {
+    "result_contract_version": {"const": "taohtml-cross-agent-result-1"},
+    "evaluated_at": {"type": "string", "minLength": 1},
+    "run": {"type": "object"},
+    "audit": {"type": "object"},
+    "automatic_status": {"enum": ["PASS", "FAIL"]},
+    "human_review": {"type": "object"},
+    "overall_status": {"enum": ["PASS", "FAIL", "AWAITING_HUMAN"]},
+    "checks": {"type": "object", "minProperties": 1},
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_evaluator_used",
+        "network_used",
+        "workbuddy_run_executed_by_this_script",
+        "visual_aesthetics_automatically_passed",
+        "actual_presentation_effect_automatically_passed"
+      ],
+      "properties": {
+        "model_evaluator_used": {"const": false},
+        "network_used": {"const": false},
+        "workbuddy_run_executed_by_this_script": {"const": false},
+        "visual_aesthetics_automatically_passed": {"const": false},
+        "actual_presentation_effect_automatically_passed": {"const": false}
+      }
+    }
+  }
+}

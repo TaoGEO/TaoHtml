@@ -1,0 +1,43 @@
+{
+  "answer_key_version": "1.0",
+  "scenario_id": "idea-change-pitch",
+  "expected_profile": {
+    "primary_profile_id": "live-presentation-persuasion",
+    "customer_facing_name": "现场演讲与说服表达",
+    "definition_version": "2.0"
+  },
+  "hard_assertions": {
+    "report_ir": [
+      {"path": "report_ir_version", "equals": "1.1"},
+      {"path": "projection.delivery_mode", "equals": "presentation"},
+      {"path": "workflow_profile.primary_profile_id", "equals": "live-presentation-persuasion"},
+      {"path": "workflow_profile.definition_version", "equals": "2.0"}
+    ],
+    "build_manifest": [
+      {"path": "workflow_profile.binding_state", "equals": "bound"},
+      {"path": "workflow_profile.primary_profile_id", "equals": "live-presentation-persuasion"}
+    ],
+    "project_handoff": [
+      {"path": "schema_version", "equals": "1.1"},
+      {"path": "task.task_intent", "equals": "new_build"},
+      {"path": "task.content_route", "equals": "idea_only"},
+      {"path": "current_build.workflow_profile.binding_state", "equals": "bound"},
+      {"path": "current_build.workflow_profile.primary_profile_id", "equals": "live-presentation-persuasion"}
+    ]
+  },
+  "leakage_markers": [
+    "live-presentation-persuasion",
+    "现场演讲与说服表达",
+    "control-key-idea-change-pitch"
+  ],
+  "follow_up_policy": {
+    "answers_must_come_from_user": true,
+    "notes": "Do not supply a preferred visual system or invented business facts. Exact-current confirmations may be given only after the Agent presents the complete current record."
+  },
+  "human_review_dimensions": [
+    "visual_finish",
+    "story_progression",
+    "live_persuasion_effect",
+    "disclosure_clarity"
+  ]
+}

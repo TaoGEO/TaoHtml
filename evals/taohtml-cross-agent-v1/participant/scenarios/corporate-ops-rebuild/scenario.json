@@ -1,0 +1,17 @@
+{
+  "scenario_contract_version": "1.0",
+  "scenario_id": "corporate-ops-rebuild",
+  "request": "request.md",
+  "materials": [
+    {
+      "source": "materials/current-review.html",
+      "output": "materials/current-review.html",
+      "transform": "copy"
+    },
+    {
+      "source": "materials/template-screenshot.json",
+      "output": "materials/template-screenshot.png",
+      "transform": "screenshot_spec_to_png"
+    }
+  ]
+}
