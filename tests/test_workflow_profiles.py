@@ -20,8 +20,10 @@ REPORT_IR_SCHEMA = json.loads(
 )
 
 DETAILED_PROFILES = {
+    "formal-submission-writing": "2.0",
     "proposal-planning-decision": "2.0",
     "live-presentation-persuasion": "2.0",
+    "rule-response-application-defense": "2.0",
 }
 
 EXPECTED_PROFILES = (
@@ -302,11 +304,20 @@ class WorkflowProfileContractTests(unittest.TestCase):
                 "## Runtime/主题使用", 1
             )[0]
             self.assertRegex(
-                ir_boundary,
+                " ".join(ir_boundary.split()),
                 r"(?:IR (?:engineering )?route is independently authorized|independently authorized IR route)",
             )
 
-    def test_node_two_implements_exactly_two_detailed_golden_paths(self) -> None:
+    def test_engineering_nodes_implement_exactly_four_detailed_golden_paths(self) -> None:
+        self.assertEqual(
+            set(DETAILED_PROFILES),
+            {
+                "formal-submission-writing",
+                "proposal-planning-decision",
+                "live-presentation-persuasion",
+                "rule-response-application-defense",
+            },
+        )
         for profile_id, expected_version in DETAILED_PROFILES.items():
             definition_ref = next(
                 ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
@@ -329,8 +340,26 @@ class WorkflowProfileContractTests(unittest.TestCase):
             self.assertIn("foundation definition", identity, profile_id)
             self.assertNotIn("Status: detailed/implemented Golden Path", identity)
 
-        self.assertIn("two detailed/implemented Golden Paths", CONTRACT)
-        self.assertIn("the other seven\n  Profiles remain foundation definitions", CONTRACT)
+        self.assertEqual(len(EXPECTED_PROFILES) - len(DETAILED_PROFILES), 5)
+        self.assertIn("four detailed/implemented Golden Paths", CONTRACT)
+        self.assertIn("the other\n  five Profiles remain foundation definitions", CONTRACT)
+
+    def test_long_detailed_profiles_have_top_level_contents(self) -> None:
+        for profile_id in DETAILED_PROFILES:
+            definition_ref = next(
+                ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
+            )
+            text = definition_text(definition_ref)
+            self.assertGreater(len(text.splitlines()), 100, profile_id)
+            identity = text.split("## 身份与版本", 1)[1].split(
+                "## 适用目标", 1
+            )[0]
+            self.assertIn("### 目录", identity, profile_id)
+            self.assertEqual(
+                len(re.findall(r"^- \[[^]]+\]\(#[^)]+\)$", identity, re.MULTILINE)),
+                len(REQUIRED_SECTIONS) - 1,
+                profile_id,
+            )
 
     def test_detailed_profiles_reuse_shared_flow_and_on_demand_loading(self) -> None:
         router = SKILL.split("## Workflow Profile Routing", 1)[1].split(
@@ -425,32 +454,129 @@ class WorkflowProfileContractTests(unittest.TestCase):
         ):
             self.assertIn(field, text)
 
+    def test_formal_submission_golden_path_covers_authority_and_consistency(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-formal-submission-writing.md"
+        )
+        flat = " ".join(text.split())
+        for marker in (
+            "defined recipient or reporting body",
+            "institutional purpose",
+            "formal-use boundary",
+            "A formal tone",
+            "mandatory chapters, fields, statements",
+            "agreed or customary structure",
+            "authorship, responsibility, approval, sign-off",
+            "confidentiality, classification, retention, and distribution restrictions only",
+            "`权威要求`",
+            "`客户材料`",
+            "`外部证据`",
+            "`Agent 补全`",
+            "An ordinary reference",
+            "Trace every actual mandatory item",
+            "task/mandate, basis, facts, analysis, conclusion or",
+            "Keep source facts, interpretation, and proposed or recommended",
+            "Never use `创作性补全`",
+            "`required-section completeness`",
+            "delivery wording is accurate",
+        ):
+            self.assertIn(marker, flat)
+
+        for field in (
+            "`正式对象与目的`",
+            "`必须覆盖项`",
+            "`权威来源及版本`",
+            "`术语与口径`",
+            "`责任与签批边界`",
+            "`格式/时间/保密约束`",
+            "`关键缺口与风险`",
+        ):
+            self.assertIn(field, text)
+
+    def test_rule_response_golden_path_covers_traceability_and_honest_gaps(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-rule-response-application-defense.md"
+        )
+        flat = " ".join(text.split())
+        for marker in (
+            "Use as primary only when success is materially governed",
+            "`文件存在` does not mean `规则已核验`",
+            "`资格/一票否决项`",
+            "`强制响应项`",
+            "`评分项与权重`",
+            "`加分项`",
+            "`格式/篇幅/提交约束`",
+            "`答辩要求`",
+            "Do not invent a category",
+            "original wording or accurate paraphrase plus rule locator",
+            "supporting evidence and evidence locator",
+            "`已满足`, `部分满足`",
+            "possessing a document",
+            "not a new TaoHtml Schema",
+            "A missing mandatory proof is not an ordinary gap eligible for creative supplements",
+            "`gap-analysis / preparation draft`",
+            "not a compliant submit-ready final artifact",
+            "reviewer can locate each applicable response and proof",
+            "do not force a fixed outline, page count, matrix, or card layout",
+            "Never invent a score, weight, qualification, certificate",
+            "existing `fragment-v1`",
+            "Do not promise dual-screen presenter view",
+            "defense final pages, staged intermediate states",
+        ):
+            self.assertIn(marker, flat)
+
+        for field in (
+            "`规则身份与版本`",
+            "`申报/评审目标`",
+            "`资格与强制项`",
+            "`评分与权重`",
+            "`响应—证据状态`",
+            "`格式/截止/答辩约束`",
+            "`责任边界`",
+            "`缺口/冲突与提交风险`",
+        ):
+            self.assertIn(field, text)
+
     def test_detailed_profiles_stay_inside_ir_runtime_and_layout_boundaries(self) -> None:
         schema_properties = REPORT_IR_SCHEMA["properties"]
-        self.assertNotIn("workflow_profile", schema_properties)
-        self.assertNotIn("decision_score", schema_properties)
-        self.assertNotIn("audience_movement", schema_properties)
+        for forbidden_property in (
+            "workflow_profile",
+            "decision_score",
+            "audience_movement",
+            "formal_recipient",
+            "mandatory_section",
+            "rule_requirement",
+            "compliance_status",
+            "score_weight",
+        ):
+            self.assertNotIn(forbidden_property, schema_properties)
 
         for profile_id in DETAILED_PROFILES:
             definition_ref = next(
                 ref for current_id, _, ref in EXPECTED_PROFILES if current_id == profile_id
             )
             text = definition_text(definition_ref)
-            self.assertIn("Direct HTML remains the default", text, profile_id)
-            self.assertIn("independently authorized", text, profile_id)
-            self.assertIn("Do not add", text, profile_id)
-            self.assertIn("Report IR Schema", text, profile_id)
-            self.assertIn("Compiler branch", text, profile_id)
-            self.assertIn("cross-page morphing", text, profile_id)
-            self.assertIn("no required", text, profile_id)
-            self.assertIn("page count", text, profile_id)
+            flat = " ".join(text.split())
+            self.assertIn("Direct HTML remains the default", flat, profile_id)
+            self.assertIn("independently authorized", flat, profile_id)
+            self.assertIn("Do not add", flat, profile_id)
+            self.assertIn("Report IR Schema", flat, profile_id)
+            self.assertIn("Compiler branch", flat, profile_id)
+            self.assertIn("cross-page morphing", flat, profile_id)
+            self.assertIn("no required", flat, profile_id)
+            self.assertIn("page count", flat, profile_id)
 
     def test_design_brief_uses_one_selected_profile_increment_only(self) -> None:
         self.assertIn("## 场景特有决策", BRIEF)
         self.assertIn("只写入当前主 Profile", BRIEF)
         self.assertIn("不展示未选 Profile 的字段", BRIEF)
         self.assertIn("not a second brief or confirmation round", BRIEF)
-        for unselected_field in ("决策问题", "受众当前状态"):
+        for unselected_field in (
+            "决策问题",
+            "受众当前状态",
+            "正式对象与目的",
+            "规则身份与版本",
+        ):
             self.assertNotIn(unselected_field, BRIEF)
 
 
