@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
+import hmac
 import json
 import re
 import shutil
@@ -23,9 +25,9 @@ SCENARIO_ROOT = PARTICIPANT_ROOT / "scenarios"
 CONTROLLER_ROOT = EVAL_ROOT / "controller"
 ANSWER_ROOT = CONTROLLER_ROOT / "scenarios"
 RUN_CONTRACT_VERSION = "taohtml-cross-agent-run-1"
-RECEIPT_VERSION = "taohtml-cross-agent-receipt-1"
+RECEIPT_VERSION = "taohtml-cross-agent-receipt-2"
 SUBMISSION_CONTRACT_VERSION = "taohtml-cross-agent-submission-1"
-RESULT_CONTRACT_VERSION = "taohtml-cross-agent-result-1"
+RESULT_CONTRACT_VERSION = "taohtml-cross-agent-result-2"
 SAFE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
 NONCE = re.compile(r"^[a-f0-9]{32,128}$")
 SHA256 = re.compile(r"^[a-f0-9]{64}$")
@@ -65,6 +67,23 @@ REQUIRED_OUTPUTS = (
     "handoff.md",
     "submission.json",
 )
+ACCEPTANCE_TOOLCHAIN_FILES = (
+    "controller/matrix.json",
+    "schemas/run-result.schema.json",
+    "scripts/accept_run.py",
+    "scripts/blackbox_contract.py",
+    "scripts/evaluate_matrix.py",
+    "scripts/prepare_run.py",
+)
+RESULT_PROVENANCE_KEYS = {
+    "controller_receipt_sha256",
+    "run_manifest_sha256",
+    "answer_key_sha256",
+    "participant_zip_sha256",
+    "returned_artifact",
+    "acceptance_toolchain_sha256",
+    "result_hmac_sha256",
+}
 
 
 class ContractError(ValueError):
@@ -177,6 +196,42 @@ def file_hashes(root: Path, relative_paths: Iterable[str] | None = None) -> dict
 
 def tree_sha256(hashes: dict[str, str]) -> str:
     return sha256_bytes(canonical_json_bytes(hashes))
+
+
+def acceptance_toolchain_hashes() -> dict[str, str]:
+    return {
+        value: sha256_file(resolve_regular_file(EVAL_ROOT, value, "acceptance toolchain file"))
+        for value in ACCEPTANCE_TOOLCHAIN_FILES
+    }
+
+
+def acceptance_toolchain_sha256() -> str:
+    return tree_sha256(acceptance_toolchain_hashes())
+
+
+def directory_tree_sha256(root: Path) -> str:
+    return tree_sha256(file_hashes(root))
+
+
+def result_hmac_payload(result: dict[str, Any]) -> bytes:
+    authenticated = copy.deepcopy(result)
+    provenance = authenticated.get("provenance")
+    if not isinstance(provenance, dict):
+        raise ContractError("result provenance must be an object")
+    provenance.pop("result_hmac_sha256", None)
+    return canonical_json_bytes(authenticated)
+
+
+def result_hmac_sha256(result: dict[str, Any], hexadecimal_key: str) -> str:
+    if not isinstance(hexadecimal_key, str) or not re.fullmatch(
+        r"[a-f0-9]{64}", hexadecimal_key
+    ):
+        raise ContractError("controller matrix HMAC key is invalid")
+    return hmac.new(
+        bytes.fromhex(hexadecimal_key),
+        result_hmac_payload(result),
+        hashlib.sha256,
+    ).hexdigest()
 
 
 def _zip_info(name: str) -> zipfile.ZipInfo:

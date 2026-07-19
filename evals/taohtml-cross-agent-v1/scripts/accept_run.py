@@ -21,7 +21,9 @@ from blackbox_contract import (
     SHA256,
     SUBMISSION_CONTRACT_VERSION,
     ContractError,
+    acceptance_toolchain_sha256,
     assert_no_answer_leakage,
+    directory_tree_sha256,
     evaluate_assertions,
     file_hashes,
     load_answer_key,
@@ -32,6 +34,7 @@ from blackbox_contract import (
     safe_extract_zip,
     safe_relative_path,
     sha256_file,
+    result_hmac_sha256,
     tree_sha256,
     utc_now,
     write_json,
@@ -797,6 +800,10 @@ def accept(
     markdown_path = result_path.with_suffix(".md")
     if markdown_path.exists():
         raise ContractError(f"acceptance table already exists: {markdown_path}")
+    if result_path.parent.resolve() != receipt_path.parent.resolve():
+        raise ContractError(
+            "result output must share the controller receipt directory for matrix provenance"
+        )
     if returned_path.is_dir():
         returned_resolved = returned_path.resolve()
         for path, label in (
@@ -814,6 +821,11 @@ def accept(
     receipt = load_json(receipt_path)
     if receipt.get("receipt_version") != RECEIPT_VERSION:
         raise ContractError("controller receipt version is unsupported")
+    current_toolchain_sha256 = acceptance_toolchain_sha256()
+    if receipt.get("acceptance_toolchain_sha256") != current_toolchain_sha256:
+        raise ContractError(
+            "acceptance toolchain drifted after run preparation; prepare a fresh run"
+        )
     answer_key = load_answer_key(receipt["scenario_id"])
     key_path = ANSWER_ROOT / f"{receipt['scenario_id']}.json"
     if sha256_file(key_path) != receipt.get("answer_key_sha256"):
@@ -821,9 +833,17 @@ def accept(
 
     with tempfile.TemporaryDirectory() as temp_dir:
         if returned_path.is_file():
+            returned_artifact = {
+                "kind": "zip",
+                "sha256": sha256_file(returned_path),
+            }
             returned_root = safe_extract_zip(returned_path, Path(temp_dir) / "returned")
         elif returned_path.is_dir():
             returned_root = normalize_returned_root(returned_path.resolve())
+            returned_artifact = {
+                "kind": "directory_tree",
+                "sha256": directory_tree_sha256(returned_root),
+            }
         else:
             raise ContractError(f"returned path does not exist: {returned_path}")
         try:
@@ -900,7 +920,18 @@ def accept(
             "visual_aesthetics_automatically_passed": False,
             "actual_presentation_effect_automatically_passed": False,
         },
+        "provenance": {
+            "controller_receipt_sha256": sha256_file(receipt_path),
+            "run_manifest_sha256": receipt["run_manifest_sha256"],
+            "answer_key_sha256": receipt["answer_key_sha256"],
+            "participant_zip_sha256": receipt["participant_zip_sha256"],
+            "returned_artifact": returned_artifact,
+            "acceptance_toolchain_sha256": current_toolchain_sha256,
+        },
     }
+    result["provenance"]["result_hmac_sha256"] = result_hmac_sha256(
+        result, receipt["matrix_hmac_key"]
+    )
     result_path.parent.mkdir(parents=True, exist_ok=True)
     write_json(result_path, result)
     markdown_path.write_text(_markdown(result), encoding="utf-8")

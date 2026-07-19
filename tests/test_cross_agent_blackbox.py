@@ -9,6 +9,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,13 +116,19 @@ def build_stub_submission(prepared: dict[str, Path | str]) -> Path:
     return output
 
 
-def prepare_fixed(root: Path, scenario: str = "idea-change-pitch") -> dict[str, Path | str]:
+def prepare_fixed(
+    root: Path,
+    scenario: str = "idea-change-pitch",
+    platform: str = "workbuddy",
+    run_id: str | None = None,
+    nonce: str = FIXED_NONCE,
+) -> dict[str, Path | str]:
     return PREPARE.prepare(
         scenario,
-        "workbuddy",
+        platform,
         root,
-        run_id=f"{scenario}-run",
-        nonce=FIXED_NONCE,
+        run_id=run_id or f"{scenario}-run",
+        nonce=nonce,
         created_at=FIXED_CREATED_AT,
     )
 
@@ -162,6 +169,8 @@ class CrossAgentPackageTests(unittest.TestCase):
             self.assertNotIn(b"controller", b"\n".join(name.encode() for name in names))
             self.assertNotIn(b"live-presentation-persuasion", combined)
             self.assertNotIn(b"control-key", combined)
+            receipt = CONTRACT.load_json(Path(prepared["receipt"]))
+            self.assertNotIn(receipt["matrix_hmac_key"].encode(), combined)
 
     def test_material_builders_produce_real_portable_formats(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -292,7 +301,7 @@ class CrossAgentIntegrityTests(unittest.TestCase):
             prepared = prepare_fixed(Path(temp_dir) / "runs")
             build_stub_submission(prepared)
             participant = Path(prepared["participant_tree"])
-            with self.assertRaisesRegex(CONTRACT.ContractError, "must remain outside"):
+            with self.assertRaisesRegex(CONTRACT.ContractError, "controller receipt directory"):
                 ACCEPT.accept(
                     Path(prepared["receipt"]),
                     participant,
@@ -309,7 +318,7 @@ class CrossAgentEvaluationBoundaryTests(unittest.TestCase):
             result = ACCEPT.accept(
                 Path(prepared["receipt"]),
                 Path(prepared["participant_tree"]),
-                Path(temp_dir) / "result.json",
+                Path(prepared["receipt"]).parent / "result.json",
                 skip_browser=True,
             )
             self.assertEqual(result["checks"]["participant_integrity"]["status"], "PASS")
@@ -358,7 +367,7 @@ class CrossAgentEvaluationBoundaryTests(unittest.TestCase):
             result = ACCEPT.accept(
                 Path(prepared["receipt"]),
                 Path(prepared["participant_tree"]),
-                Path(temp_dir) / "result.json",
+                Path(prepared["receipt"]).parent / "result.json",
                 skip_browser=True,
             )
             qa = result["checks"]["qa_boundary"]
@@ -449,7 +458,7 @@ class CrossAgentEvaluationBoundaryTests(unittest.TestCase):
 
 
 class CrossAgentMatrixTests(unittest.TestCase):
-    def _result(self, scenario: str, platform: str, human: str = "PASS") -> dict:
+    def _minimal_forgery(self, scenario: str, platform: str) -> dict:
         return {
             "result_contract_version": CONTRACT.RESULT_CONTRACT_VERSION,
             "run": {
@@ -458,45 +467,462 @@ class CrossAgentMatrixTests(unittest.TestCase):
                 "run_id": f"{scenario}-{platform}",
             },
             "automatic_status": "PASS",
-            "human_review": {"status": human},
+            "human_review": {"status": "PASS"},
         }
+
+    def _authenticated_pass_result(
+        self,
+        root: Path,
+        scenario: str,
+        platform: str,
+        nonce_index: int,
+    ) -> tuple[Path, dict, dict]:
+        nonce = f"{nonce_index:032x}"
+        prepared = prepare_fixed(
+            root / "runs",
+            scenario,
+            platform,
+            run_id=f"{scenario}-{platform}-run",
+            nonce=nonce,
+        )
+        receipt_path = Path(prepared["receipt"])
+        receipt = CONTRACT.load_json(receipt_path)
+        answer_key = CONTRACT.load_answer_key(scenario)
+        dimensions = {
+            name: {"status": "PASS", "note": f"人工已检查 {name}"}
+            for name in answer_key["human_review_dimensions"]
+        }
+        integrity_checks = [
+            {"id": check_id, "status": "PASS", "evidence": {}}
+            for check_id in sorted(MATRIX.INTEGRITY_CHECK_IDS)
+        ]
+        def hard_assertions(section: str) -> list[dict]:
+            return [
+                {
+                    "path": assertion["path"],
+                    "expected": assertion["equals"],
+                    "actual": assertion["equals"],
+                    "status": "PASS",
+                    "error": None,
+                }
+                for assertion in answer_key["hard_assertions"][section]
+            ]
+
+        checks = {
+            "participant_integrity": {
+                "status": "PASS",
+                "checks": integrity_checks,
+            },
+            "profile_routing": {
+                "status": "PASS",
+                "expected": answer_key["expected_profile"],
+                "brief_checks": [
+                    {
+                        "id": "profile_id_in_brief",
+                        "status": "PASS",
+                        "evidence": answer_key["expected_profile"]["primary_profile_id"],
+                    },
+                    {
+                        "id": "customer_profile_name_in_brief",
+                        "status": "PASS",
+                        "evidence": answer_key["expected_profile"]["customer_facing_name"],
+                    },
+                    {
+                        "id": "definition_version_in_brief",
+                        "status": "PASS",
+                        "evidence": answer_key["expected_profile"]["definition_version"],
+                    },
+                ],
+            },
+            "design_brief_binding": {
+                "status": "PASS",
+                "report_ir": {"issues": []},
+                "project_handoff": {"issues": []},
+            },
+            "report_ir": {
+                "status": "PASS",
+                "layers": {key: True for key in MATRIX.IR_LAYER_KEYS},
+                "qa_execution_claim": "not_executed_by_validator",
+                "hard_assertions": hard_assertions("report_ir"),
+                "validator_result": {},
+            },
+            "compiler_manifest_html": {
+                "status": "PASS",
+                "issues": [],
+                "hard_assertions": hard_assertions("build_manifest"),
+                "controller_recompile": {
+                    "issues": [],
+                    "files": {
+                        name: {
+                            "status": "PASS",
+                            "returned_sha256": f"{nonce_index + offset:064x}",
+                            "recompiled_sha256": f"{nonce_index + offset:064x}",
+                        }
+                        for offset, name in enumerate((
+                            "index.html",
+                            "source-map.json",
+                            "report.ir.normalized.json",
+                            "build-manifest.json",
+                        ), start=1)
+                    },
+                },
+                "compiler_qa_execution_claim": "not_executed_by_compiler",
+            },
+            "project_handoff": {
+                "status": "PASS",
+                "readiness": {key: True for key in MATRIX.READINESS_KEYS},
+                "qa_execution_claim": "not_executed_by_validator",
+                "hard_assertions": hard_assertions("project_handoff"),
+                "validator_result": {},
+            },
+            "qa_boundary": {
+                "status": "PASS",
+                "returned_record_validation": {
+                    "execution_claim": "not_executed_by_validator",
+                    "records": [
+                        {
+                            "record_id": f"record-{check_type}",
+                            "check_type": check_type,
+                            "status": "passed",
+                            "record_artifact_ref": f"artifact-{check_type}",
+                        }
+                        for check_type in (
+                            "asset_qa",
+                            "browser_qa",
+                            "runtime_editor_qa",
+                            "traceability",
+                            "delivery_verification",
+                        )
+                    ],
+                },
+                "controller_execution": {
+                    "asset_qa": {"status": "PASS"},
+                    "browser_runtime_editor_qa": {"status": "PASS"},
+                    "traceability_verification": {"status": "PASS"},
+                    "delivery_integrity": {"status": "PASS"},
+                    "meaning": "controller executed current checks",
+                },
+            },
+        }
+        result = {
+            "result_contract_version": CONTRACT.RESULT_CONTRACT_VERSION,
+            "evaluated_at": "2026-07-19T09:00:00Z",
+            "run": {
+                "run_id": receipt["run_id"],
+                "nonce": receipt["nonce"],
+                "scenario_id": receipt["scenario_id"],
+                "target_platform": receipt["target_platform"],
+                "created_at": receipt["created_at"],
+                "source_commit": receipt["source_commit"],
+                "input_tree_sha256": receipt["input_tree_sha256"],
+            },
+            "audit": {
+                "platform": platform,
+                "agent": platform,
+                "model": "unknown",
+                "started_at": "2026-07-19T08:00:00Z",
+                "ended_at": "2026-07-19T08:30:00Z",
+                "tokens": {
+                    "availability": "unknown",
+                    "source": "unknown",
+                    "input": None,
+                    "output": None,
+                    "cache": None,
+                    "total": None,
+                },
+                "points": {
+                    "availability": "unknown",
+                    "source": "unknown",
+                    "value": None,
+                    "balance_before": None,
+                    "balance_after": None,
+                },
+                "validation_issues": [],
+                "used_for_automatic_pass": False,
+            },
+            "automatic_status": "PASS",
+            "human_review": {
+                "review_version": "1.0",
+                "scenario_id": scenario,
+                "run_id": receipt["run_id"],
+                "status": "PASS",
+                "dimensions": dimensions,
+                "reviewer": "test human",
+                "reviewed_at": "2026-07-19T08:45:00Z",
+                "source": "/controller/human-review.json",
+            },
+            "overall_status": "PASS",
+            "checks": checks,
+            "claims": copy.deepcopy(MATRIX.CLAIMS),
+            "provenance": {
+                "controller_receipt_sha256": CONTRACT.sha256_file(receipt_path),
+                "run_manifest_sha256": receipt["run_manifest_sha256"],
+                "answer_key_sha256": receipt["answer_key_sha256"],
+                "participant_zip_sha256": receipt["participant_zip_sha256"],
+                "returned_artifact": {
+                    "kind": "zip",
+                    "sha256": f"{nonce_index + 1000:064x}",
+                },
+                "acceptance_toolchain_sha256": receipt[
+                    "acceptance_toolchain_sha256"
+                ],
+            },
+        }
+        self._resign(result, receipt)
+        result_path = receipt_path.with_name("result.json")
+        write_json(result_path, result)
+        return result_path, result, receipt
+
+    def _resign(self, result: dict, receipt: dict) -> None:
+        result["provenance"]["result_hmac_sha256"] = CONTRACT.result_hmac_sha256(
+            result, receipt["matrix_hmac_key"]
+        )
 
     def test_full_matrix_stays_disabled_when_results_are_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             write_json(
                 root / "one-result.json",
-                self._result("idea-change-pitch", "codex"),
+                self._minimal_forgery("idea-change-pitch", "codex"),
             )
             result = MATRIX.evaluate([root / "one-result.json"])
             self.assertEqual(result["smoke_status"], "NOT_PASSED")
             self.assertFalse(result["full_matrix"]["enabled"])
             self.assertFalse(result["workbuddy_results_synthesized"])
+            self.assertEqual(len(result["invalid_results"]), 1)
             self.assertEqual(
                 len([row for row in result["smoke_rows"] if row["status"] == "MISSING"]),
-                5,
+                6,
             )
 
-    def test_full_matrix_enables_only_after_all_six_automatic_and_human_pass(self) -> None:
+    def test_six_minimal_forged_pass_files_cannot_enable_full(self) -> None:
         matrix = CONTRACT.load_json(EVAL_ROOT / "controller" / "matrix.json")
         with tempfile.TemporaryDirectory() as temp_dir:
             paths: list[Path] = []
             for scenario in matrix["smoke"]["scenarios"]:
                 for platform in matrix["platforms"]:
                     path = Path(temp_dir) / f"{scenario}-{platform}-result.json"
-                    write_json(path, self._result(scenario, platform))
+                    write_json(path, self._minimal_forgery(scenario, platform))
                     paths.append(path)
-            passed = MATRIX.evaluate(paths)
-            self.assertEqual(passed["smoke_status"], "PASS")
-            self.assertTrue(passed["full_matrix"]["enabled"])
-            self.assertEqual(passed["full_matrix"]["expected_run_count"], 18)
-            pending_path = paths[0]
-            write_json(
-                pending_path,
-                self._result("idea-change-pitch", "codex", human="PENDING"),
+            result = MATRIX.evaluate(paths)
+            self.assertEqual(result["smoke_status"], "NOT_PASSED")
+            self.assertFalse(result["full_matrix"]["enabled"])
+            self.assertEqual(len(result["invalid_results"]), 6)
+
+    def test_full_matrix_requires_six_authenticated_complete_pass_results(self) -> None:
+        matrix = CONTRACT.load_json(EVAL_ROOT / "controller" / "matrix.json")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            paths: list[Path] = []
+            index = 1
+            for scenario in matrix["smoke"]["scenarios"]:
+                for platform in matrix["platforms"]:
+                    path, _, _ = self._authenticated_pass_result(
+                        Path(temp_dir) / f"row-{index}",
+                        scenario,
+                        platform,
+                        index,
+                    )
+                    paths.append(path)
+                    index += 1
+            result = MATRIX.evaluate(paths)
+            self.assertEqual(result["invalid_results"], [])
+            self.assertEqual(result["smoke_status"], "PASS")
+            self.assertTrue(result["full_matrix"]["enabled"])
+            self.assertEqual(result["full_matrix"]["expected_run_count"], 18)
+
+    def test_matrix_policy_drift_invalidates_prepared_receipt_and_result(self) -> None:
+        toolchain_hashes = CONTRACT.acceptance_toolchain_hashes()
+        self.assertEqual(
+            toolchain_hashes["controller/matrix.json"],
+            CONTRACT.sha256_file(EVAL_ROOT / "controller" / "matrix.json"),
+        )
+        self.assertEqual(
+            toolchain_hashes["scripts/prepare_run.py"],
+            CONTRACT.sha256_file(EVAL_ROOT / "scripts" / "prepare_run.py"),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, _, receipt = self._authenticated_pass_result(
+                Path(temp_dir), "idea-change-pitch", "codex", 27
             )
-            pending = MATRIX.evaluate(paths)
-            self.assertFalse(pending["full_matrix"]["enabled"])
+            drifted_hash = (
+                "f" * 64
+                if receipt["acceptance_toolchain_sha256"] != "f" * 64
+                else "e" * 64
+            )
+            with mock.patch.object(
+                MATRIX, "acceptance_toolchain_sha256", return_value=drifted_hash
+            ):
+                evaluated = MATRIX.evaluate([path])
+            self.assertFalse(evaluated["full_matrix"]["enabled"])
+            self.assertTrue(
+                any(
+                    "toolchain has drifted" in issue
+                    for issue in evaluated["invalid_results"][0]["issues"]
+                )
+            )
+
+    def test_matrix_rejects_cross_row_run_id_and_nonce_reuse(self) -> None:
+        matrix = CONTRACT.load_json(EVAL_ROOT / "controller" / "matrix.json")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            accepted: list[tuple[Path, dict, dict]] = []
+            index = 1
+            for scenario in matrix["smoke"]["scenarios"]:
+                for platform in matrix["platforms"]:
+                    accepted.append(
+                        self._authenticated_pass_result(
+                            Path(temp_dir) / f"row-{index}",
+                            scenario,
+                            platform,
+                            index,
+                        )
+                    )
+                    index += 1
+            _, first_result, _ = accepted[0]
+            for item_index, field in ((1, "run_id"), (2, "nonce")):
+                path, result, receipt = accepted[item_index]
+                reused = first_result["run"][field]
+                receipt[field] = reused
+                result["run"][field] = reused
+                if field == "run_id":
+                    result["human_review"]["run_id"] = reused
+                receipt_path = path.with_name("receipt.json")
+                write_json(receipt_path, receipt)
+                result["provenance"]["controller_receipt_sha256"] = CONTRACT.sha256_file(
+                    receipt_path
+                )
+                self._resign(result, receipt)
+                write_json(path, result)
+            evaluated = MATRIX.evaluate([path for path, _, _ in accepted])
+            self.assertEqual(evaluated["smoke_status"], "NOT_PASSED")
+            self.assertFalse(evaluated["full_matrix"]["enabled"])
+            self.assertEqual(
+                {record["identity"] for record in evaluated["identity_conflicts"]},
+                {"run_id", "nonce"},
+            )
+
+    def test_authenticated_truncated_answer_key_assertions_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for index, check_name in enumerate(
+                ("report_ir", "compiler_manifest_html", "project_handoff"),
+                start=25,
+            ):
+                with self.subTest(check_name=check_name):
+                    path, result, receipt = self._authenticated_pass_result(
+                        Path(temp_dir) / check_name,
+                        "research-reading-brief",
+                        "codex",
+                        index,
+                    )
+                    result["checks"][check_name]["hard_assertions"].pop()
+                    self._resign(result, receipt)
+                    write_json(path, result)
+                    evaluated = MATRIX.evaluate([path])
+                    self.assertTrue(
+                        any(
+                            "hard assertion count does not match the answer key" in issue
+                            for issue in evaluated["invalid_results"][0]["issues"]
+                        )
+                    )
+
+    def test_authenticated_truncated_profile_evidence_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, result, receipt = self._authenticated_pass_result(
+                Path(temp_dir), "idea-change-pitch", "workbuddy", 26
+            )
+            result["checks"]["profile_routing"]["brief_checks"].pop()
+            self._resign(result, receipt)
+            write_json(path, result)
+            evaluated = MATRIX.evaluate([path])
+            self.assertTrue(
+                any(
+                    "brief evidence is incomplete" in issue
+                    for issue in evaluated["invalid_results"][0]["issues"]
+                )
+            )
+
+    def test_authenticated_missing_field_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, result, receipt = self._authenticated_pass_result(
+                Path(temp_dir), "idea-change-pitch", "codex", 20
+            )
+            del result["claims"]
+            self._resign(result, receipt)
+            write_json(path, result)
+            evaluated = MATRIX.evaluate([path])
+            self.assertFalse(evaluated["full_matrix"]["enabled"])
+            self.assertTrue(
+                any("result fields drifted" in issue for issue in evaluated["invalid_results"][0]["issues"])
+            )
+
+    def test_authenticated_malformed_identity_type_is_rejected_without_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, result, receipt = self._authenticated_pass_result(
+                Path(temp_dir), "idea-change-pitch", "codex", 28
+            )
+            result["run"]["run_id"] = []
+            self._resign(result, receipt)
+            write_json(path, result)
+            evaluated = MATRIX.evaluate([path])
+            self.assertFalse(evaluated["full_matrix"]["enabled"])
+            self.assertTrue(
+                any(
+                    "result.run.run_id is invalid" in issue
+                    for issue in evaluated["invalid_results"][0]["issues"]
+                )
+            )
+
+    def test_authenticated_contradictory_status_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, result, receipt = self._authenticated_pass_result(
+                Path(temp_dir), "idea-change-pitch", "codex", 21
+            )
+            result["overall_status"] = "FAIL"
+            self._resign(result, receipt)
+            write_json(path, result)
+            evaluated = MATRIX.evaluate([path])
+            self.assertTrue(
+                any("statuses contradict" in issue for issue in evaluated["invalid_results"][0]["issues"])
+            )
+
+    def test_authenticated_fake_human_pass_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, result, receipt = self._authenticated_pass_result(
+                Path(temp_dir), "research-reading-brief", "workbuddy", 22
+            )
+            result["human_review"]["dimensions"] = {}
+            self._resign(result, receipt)
+            write_json(path, result)
+            evaluated = MATRIX.evaluate([path])
+            self.assertTrue(
+                any("dimensions" in issue for issue in evaluated["invalid_results"][0]["issues"])
+            )
+
+    def test_authenticated_fake_automatic_pass_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, result, receipt = self._authenticated_pass_result(
+                Path(temp_dir), "corporate-ops-rebuild", "codex", 23
+            )
+            result["checks"]["qa_boundary"]["controller_execution"][
+                "browser_runtime_editor_qa"
+            ]["status"] = "NOT_RUN"
+            self._resign(result, receipt)
+            write_json(path, result)
+            evaluated = MATRIX.evaluate([path])
+            self.assertTrue(
+                any("controller QA execution is not PASS" in issue for issue in evaluated["invalid_results"][0]["issues"])
+            )
+
+    def test_post_acceptance_tampering_breaks_hmac(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path, result, _ = self._authenticated_pass_result(
+                Path(temp_dir), "idea-change-pitch", "workbuddy", 24
+            )
+            result["human_review"]["dimensions"]["visual_finish"]["note"] = "篡改"
+            write_json(path, result)
+            evaluated = MATRIX.evaluate([path])
+            self.assertTrue(
+                any("HMAC does not authenticate" in issue for issue in evaluated["invalid_results"][0]["issues"])
+            )
 
 
 if __name__ == "__main__":
