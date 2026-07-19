@@ -537,6 +537,67 @@ class WorkflowProfileContractTests(unittest.TestCase):
         ):
             self.assertIn(field, text)
 
+    def test_rule_response_submit_ready_requires_actual_submission_compatibility(self) -> None:
+        text = definition_text(
+            "references/workflow-profile-rule-response-application-defense.md"
+        )
+        design_ready = text.split("## design-ready 条件", 1)[1].split(
+            "## 叙事任务", 1
+        )[0]
+        golden_path = text.split("### Golden Path", 1)[1].split(
+            "### 页面任务与评审核验重点", 1
+        )[0]
+        evidence = text.split("## 证据规则", 1)[1].split(
+            "## 横向参数默认值", 1
+        )[0]
+        qa = text.split("## QA 验收", 1)[1].split(
+            "## 能力叠加与冲突处理", 1
+        )[0]
+
+        design_ready_flat = " ".join(design_ready.split())
+        golden_path_flat = " ".join(golden_path.split())
+        evidence_flat = " ".join(evidence.split())
+        qa_flat = " ".join(qa.split())
+
+        for marker in (
+            "`actual deliverable format/channel compatibility`",
+            "exact TaoHtml output format and package are accepted by the applicable submission channel",
+            "deadline and every other mandatory submission constraint",
+            "no missing mandatory proof or unsatisfied mandatory submission constraint",
+        ):
+            self.assertIn(marker, design_ready_flat)
+
+        for marker in (
+            "mandatory proof is sufficient",
+            "actual TaoHtml deliverable format/package is accepted by the applicable submission channel",
+            "deadline plus every other mandatory submission constraint is actually satisfied",
+            "Disclosure records the failure; it does not satisfy the constraint or make the artifact submit-ready",
+        ):
+            self.assertIn(marker, golden_path_flat)
+
+        self.assertIn(
+            "A locally openable HTML or successful current-file Production Authorization does not prove channel acceptance",
+            evidence_flat,
+        )
+        self.assertIn(
+            "Disclosure of incompatibility records a gap; it never satisfies it",
+            evidence_flat,
+        )
+
+        for marker in (
+            "for a formal compliant or submit-ready result",
+            "actual delivered format/package is accepted by the applicable submission channel",
+            "none may pass merely by being disclosed",
+            "disclosure does not make the artifact compliant or submit-ready",
+            "the user has explicitly reclassified it as `gap-analysis / preparation draft`",
+            "diagnostic draft may disclose the unsatisfied items",
+        ):
+            self.assertIn(marker, qa_flat)
+        self.assertNotIn(
+            "constraints are satisfied or disclosed with their submission impact",
+            qa_flat,
+        )
+
     def test_detailed_profiles_stay_inside_ir_runtime_and_layout_boundaries(self) -> None:
         schema_properties = REPORT_IR_SCHEMA["properties"]
         for forbidden_property in (

@@ -54,8 +54,10 @@ Depending on the confirmed objective and proof state, produce one of two honestl
 named customer-usable results through the existing TaoHtml chain:
 
 - a formal offline submission or defense artifact whose actual mandatory and score-
-  bearing requirements are covered, evidenced, locatable, and within all submission
-  constraints; or
+  bearing requirements are covered, evidenced, and locatable; whose mandatory proof
+  is sufficient; whose actual TaoHtml deliverable format/package is accepted by the
+  applicable submission channel; and whose deadline and every other mandatory
+  submission constraint are actually satisfied; or
 - an explicitly requested `gap-analysis / preparation draft` that maps requirements,
   available responses, missing proof, conflicts, owners, and submission risk, while
   stating clearly that it is not a compliant submit-ready final artifact.
@@ -135,14 +137,17 @@ the record and presentation shape that fits the actual rule and project.
 
 After each pass, ask at most the one largest still-missing item whose answer could
 change eligibility, mandatory coverage, score-bearing meaning, proof sufficiency,
-submission legality, responsibility, or the claimed deliverable class. Reuse the
-shared 0-6 question budget, repetition rule, information-gain stop, and hard
-boundaries; do not add a Profile questionnaire or independent confirmation round.
+actual deliverable format/channel compatibility, deadline viability, submission
+legality, responsibility, or the claimed deliverable class. Reuse the shared 0-6
+question budget, repetition rule, information-gain stop, and hard boundaries; do not
+add a Profile questionnaire or independent confirmation round.
 
 Do not spend the question budget collecting every row manually when eligible material
 already contains the answer. Ordinary expression and non-proof examples may follow
 the shared output-first path. A missing mandatory proof is not an ordinary gap
-eligible for creative supplements.
+eligible for creative supplements. Neither is an unsupported required format/package,
+an incompatible mandatory submission channel, a missed deadline, or another
+unsatisfied mandatory submission constraint.
 
 ## design-ready 条件
 
@@ -160,18 +165,26 @@ For a formal submission or compliance-ready defense, require:
 - qualification, score-bearing claims, credentials, commitments, customers,
   performance, completed results, and compliance conclusions supported at their real
   evidence strength;
-- responsibility owners, unresolved conflicts, format/deadline constraints, and
-  submission risks visible; and
-- no missing mandatory proof that would make a compliance or submit-ready claim
-  false.
+- `actual deliverable format/channel compatibility`: the exact TaoHtml output format
+  and package are accepted by the applicable submission channel without assuming an
+  unsupported export, conversion, packaging, or submission capability;
+- the applicable deadline and every other mandatory submission constraint that
+  decides whether the actual artifact can be submitted are already satisfied;
+- responsibility owners, unresolved conflicts, and submission risks visible; and
+- no missing mandatory proof or unsatisfied mandatory submission constraint that
+  would make a compliance or submit-ready claim false.
 
-When mandatory proof is missing, do not fabricate eligibility or a compliant final
-artifact. Continue only if the user explicitly changes the requested result to
-`gap-analysis / preparation draft`. That diagnostic branch may become design-ready
-after its inspected scope, known gaps, owners, risks, and non-submit-ready boundary
-are clear. It still uses the existing complete-brief confirmation, current-file
-Production Authorization, QA, delivery, and Handoff rules; it must never be labeled
-as a compliant submission.
+When mandatory proof is missing, the actual TaoHtml format/package is not accepted by
+the mandatory channel, the deadline cannot be met, or any other mandatory submission
+constraint is unsatisfied, do not fabricate eligibility or a compliant final
+artifact. Block as needed, or continue only if the user explicitly changes the
+requested result to `gap-analysis / preparation draft`. That diagnostic branch may
+become design-ready after its inspected scope, known gaps, owners, risks, and non-
+submit-ready boundary are clear. It still uses the existing complete-brief
+confirmation, current-file Production Authorization, QA, delivery, and Handoff rules;
+it must never be labeled as a compliant submission. Do not add an output-format,
+conversion, packaging, channel-submission, or deadline-bypass capability to escape
+this boundary.
 
 ### 设计简报增量
 
@@ -193,9 +206,10 @@ brief, Profile questionnaire, or Profile-specific confirmation round.
   speaker/device, and interaction constraints;
 - `责任边界`: who supplies, verifies, approves, signs, submits, presents, and owns
   each unresolved requirement; and
-- `缺口/冲突与提交风险`: missing mandatory proof, rule conflict/version uncertainty,
-  unsupported score claims, unresolved responsibility, and impact on submit-ready
-  status.
+- `缺口/冲突与提交风险`: missing mandatory proof, incompatible actual deliverable
+  format/package/channel, missed or unsatisfied deadline, other mandatory submission
+  constraints, rule conflict/version uncertainty, unsupported score claims,
+  unresolved responsibility, and impact on submit-ready status.
 
 Record reversible inferences and their bases in the existing `待确认项`. Display and
 confirm the complete current brief once. Profile selection, complete-brief
@@ -223,11 +237,15 @@ facts.
    connect rule text/locator, response, evidence/locator, owner, honest status,
    gap/conflict, and final presentation location. A file's existence is evidence
    availability, not automatic satisfaction.
-5. **Choose the honest deliverable branch.** If mandatory proof is sufficient, build
-   the formal response or defense. If mandatory proof is missing, block a compliant
-   or submit-ready claim; proceed only after the user explicitly requests a
-   `gap-analysis / preparation draft`, and make its diagnostic, non-submit-ready
-   boundary visible from brief through delivery.
+5. **Choose the honest deliverable branch.** Build a formal compliant or submit-ready
+   response only when mandatory proof is sufficient, the actual TaoHtml deliverable
+   format/package is accepted by the applicable submission channel, and the deadline
+   plus every other mandatory submission constraint is actually satisfied. If any
+   condition fails, block a compliant or submit-ready claim; proceed only after the
+   user explicitly requests a `gap-analysis / preparation draft`, and make its
+   diagnostic, non-submit-ready boundary visible from brief through delivery.
+   Disclosure records the failure; it does not satisfy the constraint or make the
+   artifact submit-ready.
 6. **Design for reviewer verification and scoring.** Sequence content so the reviewer
    can locate each applicable response and proof, follow declared scoring logic, see
    differentiators at their real evidence strength, and find gaps without hunting.
@@ -270,6 +288,12 @@ it. These are semantic tasks, not required chapters, fixed tables, cards, or pag
 - Preserve contrary evidence, expired or wrong-version proof, name/entity mismatch,
   missing signatures, unavailable attachments, and owner conflicts when they affect
   eligibility, score, or submission risk.
+- Treat acceptance of the actual deliverable format/package/channel and satisfaction
+  of the deadline and other mandatory submission constraints as verifiable rule
+  conditions. A locally openable HTML or successful current-file Production
+  Authorization does not prove channel acceptance or external submit-ready status.
+  Do not invent conversion, export, packaging, submission, or deadline-bypass
+  capabilities. Disclosure of incompatibility records a gap; it never satisfies it.
 - A gap-analysis or preparation draft may organize unresolved proof but may not use
   creative completion to simulate official evidence, achieved results, credentials,
   signatures, or compliant completion.
@@ -334,13 +358,23 @@ authorization rechecks, Handoff validation, and delivery gates. In addition, ver
   rule have not been created;
 - every rule locator, evidence locator, response location, appendix/attachment
   reference, and final output location resolves accurately;
-- actual format, length, page/word/character, package, naming, channel, deadline, and
-  defense constraints are satisfied or disclosed with their submission impact;
+- for a formal compliant or submit-ready result, the actual delivered format/package
+  is accepted by the applicable submission channel, the mandatory length,
+  page/word/character, naming, copy, and defense constraints are actually satisfied,
+  and the real submission can still occur within the mandatory deadline; none may
+  pass merely by being disclosed;
+- disclosure in the artifact, risk list, delivery note, or Handoff records an
+  unsatisfied mandatory constraint; disclosure does not make the artifact compliant
+  or submit-ready;
 - missing proof, partial satisfaction, conflict, pending confirmation, inapplicability,
   expired/wrong-version proof, and unresolved responsibility are disclosed rather
   than upgraded or hidden;
-- a `gap-analysis / preparation draft` is labeled throughout as diagnostic and not a
-  compliant submit-ready artifact, including its delivery wording and Handoff; and
+- when mandatory proof, actual format/package/channel compatibility, deadline, or any
+  other mandatory submission constraint is unsatisfied, the result is blocked or the
+  user has explicitly reclassified it as `gap-analysis / preparation draft`; that
+  diagnostic draft may disclose the unsatisfied items but is labeled throughout as
+  not a compliant submit-ready artifact, including its delivery wording and Handoff;
+  and
 - defense final pages, staged intermediate states, speaker-support content, and oral
   wording do not exceed the verified written response or evidence, while exact
   `fragment-v1` navigation and target viewports pass the current Runtime QA.
