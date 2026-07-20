@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://taohtml.local/evals/profile-release-result.schema.json",
+  "title": "TaoHtml Workflow Profile release acceptance result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "result_contract_version",
+    "evaluated_at",
+    "run",
+    "layers",
+    "overall_status",
+    "claims",
+    "provenance"
+  ],
+  "properties": {
+    "result_contract_version": {"const": "taohtml-profile-release-result-1"},
+    "evaluated_at": {"type": "string", "minLength": 1},
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "nonce",
+        "scenario_id",
+        "runner_label",
+        "source_commit",
+        "primary_profile_id",
+        "html_sha256"
+      ],
+      "properties": {
+        "run_id": {"type": "string", "minLength": 3},
+        "nonce": {"type": "string", "pattern": "^[a-f0-9]{32,128}$"},
+        "scenario_id": {"type": "string", "minLength": 3},
+        "runner_label": {"type": "string", "minLength": 1},
+        "source_commit": {"type": "string", "minLength": 1},
+        "primary_profile_id": {"type": "string", "minLength": 3},
+        "html_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_static",
+        "blackbox_flow",
+        "html_browser_qa",
+        "human_visual_review"
+      ],
+      "properties": {
+        "contract_static": {"$ref": "#/$defs/layer"},
+        "blackbox_flow": {"$ref": "#/$defs/layer"},
+        "html_browser_qa": {"$ref": "#/$defs/layer"},
+        "human_visual_review": {"$ref": "#/$defs/layer"}
+      }
+    },
+    "overall_status": {"enum": ["PASS", "FAIL", "PENDING"]},
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "participant_claimed_status",
+        "participant_status_used_for_pass",
+        "contract_or_flow_pass_implies_browser_pass",
+        "automatic_pass_implies_human_pass",
+        "report_ir_or_compiler_formally_available"
+      ],
+      "properties": {
+        "participant_claimed_status": {"type": "string"},
+        "participant_status_used_for_pass": {"const": false},
+        "contract_or_flow_pass_implies_browser_pass": {"const": false},
+        "automatic_pass_implies_human_pass": {"const": false},
+        "report_ir_or_compiler_formally_available": {"const": false}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controller_receipt_sha256",
+        "controller_answer_sha256",
+        "participant_zip_sha256",
+        "returned_artifact",
+        "release_toolchain_sha256",
+        "browser_review_sha256",
+        "human_review_sha256",
+        "result_hmac_sha256"
+      ],
+      "properties": {
+        "controller_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "controller_answer_sha256": {"$ref": "#/$defs/sha256"},
+        "participant_zip_sha256": {"$ref": "#/$defs/sha256"},
+        "returned_artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "sha256"],
+          "properties": {
+            "kind": {"enum": ["zip", "directory_tree"]},
+            "sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "release_toolchain_sha256": {"$ref": "#/$defs/sha256"},
+        "browser_review_sha256": {
+          "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "human_review_sha256": {
+          "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "result_hmac_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "layer": {
+      "type": "object",
+      "required": ["status", "issues"],
+      "properties": {
+        "status": {"enum": ["PASS", "FAIL", "PENDING"]},
+        "issues": {"type": "array", "items": {"type": "string"}},
+        "handoff_validator": {"type": ["object", "null"]},
+        "review": {"type": ["object", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

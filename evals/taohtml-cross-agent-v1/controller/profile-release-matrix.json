@@ -1,0 +1,611 @@
+{
+  "matrix_contract_version": "taohtml-profile-release-matrix-1",
+  "release_target": "v0.5.0-candidate",
+  "status": "DEFINED_PENDING_REAL_RUNS",
+  "expected_run_count": 9,
+  "layers": [
+    "contract_static",
+    "blackbox_flow",
+    "html_browser_qa",
+    "human_visual_review"
+  ],
+  "pass_policy": {
+    "row_pass_requires": "all_four_layers_pass",
+    "matrix_pass_requires": "exactly_nine_unique_rows_pass",
+    "missing_layer_status": "PENDING",
+    "participant_claimed_status_used_for_pass": false,
+    "automatic_layers_may_imply_human_pass": false
+  },
+  "compiler_report_ir_boundary": {
+    "v0_5_0_status": "experimental_pilot_only",
+    "default_production_route": "direct_html",
+    "independent_engineering_authorization_required": true,
+    "release_packages_include": [
+      "references/report-ir-v1.md",
+      "references/report-ir-v1.schema.json",
+      "references/report-ir-pilot-workflow.md",
+      "scripts/compile_report_ir.py",
+      "scripts/report_ir_core.py",
+      "scripts/orchestrate_report_ir_pilot.py"
+    ],
+    "package_presence_means_formal_general_availability": false,
+    "unsupported_in_v0_5_0": [
+      "advanced_composition_graph",
+      "non_monotonic_runtime_state",
+      "incremental_compilation"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenario_id": "committee-record-closure",
+      "request_ref": "participant/profile-release-scenarios/committee-record-closure/request.md",
+      "primary_profile": {
+        "profile_id": "formal-submission-writing",
+        "customer_facing_name": "规范报送与正式写作",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "The artifact will be formally circulated and archived by a defined committee, with wording and responsibility boundaries subject to review.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Produce an offline committee record that can be circulated and archived without overstating approval authority.",
+        "critical_judgment": "Formal institutional use is dominant; the missing sign-off scope stays unresolved instead of being filled by polished prose.",
+        "design_ready_increment": [
+          "recipient and archive purpose",
+          "mandatory record content",
+          "terminology and date basis",
+          "responsibility and sign-off boundary"
+        ],
+        "evidence_boundary": "An attendee list and discussion summary do not prove final approval, signature authority, or an effective decision date.",
+        "delivery_status": "formal draft with unresolved sign-off explicitly bounded",
+        "qa_focus": [
+          "cross-section identity/date consistency",
+          "mandatory item locatability",
+          "responsibility wording",
+          "independent reading completeness"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "reading",
+        "content_length": "standard",
+        "visual_binding": "rigorous-consulting-report",
+        "motion_density": "minimal"
+      },
+      "required_brief_decisions": [
+        "正式对象与目的",
+        "必须覆盖项",
+        "术语与口径",
+        "责任与签批边界",
+        "关键缺口与风险"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "signoff-authority",
+          "required_status": "unresolved",
+          "required_terms": ["签批权限待确认"],
+          "forbidden_terms": ["已经正式批准"]
+        }
+      ],
+      "human_review_dimensions": [
+        "formal_readability",
+        "responsibility_clarity",
+        "record_consistency",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-committee-record-closure"]
+    },
+    {
+      "scenario_id": "shared-desk-cause-review",
+      "request_ref": "participant/profile-release-scenarios/shared-desk-cause-review/request.md",
+      "primary_profile": {
+        "profile_id": "research-analysis-argumentation",
+        "customer_facing_name": "研究分析与专业论证",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "The main job is to test a causal explanation and preserve method, evidence, alternatives, and conclusion-strength limits.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Judge whether current observations support attributing unused reserved desks to the release rule and define the next validation step.",
+        "critical_judgment": "Association from a short observation window cannot establish causality or generalize beyond the inspected days.",
+        "design_ready_increment": [
+          "research question and conclusion strength",
+          "method execution and inspected scope",
+          "Claim-Evidence-Source boundary",
+          "alternative explanations"
+        ],
+        "evidence_boundary": "Two observation days and interviews support a provisional pattern, not a causal conclusion or population estimate.",
+        "delivery_status": "provisional analysis pending a longer and controlled validation window",
+        "qa_focus": [
+          "fact/inference separation",
+          "method status visibility",
+          "alternative explanation coverage",
+          "source locatability"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "reading",
+        "content_length": "detailed",
+        "visual_binding": "rigorous-consulting-report",
+        "motion_density": "minimal"
+      },
+      "required_brief_decisions": [
+        "研究问题与决策语境",
+        "范围与术语口径",
+        "方法与已检查材料",
+        "核心 Claim–Evidence 状态",
+        "替代解释/冲突",
+        "目标结论强度",
+        "关键局限/缺口"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "causal-strength",
+          "required_status": "provisional",
+          "required_terms": ["不能据此确认因果"],
+          "forbidden_terms": ["已经证明释放规则导致"]
+        }
+      ],
+      "human_review_dimensions": [
+        "argument_clarity",
+        "evidence_readability",
+        "causal_boundary_visibility",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-shared-desk-cause-review"]
+    },
+    {
+      "scenario_id": "support-quarter-review",
+      "request_ref": "participant/profile-release-scenarios/support-quarter-review/request.md",
+      "primary_profile": {
+        "profile_id": "periodic-operations-reporting",
+        "customer_facing_name": "周期经营与数据汇报",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "The artifact must explain one operating period's results, comparison limits, risks, and next management actions.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Review quarterly service performance and agree which backlog action receives priority next period.",
+        "critical_judgment": "The current and prior resolution-rate denominators differ, so the headline comparison is not comparable until restated.",
+        "design_ready_increment": [
+          "reporting cutoff and scope",
+          "metric definition and denominator",
+          "actual/target/forecast status",
+          "variance driver and management action"
+        ],
+        "evidence_boundary": "A changed denominator must remain visible; it cannot be presented as a clean quarter-over-quarter improvement.",
+        "delivery_status": "period review with the non-comparable metric disclosed and excluded from a definitive trend claim",
+        "qa_focus": [
+          "cutoff and unit consistency",
+          "actual versus target separation",
+          "comparison basis visibility",
+          "action ownership"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "presentation",
+        "content_length": "standard",
+        "visual_binding": "corporate-annual-report",
+        "motion_density": "moderate"
+      },
+      "required_brief_decisions": [
+        "经营周期与 cutoff",
+        "指标与口径",
+        "比较基准",
+        "数据完整性与修订",
+        "关键差异/驱动",
+        "决策/行动/owner"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "metric-comparability",
+          "required_status": "not_comparable",
+          "required_terms": ["口径不同，不可直接比较"],
+          "forbidden_terms": ["环比改善已确认"]
+        }
+      ],
+      "human_review_dimensions": [
+        "management_scanability",
+        "metric_state_clarity",
+        "action_priority_flow",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-support-quarter-review"]
+    },
+    {
+      "scenario_id": "service-channel-choice",
+      "request_ref": "participant/profile-release-scenarios/service-channel-choice/request.md",
+      "primary_profile": {
+        "profile_id": "proposal-planning-decision",
+        "customer_facing_name": "方案策划与决策提案",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "A named decision body must compare options against criteria, understand tradeoffs, and approve a bounded pilot.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Help an operations council choose one of three request-intake approaches and approve a two-team pilot.",
+        "critical_judgment": "The recommendation must expose criteria, tradeoffs, assumptions, reversibility, and pilot stop conditions rather than sell a preferred option.",
+        "design_ready_increment": [
+          "decision owner and decision ask",
+          "options and baseline",
+          "criteria and tradeoffs",
+          "recommendation assumptions",
+          "implementation risks and stop conditions"
+        ],
+        "evidence_boundary": "Illustrative effort estimates are decision assumptions, not measured savings or committed delivery dates.",
+        "delivery_status": "decision proposal for a reversible pilot, not a record of an approved rollout",
+        "qa_focus": [
+          "option fairness",
+          "criteria traceability",
+          "recommendation/approval separation",
+          "decision ask visibility"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "presentation",
+        "content_length": "concise",
+        "visual_binding": "black-white-fluorescent-cards",
+        "motion_density": "moderate"
+      },
+      "required_brief_decisions": [
+        "决策问题",
+        "决策人及责任边界",
+        "选项集合及来源状态",
+        "评价标准",
+        "关键取舍",
+        "推荐依据",
+        "风险与失效条件"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "approval-state",
+          "required_status": "recommended_not_approved",
+          "required_terms": ["建议试点，尚未批准"],
+          "forbidden_terms": ["已批准全面上线"]
+        }
+      ],
+      "human_review_dimensions": [
+        "decision_clarity",
+        "option_comparability",
+        "tradeoff_honesty",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-service-channel-choice"]
+    },
+    {
+      "scenario_id": "manager-change-talk",
+      "request_ref": "participant/profile-release-scenarios/manager-change-talk/request.md",
+      "primary_profile": {
+        "profile_id": "live-presentation-persuasion",
+        "customer_facing_name": "现场演讲与说服表达",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "The artifact is a timed live talk whose success depends on audience movement, spoken pacing, visible proof, and a closing action.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Deliver a seven-minute management talk that wins agreement to test a new escalation ritual.",
+        "critical_judgment": "The story must work aloud and on projection; illustrative examples cannot be presented as observed outcomes.",
+        "design_ready_increment": [
+          "audience movement",
+          "speaker voice and timing",
+          "proof moments",
+          "objection handling",
+          "closing action"
+        ],
+        "evidence_boundary": "A hypothetical incident illustrates the mechanism but does not prove that the ritual has already reduced delays.",
+        "delivery_status": "live persuasion deck seeking permission for a trial, not reporting trial success",
+        "qa_focus": [
+          "spoken rhythm",
+          "projection legibility",
+          "fragment progression",
+          "final action clarity"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "presentation",
+        "content_length": "concise",
+        "visual_binding": "black-white-fluorescent-cards",
+        "motion_density": "rich"
+      },
+      "required_brief_decisions": [
+        "受众当前状态",
+        "目标移动",
+        "核心主张",
+        "决定性证据",
+        "主要阻力",
+        "现场约束",
+        "动效/口播意图",
+        "最终行动"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "trial-outcome",
+          "required_status": "illustrative_only",
+          "required_terms": ["示意情境，不代表已发生结果"],
+          "forbidden_terms": ["试行已经降低延误"]
+        }
+      ],
+      "human_review_dimensions": [
+        "spoken_flow",
+        "projection_legibility",
+        "persuasion_progression",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-manager-change-talk"]
+    },
+    {
+      "scenario_id": "escalation-practice-session",
+      "request_ref": "participant/profile-release-scenarios/escalation-practice-session/request.md",
+      "primary_profile": {
+        "profile_id": "teaching-training-knowledge-transfer",
+        "customer_facing_name": "教学培训与知识传递",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "The result must enable novice coordinators to understand, practice, receive feedback, and transfer an escalation method.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Teach new coordinators to classify escalation urgency and practice the first response.",
+        "critical_judgment": "A readable explanation is insufficient without a learner task, observable performance, feedback, and a transfer boundary.",
+        "design_ready_increment": [
+          "learner starting point",
+          "observable learning outcome",
+          "example and non-example",
+          "practice and feedback",
+          "transfer limitation"
+        ],
+        "evidence_boundary": "Training completion does not prove workplace mastery; the final check only demonstrates performance in the supplied practice case.",
+        "delivery_status": "facilitated training artifact with practice-level assessment, not certification",
+        "qa_focus": [
+          "instruction sequence",
+          "practice usability",
+          "answer reveal control",
+          "reading-state completeness"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "presentation",
+        "content_length": "standard",
+        "visual_binding": "editorial-collage",
+        "motion_density": "moderate"
+      },
+      "required_brief_decisions": [
+        "学习者与已有基础",
+        "目标能力/可观察表现",
+        "先备知识与范围边界",
+        "关键示例、误解与失败模式",
+        "练习/回顾与反馈方式",
+        "完成/评价边界"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "mastery-claim",
+          "required_status": "practice_evidence_only",
+          "required_terms": ["仅证明练习情境中的表现"],
+          "forbidden_terms": ["学员已获得岗位认证"]
+        }
+      ],
+      "human_review_dimensions": [
+        "learning_sequence",
+        "practice_clarity",
+        "feedback_usability",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-escalation-practice-session"]
+    },
+    {
+      "scenario_id": "relocation-stage-review",
+      "request_ref": "participant/profile-release-scenarios/relocation-stage-review/request.md",
+      "primary_profile": {
+        "profile_id": "project-lifecycle-reporting",
+        "customer_facing_name": "项目全过程汇报",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "Stakeholders need alignment on baseline, stage progress, changes, dependencies, risks, decisions, and closure conditions across a project lifecycle.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Run a stage-gate review for an office relocation and decide whether the next phase can start.",
+        "critical_judgment": "Work completed, accepted deliverables, pending dependencies, change requests, and forecast dates must stay distinct.",
+        "design_ready_increment": [
+          "project baseline and current stage",
+          "progress evidence",
+          "change and dependency state",
+          "risk owner",
+          "stage decision and closure condition"
+        ],
+        "evidence_boundary": "A contractor's forecast is not an accepted completion date, and installation completion is not business acceptance.",
+        "delivery_status": "stage review pending two named dependencies and an explicit go/no-go decision",
+        "qa_focus": [
+          "baseline/change separation",
+          "status date visibility",
+          "risk/action ownership",
+          "stage decision traceability"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "presentation",
+        "content_length": "standard",
+        "visual_binding": "corporate-annual-report",
+        "motion_density": "minimal"
+      },
+      "required_brief_decisions": [
+        "项目目标、sponsor/受众与治理目的",
+        "baseline/范围版本",
+        "当前阶段与 reporting cutoff",
+        "里程碑/交付物及状态证据",
+        "变化/偏差与影响",
+        "issue/risk/dependency",
+        "所需决策、行动与 owner",
+        "验收/收尾条件、未结义务"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "completion-acceptance",
+          "required_status": "forecast_not_accepted",
+          "required_terms": ["预测日期不等于验收完成"],
+          "forbidden_terms": ["本阶段已正式验收"]
+        }
+      ],
+      "human_review_dimensions": [
+        "stage_story_clarity",
+        "status_distinction",
+        "risk_action_traceability",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-relocation-stage-review"]
+    },
+    {
+      "scenario_id": "community-program-story",
+      "request_ref": "participant/profile-release-scenarios/community-program-story/request.md",
+      "primary_profile": {
+        "profile_id": "brand-communication-editorial-publishing",
+        "customer_facing_name": "品牌传播与编辑出版",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "ambiguous",
+        "selection_basis": "After the single business-goal clarification, the dominant outcome is a public-facing story rather than volunteer instruction.",
+        "expected_user_answer": "优先做成对外发布的项目故事；志愿者讲解只作为次要用途。"
+      },
+      "audit": {
+        "customer_goal": "Create a memorable public story for a community repair program while preserving identity, claim, quotation, image-rights, and publication boundaries.",
+        "critical_judgment": "The initial request genuinely mixes public communication and volunteer teaching; the full catalog and one business-goal question must resolve one primary path.",
+        "design_ready_increment": [
+          "audience and communication outcome",
+          "identity and central claim",
+          "asset and quotation rights",
+          "publication boundary",
+          "optional action path"
+        ],
+        "evidence_boundary": "Unverified participant count and image permission block publication-ready status but still permit an explicitly labeled internal editorial draft.",
+        "delivery_status": "internal editorial draft pending count verification and image permission",
+        "qa_focus": [
+          "identity consistency",
+          "claim strength",
+          "asset-rights visibility",
+          "publication-status clarity"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "reading",
+        "content_length": "concise",
+        "visual_binding": "editorial-collage",
+        "motion_density": "minimal"
+      },
+      "required_brief_decisions": [
+        "外部受众与传播/出版场景",
+        "核心传播目标、central message 与 story angle",
+        "品牌/主体身份、语气与视觉边界",
+        "approved/source-backed/unverified claims",
+        "素材来源、权利与真实资产保护",
+        "引用/证言状态",
+        "公开/内部使用边界、分发限制",
+        "关键缺口、风险与交付边界"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "publication-rights",
+          "required_status": "internal_review_only",
+          "required_terms": ["内部编辑稿，不可公开发布"],
+          "forbidden_terms": ["已获完整公开发布授权"]
+        }
+      ],
+      "human_review_dimensions": [
+        "story_memorability",
+        "identity_coherence",
+        "rights_boundary_visibility",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-community-program-story"]
+    },
+    {
+      "scenario_id": "grant-readiness-defense",
+      "request_ref": "participant/profile-release-scenarios/grant-readiness-defense/request.md",
+      "primary_profile": {
+        "profile_id": "rule-response-application-defense",
+        "customer_facing_name": "规则响应、申报与答辩",
+        "definition_version": "2.0"
+      },
+      "routing": {
+        "mode": "clear",
+        "selection_basis": "Eligibility, mandatory proof, declared scoring, format/channel constraints, and defense rules materially govern success.",
+        "expected_user_answer": null
+      },
+      "audit": {
+        "customer_goal": "Prepare a grant defense readiness artifact that maps actual requirements, proof, gaps, owners, and submission risk.",
+        "critical_judgment": "Missing mandatory proof and unverified HTML channel compatibility prohibit a compliant or submit-ready claim.",
+        "design_ready_increment": [
+          "rule identity and checked scope",
+          "eligibility and mandatory items",
+          "score-bearing response evidence",
+          "format/channel/deadline constraints",
+          "gap owner and deliverable class"
+        ],
+        "evidence_boundary": "Disclosure of a missing certificate or unknown channel acceptance does not satisfy the rule; only a preparation draft is honest.",
+        "delivery_status": "gap-analysis / preparation draft, explicitly not submit-ready",
+        "qa_focus": [
+          "requirement-response-evidence traceability",
+          "mandatory proof status",
+          "format/channel boundary",
+          "non-submit-ready labeling"
+        ]
+      },
+      "known_choices": {
+        "input_entry_route": "idea_only",
+        "use_mode": "presentation",
+        "content_length": "detailed",
+        "visual_binding": "rigorous-consulting-report",
+        "motion_density": "moderate"
+      },
+      "required_brief_decisions": [
+        "规则身份与版本",
+        "资格与强制项",
+        "评分与权重",
+        "响应—证据状态",
+        "格式/截止/答辩约束",
+        "缺口/冲突与提交风险"
+      ],
+      "evidence_expectations": [
+        {
+          "boundary_id": "submit-readiness",
+          "required_status": "preparation_draft_only",
+          "required_terms": ["准备稿，不可声称可提交"],
+          "forbidden_terms": ["已满足全部申报条件"]
+        }
+      ],
+      "human_review_dimensions": [
+        "requirement_locatability",
+        "proof_gap_visibility",
+        "defense_readiness",
+        "visual_finish"
+      ],
+      "leakage_markers": ["control-key-grant-readiness-defense"]
+    }
+  ]
+}
