@@ -280,6 +280,11 @@ class IntakeContractTests(unittest.TestCase):
     def test_formal_html_uses_current_state_and_allowed_action_matrix(self) -> None:
         self.assertIn("Allowed-Action Matrix", AUTHORIZATION)
         self.assertIn("current-invocation-id", AUTHORIZATION)
+        self.assertIn('"schema_version": "1.3"', AUTHORIZATION)
+        self.assertIn("--action built-in-theme-selection", AUTHORIZATION)
+        self.assertIn("--action motion-density-selection", AUTHORIZATION)
+        self.assertIn("current_design_decisions_sha256", AUTHORIZATION)
+        self.assertIn("--action design-brief-preview", AUTHORIZATION)
         self.assertIn("--action formal-html", AUTHORIZATION)
         self.assertIn("--action deliver-formal-html", AUTHORIZATION)
         self.assertIn("not formal report HTML", AUTHORIZATION)
@@ -292,13 +297,20 @@ class IntakeContractTests(unittest.TestCase):
             "artifact_path",
             "artifact_sha256",
             "confirmation_ref",
+            "decision_ref",
+            "design_decisions_sha256",
             "does not access or independently",
         ):
             self.assertIn(marker, AUTHORIZATION)
+        self.assertIn("fail-closed migration", AUTHORIZATION)
+        self.assertIn("migration.required: true", AUTHORIZATION)
 
     def test_clear_idea_can_stop_with_zero_questions(self) -> None:
         self.assertIn("Allow **0 clarification questions**", INTAKE)
-        self.assertIn("proceed directly to a brief with zero clarification questions", INTAKE)
+        self.assertIn(
+            "proceed directly to the independent design-choice gate with zero clarification questions",
+            INTAKE,
+        )
         self.assertIn("Do not impose this gate on an idea-only input", INTAKE)
 
     def test_ordinary_intake_targets_three_to_five_questions(self) -> None:
@@ -312,7 +324,7 @@ class IntakeContractTests(unittest.TestCase):
             INTAKE,
         )
         self.assertIn("Do not ask a seventh", INTAKE)
-        self.assertIn("does not count toward this budget", INTAKE)
+        self.assertIn("do not count toward this budget", INTAKE)
         self.assertIn("start a new intake cycle with fresh counters", INTAKE)
 
     def test_known_route_mode_audience_goal_length_and_action_path_are_not_reasked(
@@ -372,8 +384,8 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn(
             "three consecutive rounds without actionable new information", INTAKE
         )
-        self.assertIn("Stop questioning immediately", INTAKE)
-        self.assertIn("infer all remaining low-risk gaps", INTAKE)
+        self.assertIn("Stop ordinary clarification immediately", INTAKE)
+        self.assertIn("infer all remaining ordinary low-risk gaps", INTAKE)
 
     def test_ordinary_missing_content_is_completed_and_handed_off(self) -> None:
         self.assertIn("Ordinary information gaps do not automatically create a block", INTAKE)
@@ -447,9 +459,32 @@ class IntakeContractTests(unittest.TestCase):
         self.assertNotIn("DBS", SKILL + INTAKE + BRIEF)
 
     def test_design_ready_state_stops_questions_before_the_cap(self) -> None:
-        self.assertIn("Stop immediately when the design-ready gate passes", INTAKE)
+        self.assertIn(
+            "Stop ordinary clarification immediately when the design-ready gate passes",
+            INTAKE,
+        )
         self.assertIn("never continue asking to approach a target or maximum", INTAKE)
-        self.assertIn("Stop asking as soon as these conditions are met", INTAKE)
+        self.assertIn(
+            "Stop ordinary clarification as soon as these conditions are met", INTAKE
+        )
+
+    def test_visual_and_motion_choices_are_outside_the_six_question_budget(self) -> None:
+        for marker in (
+            "Built-in theme selection, motion-density selection",
+            "cannot be skipped by the six-question maximum",
+            "never selects either value",
+            "without either, stop at this gate",
+            "minimal | moderate | rich",
+            "少量 / 适中 / 丰富",
+        ):
+            self.assertIn(marker, INTAKE)
+        self.assertIn(
+            "remain required after six ordinary questions", SKILL
+        )
+        self.assertNotIn(
+            "If the project reaches the maximum or the three-no-gain stop before a low-risk visual choice is selected",
+            INTAKE,
+        )
 
     def test_verification_handoff_does_not_expand_the_question_budget(self) -> None:
         self.assertIn("Enforce **6 clarification questions**", INTAKE)

@@ -38,14 +38,15 @@ direct-HTML 正式流程；不得根据项目类型、模型偏好或 Report IR 
 
 - 从交付用途派生 `delivery_mode`、报告原型、信息密度和 Runtime 目标模式；
 - 从证据边界派生 evidence rigor、Claim—Evidence—Source 关系和待核实项；
-- 从已选视觉路线派生四套内置系统之一、客户参考 Project Theme 或企业模板绑定；
+- 从 Production Authorization 已记录的设计决定派生四套内置系统之一、客户参考 Project Theme 或企业模板绑定，以及 `minimal | moderate | rich` 动效密度；不得用 IR 重选或覆盖；
 - 从内容结构派生章节、叙事单元、页面任务、Visual Intent 和必要的 State Sequence；
 - 把当前简报的任务内相对路径和 SHA-256 分别写入
   `traceability.design_brief_ref` 与 `traceability.design_brief_sha256`。
 
 不得重复询问这些已知选择。内置视觉路线仍执行 `references/visual-systems.md`：客户未明确
-缩小范围时先完整展示四套；客户参考、企业模板和企业档案的优先级不变。模型负责把已确认
-内容表达成 IR，但不得在 IR 之后再次完整手写 HTML。
+缩小范围时先完整展示四套；客户参考、企业模板和企业档案的优先级不变。主题与动效未由
+客户选择或明确委托时，Production Authorization 必须先阻塞，不能由 IR 补猜。模型负责把
+已确认内容表达成 IR，但不得在 IR 之后再次完整手写 HTML。
 
 Profile binding、设计简报确认、pilot 授权与 current-file Production Authorization 是
 独立事实：binding 不授权 pilot，pilot 授权不确认简报，简报确认也不替代
@@ -68,8 +69,8 @@ python scripts/orchestrate_report_ir_pilot.py \
 客户参考或企业模板路线另传已验证的 `--project-theme-dir`。编排器会按顺序：
 
 1. 验证项目级 pilot 授权并绑定 `task_id`；
-2. 复用 Production Authorization 检查当前 confirmed brief 和 `formal-html` 权限；
-3. 要求 IR 的简报路径和哈希与当前确认文件完全一致；
+2. 复用 Production Authorization 检查当前 confirmed brief、其绑定当前主题/不适用状态与动效决定的 canonical digest，以及 `formal-html` 权限；
+3. 要求 IR 的简报路径和哈希、内置主题（适用时）及动效密度与当前 Production Authorization 决定完全一致；
 4. 复用 Report IR Validator 的四层结果；
 5. 调用本地 `compile_report_ir.py` 编译核心并记录 HTML、规范化 IR、Manifest 哈希及
    `workflow_profile.binding_state/binding_sha256`；

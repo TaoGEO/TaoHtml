@@ -54,6 +54,19 @@ def gate(
     }
 
 
+def design_brief_gate(
+    status: str,
+    artifact_path: str | None = None,
+    artifact_sha256: str | None = None,
+    confirmation_ref: str | None = None,
+    design_decisions_sha256: str | None = None,
+) -> dict[str, str | None]:
+    return {
+        **gate(status, artifact_path, artifact_sha256, confirmation_ref),
+        "design_decisions_sha256": design_decisions_sha256,
+    }
+
+
 def write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -79,18 +92,32 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
         brief = root / "brief" / "design-brief.md"
         brief.parent.mkdir(parents=True)
         brief.write_text("# Confirmed report design brief\n", encoding="utf-8")
+        built_in_theme = {
+            "theme_id": "rigorous-consulting-report",
+            "selection_status": "user_selected",
+            "decision_ref": "conversation://pilot/theme-selection",
+        }
+        motion_density = {
+            "density": "moderate",
+            "selection_status": "user_selected",
+            "decision_ref": "conversation://pilot/motion-selection",
+        }
         brief_gate = (
-            gate(
+            design_brief_gate(
                 "confirmed",
                 "brief/design-brief.md",
                 sha256(brief),
                 "conversation://pilot/brief-confirmation",
+                WORKFLOW.production_authorization.design_decisions_sha256(
+                    built_in_theme,
+                    motion_density,
+                ),
             )
             if brief_confirmed
-            else gate("pending", "brief/design-brief.md")
+            else design_brief_gate("pending", "brief/design-brief.md")
         )
         state = {
-            "schema_version": "1.2",
+            "schema_version": "1.3",
             "task_id": self.task_id,
             "route": "idea_only",
             "visual_route": "built_in",
@@ -102,6 +129,8 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
                 "artifact_sha256": None,
             },
             "project_theme_compiled": False,
+            "built_in_theme": built_in_theme,
+            "motion_density": motion_density,
             "design_brief": brief_gate,
         }
         write_json(root / "gates" / "production-state.json", state)
@@ -230,6 +259,21 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
             )
             self.assertEqual(status["status"], "compiled_pending_qa_handoff")
             self.assertTrue(status["production_authorization"]["allowed"])
+            self.assertEqual(
+                status["production_authorization"]["built_in_theme"]["theme_id"],
+                "rigorous-consulting-report",
+            )
+            self.assertEqual(
+                status["production_authorization"]["motion_density"]["density"],
+                "moderate",
+            )
+            self.assertEqual(
+                status["production_authorization"]["design_decisions_sha256"],
+                WORKFLOW.production_authorization.design_decisions_sha256(
+                    status["production_authorization"]["built_in_theme"],
+                    status["production_authorization"]["motion_density"],
+                ),
+            )
             for field in (
                 "schema_valid",
                 "references_valid",
@@ -336,6 +380,48 @@ class ReportIrPilotWorkflowTests(unittest.TestCase):
                 "binding_or_input_invalid",
             )
             self.assertIn("brief hash", status["diagnostics"][0]["message"])
+            self.assertFalse((root / "build").exists())
+
+    def test_report_ir_must_match_authorized_built_in_theme(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            path = root / "report-ir.json"
+            ir = json.loads(path.read_text(encoding="utf-8"))
+            ir["build_binding"]["theme"]["ref"] = "corporate-annual-report"
+            write_json(path, ir)
+            result = self._command(root, *self._pilot_args())
+            self.assertEqual(result.returncode, 1)
+            status = json.loads(
+                (root / "records" / "report-ir-pilot-status.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(status["diagnostics"][0]["code"], "report_ir_invalid")
+            self.assertIn(
+                "production-state decision", status["diagnostics"][0]["message"]
+            )
+            self.assertFalse((root / "build").exists())
+
+    def test_report_ir_must_match_authorized_motion_density(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._project(root)
+            path = root / "report-ir.json"
+            ir = json.loads(path.read_text(encoding="utf-8"))
+            ir["projection"]["motion_density"] = "rich"
+            write_json(path, ir)
+            result = self._command(root, *self._pilot_args())
+            self.assertEqual(result.returncode, 1)
+            status = json.loads(
+                (root / "records" / "report-ir-pilot-status.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(status["diagnostics"][0]["code"], "report_ir_invalid")
+            self.assertIn(
+                "motion_density", status["diagnostics"][0]["message"]
+            )
             self.assertFalse((root / "build").exists())
 
     def test_handoff_validator_failure_is_recorded_after_compile(self) -> None:

@@ -291,7 +291,7 @@ cards, dashboards, tables, charts, or page layouts.
 - `visual_binding`: inherit the validated visual route
 - `evidence_rigor`: `formal`
 - `information_density`: `high`
-- `motion_density`: `minimal`
+- `motion_density`: `minimal` recommendation only; require customer selection or explicit delegation
 - `continuation_state`: inherit the Handoff decision
 
 These defaults never override a known, confirmed, inherited, or explicitly delegated

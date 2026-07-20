@@ -74,6 +74,19 @@ def gate(
     }
 
 
+def authorization_brief_gate(
+    status: str,
+    artifact_path: str | None = None,
+    artifact_sha256: str | None = None,
+    confirmation_ref: str | None = None,
+    design_decisions_sha256: str | None = None,
+) -> dict[str, str | None]:
+    return {
+        **gate(status, artifact_path, artifact_sha256, confirmation_ref),
+        "design_decisions_sha256": design_decisions_sha256,
+    }
+
+
 def profile_gate(
     status: str,
     artifact_path: str | None = None,
@@ -819,7 +832,7 @@ class CorporateProfileStoreTests(unittest.TestCase):
                 profile_id="orbital",
             )
             pending = {
-                "schema_version": "1.2",
+                "schema_version": "1.3",
                 "task_id": "current-task",
                 "route": "idea_only",
                 "visual_route": "profile_reuse",
@@ -831,7 +844,19 @@ class CorporateProfileStoreTests(unittest.TestCase):
                     sha256(binding_path),
                 ),
                 "project_theme_compiled": True,
-                "design_brief": gate("pending", "gates/design-brief.md"),
+                "built_in_theme": {
+                    "theme_id": None,
+                    "selection_status": "not_required",
+                    "decision_ref": None,
+                },
+                "motion_density": {
+                    "density": "moderate",
+                    "selection_status": "user_selected",
+                    "decision_ref": "conversation-current-motion",
+                },
+                "design_brief": authorization_brief_gate(
+                    "pending", "gates/design-brief.md"
+                ),
             }
             with mock.patch.dict(os.environ, {"TAOHTML_HOME": str(home)}):
                 pending_result = AUTHORIZATION.evaluate_state(
@@ -840,11 +865,15 @@ class CorporateProfileStoreTests(unittest.TestCase):
                 brief_path = artifact_root / "gates/design-brief.md"
                 brief_path.write_text("# Current confirmed brief\n", encoding="utf-8")
                 confirmed_state = copy.deepcopy(pending)
-                confirmed_state["design_brief"] = gate(
+                confirmed_state["design_brief"] = authorization_brief_gate(
                     "confirmed",
                     "gates/design-brief.md",
                     sha256(brief_path),
                     "conversation-current-brief",
+                    AUTHORIZATION.design_decisions_sha256(
+                        confirmed_state["built_in_theme"],
+                        confirmed_state["motion_density"],
+                    ),
                 )
                 confirmed_result = AUTHORIZATION.evaluate_state(
                     AUTHORIZATION.validate_state(confirmed_state, artifact_root)

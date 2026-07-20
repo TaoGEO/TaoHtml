@@ -143,9 +143,9 @@ Profiles.
 ## Horizontal Parameters
 
 These are cross-cutting parameters, not Profiles. A Profile may provide a low-risk
-default only when the value is not already known, confirmed, inherited, or delegated.
-The existing source, brief, visual, Runtime, evidence, and Handoff contracts remain
-authoritative.
+recommendation only when the value is not already known, confirmed, inherited, or
+delegated. The existing source, brief, visual, Runtime, evidence, and Handoff contracts
+remain authoritative. A recommendation never becomes a customer decision by default.
 
 | Parameter | Contract boundary |
 |---|---|
@@ -154,14 +154,16 @@ authoritative.
 | `visual_binding` | Built-in visual system, confirmed project theme, or validated enterprise Profile binding; never copy theme implementation into a Workflow Profile. |
 | `evidence_rigor` | Use the Report IR stable enum directly: `exploratory`, `standard`, or `formal`. No Product-layer aliases are permitted. High-risk and source-protection rules always override the default. |
 | `information_density` | Low, medium, or high production guidance after content length and actual material are known. |
-| `motion_density` | Use the Report IR stable enum directly: `minimal`, `moderate`, or `rich`. No Product-layer aliases are permitted, and the current Runtime contract still constrains implementation. |
+| `motion_density` | Use the Report IR stable enum directly: `minimal`, `moderate`, or `rich`, displayed to the customer as 少量 / 适中 / 丰富. A Profile value is recommendation evidence only; the customer must select it or explicitly delegate the choice. No Product-layer aliases are permitted, and the current Runtime contract still constrains implementation. |
 | `continuation_state` | New build, review-only, meaning-preserving local continuation, or meaning-changing continuation under the existing Handoff contract. |
 
 Do not ask the user to fill these as a Profile form. Reuse values already established
 by conversation, eligible material, the Report Design Brief, or a valid handoff.
 `content_length` is not a Profile default: keep the existing concise/standard/detailed
 choice and its explicit-delegation requirement. Neither `use_mode` nor content length
-may be inferred merely because a Profile supplies other defaults.
+may be inferred merely because a Profile supplies other defaults. Likewise, never turn
+a Profile's `motion_density` recommendation into a selected value without the
+independent design-choice evidence required by `production-authorization.md`.
 
 ## Required Profile Sections
 

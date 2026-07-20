@@ -220,6 +220,28 @@ def _validate_brief_binding(
         raise ValueError(
             "Report IR design_brief_sha256 must equal the current confirmed brief hash"
         )
+    projection = raw_ir.get("projection")
+    if not isinstance(projection, dict):
+        raise ValueError("Report IR projection must be present")
+    selected_motion = production_state["motion_density"]["density"]
+    if projection.get("motion_density") != selected_motion:
+        raise ValueError(
+            "Report IR motion_density must equal the current production-state decision"
+        )
+    if production_state["visual_route"] == "built_in":
+        build_binding = raw_ir.get("build_binding")
+        theme = (
+            build_binding.get("theme") if isinstance(build_binding, dict) else None
+        )
+        selected_theme = production_state["built_in_theme"]["theme_id"]
+        if (
+            not isinstance(theme, dict)
+            or theme.get("kind") != "built_in"
+            or theme.get("ref") != selected_theme
+        ):
+            raise ValueError(
+                "Report IR built-in theme must equal the current production-state decision"
+            )
 
 
 def _handoff_binding_issues(
@@ -359,6 +381,11 @@ def _run_pilot(
         "blocking_gates": production_result["blocking_gates"],
         "design_brief_ref": production_state["design_brief"]["artifact_path"],
         "design_brief_sha256": production_state["design_brief"]["artifact_sha256"],
+        "design_decisions_sha256": production_state["design_brief"][
+            "design_decisions_sha256"
+        ],
+        "built_in_theme": production_state["built_in_theme"],
+        "motion_density": production_state["motion_density"],
     }
     if "formal-html" not in production_result["allowed_actions"]:
         raise WorkflowError(

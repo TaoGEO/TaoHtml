@@ -67,9 +67,13 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 参考事实边界（如适用）：`observed` 直接观察 / `extension` 可确认延展 / `unknown` 截图无法判断；按 source / shell / asset / page role 分别记录
 - 延展页面与限制（企业模板保真时保留）：所有未观察角色的 proposed extension 状态；更清晰截图等真实阻塞项；不承诺独立 Logo 上传
 - VI 规范图（静态参考时保留）：统一 PNG / HTML 路径 + 已确认状态
-- 所选内置主题（如适用）：完整主题名称 + 一句具体画面描述
+- 所选内置主题（如适用）：稳定 theme id + 完整主题名称 + 一句具体画面描述
+- 内置主题决定（如适用）：客户选择 / 明确委托 TaoHtml；当前选择或委托的会话引用
 - 选择理由：...
 - 必要偏离说明：无 / 偏离项、原因及仍保留的主题语法
+- 动效密度：`minimal` 少量 / `moderate` 适中 / `rich` 丰富
+- 动效决定：客户选择 / 明确委托 TaoHtml；当前选择或委托的会话引用
+- 动效推荐依据：TaoHtml 的推荐及与报告任务、使用模式的关系；推荐不等于已选择
 - 阅读与演讲行为：...
 
 ## 来源与证据记录
@@ -92,7 +96,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - 数据修正及原因：...
 - 其他会影响成品的判断：...
 
-请确认或修正这份当前完整设计简报；明确确认只绑定此版本的完整设计简报与当前会话记录，并允许进入独立的 current-file Production Authorization 检查。设计简报确认不是正式 HTML 制作授权；只有该检查允许 `formal-html` 后，才能开始正式制作。
+请确认或修正这份当前完整设计简报；明确确认只绑定此版本的完整设计简报、其中记录的当前内置主题/不适用状态与动效决定，以及当前会话记录，并允许进入独立的 current-file Production Authorization 检查。任一设计决定变更后都必须更新并重新确认完整简报。设计简报确认不是正式 HTML 制作授权；只有该检查允许 `formal-html` 后，才能开始正式制作。
 ```
 
 ## Adaptation Rules
@@ -101,7 +105,7 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - For a complex report, preserve the chapter-level viewpoint, evidence, and conclusion mapping.
 - Copy the selected Workflow Profile's exact customer-facing name, stable `profile_id`, definition version, semantic selection basis, and bounded capability overlays into `主要工作场景`. Write `无` when there is no overlay. Do not expose a Profile or IR questionnaire.
 - When the selected definition contains `设计简报增量`, copy only those fields into the one adaptive `场景特有决策` section. Omit the whole section for definitions without an increment, and never display fields from an unselected Profile. This is part of the complete current brief, not a second brief or confirmation round.
-- Treat Profile selection, confirmation of the complete current Report Design Brief, and Production Authorization as three independent facts. Selecting a Profile neither confirms the brief nor authorizes production, and brief confirmation does not replace current-file Production Authorization.
+- Treat Profile selection, confirmation of the complete current Report Design Brief, and Production Authorization as three independent facts. Selecting a Profile neither confirms the brief nor authorizes production, and brief confirmation does not replace current-file Production Authorization. Bind the confirmed brief to the current normalized built-in-theme/not-required object and motion decision through the canonical digest defined in `production-authorization.md`; any value, status, or decision-reference change requires an updated brief and fresh confirmation.
 - For a meaning-changing continuation, preserve every still-supported inherited decision, describe only the requested delta in `续作基线`, rebuild only affected fields, then display and confirm the complete current brief. Avoid replaying the original interview. A read-only handoff and a meaning-preserving local continuation never use this template.
 - For a meaning-changing continuation whose dominant business outcome changes, update the affected `主要工作场景` fields inside the complete current brief and use the existing single brief-confirmation gate. For a meaning-preserving local continuation, keep the inherited Profile state without generating or reconfirming a brief. Do not add a Profile-specific confirmation round.
 - Keep the seven source roles, six availability states, and evidence-verification status independent from `source_binding`. A secondary summary and a current artifact must state what each can and cannot support; neither becomes original evidence through reuse. Retrieved public/third-party evidence uses its external role and availability and must never be relabeled as customer material or Agent-generated content.
@@ -112,7 +116,8 @@ Keep it readable by the customer. Include only fields that affect this project. 
 - If the user supplied a clear visual reference, do not add a competing built-in-theme requirement.
 - For supported static-reference inputs, include the confirmed unified VI board path and confirmation state. In corporate fidelity, copy the exact source-role, canvas, shared-asset, shell placement, editable-region, extension, and limitation summary from the confirmed contract; do not silently alter it after current-board confirmation. Do not include a dynamic-analysis field or infer sequential behavior from multiple stills.
 - Treat VI confirmation and Report Design Brief confirmation as separate gates. A confirmed VI board may enter the separate project-theme handoff, but it does not authorize report production.
-- If TaoHtml recommends or selects a built-in visual system, copy its full customer-facing name and one-line description, explain why it suits the topic, audience, and use mode, and record every necessary deviation. Write `无` when there is no deviation.
+- For a built-in visual system, copy its stable theme id, full customer-facing name, one-line description, `user_selected | delegated_to_taohtml` status, exact decision reference, fit reason, and every necessary deviation. A recommendation without either status cannot enter this brief. Write `无` when there is no deviation.
+- For every visual route, copy the native `minimal | moderate | rich` motion density, its 少量 / 适中 / 丰富 customer label, `user_selected | delegated_to_taohtml` status, exact decision reference, and recommendation basis. Never turn a Workflow Profile default or static reference into a selected value. Do not repeat a choice already recorded.
 - Include `行动闭环` only when the confirmed goal requires the audience to complete an external action. Omit it for explanatory, educational, or internal reports that do not require conversion; do not add a gratuitous CTA.
 - Copy the exact verified action path into the brief. Record its provenance and verification status separately from the desired action, and state how the audience will see and use it on the final page.
 - Put every outcome-changing design inference and its basis, planned creative-supplement scope, and source-data correction in `待确认项`. This is where `inferred` design-ledger items receive unified confirmation; do not require the customer to pre-approve every production sentence or illustrative value.

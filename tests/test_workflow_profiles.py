@@ -232,6 +232,14 @@ class WorkflowProfileContractTests(unittest.TestCase):
         self.assertEqual(information_enum, {"low", "medium", "high"})
         self.assertEqual(motion_enum, {"minimal", "moderate", "rich"})
         self.assertIn("No Product-layer aliases are permitted", CONTRACT)
+        self.assertIn("displayed to the customer as 少量 / 适中 / 丰富", CONTRACT)
+        self.assertIn(
+            "the customer must select it or explicitly delegate the choice", CONTRACT
+        )
+        self.assertIn(
+            "never turn\na Profile's `motion_density` recommendation into a selected value",
+            CONTRACT,
+        )
 
         for _, name, definition_ref in EXPECTED_PROFILES:
             text = definition_text(definition_ref)
@@ -239,7 +247,12 @@ class WorkflowProfileContractTests(unittest.TestCase):
             information = re.search(
                 r"^- `information_density`: `([^`]+)`$", text, re.MULTILINE
             )
-            motion = re.search(r"^- `motion_density`: `([^`]+)`$", text, re.MULTILINE)
+            motion = re.search(
+                r"^- `motion_density`: `([^`]+)` recommendation only; "
+                r"require customer selection or explicit delegation$",
+                text,
+                re.MULTILINE,
+            )
             self.assertIn(evidence.group(1), evidence_enum, name)
             self.assertIn(information.group(1), information_enum, name)
             self.assertIn(motion.group(1), motion_enum, name)
@@ -271,7 +284,9 @@ class WorkflowProfileContractTests(unittest.TestCase):
         self.assertIn("Do not add a Profile-specific confirmation round", BRIEF)
         self.assertIn("Do not expose a Profile or IR questionnaire", BRIEF)
         self.assertNotIn("作为正式 HTML 制作授权", BRIEF)
-        self.assertIn("明确确认只绑定此版本的完整设计简报与当前会话记录", BRIEF)
+        self.assertIn("明确确认只绑定此版本的完整设计简报", BRIEF)
+        self.assertIn("当前内置主题/不适用状态与动效决定", BRIEF)
+        self.assertIn("任一设计决定变更后都必须更新并重新确认", BRIEF)
         self.assertIn(
             "允许进入独立的 current-file Production Authorization 检查", BRIEF
         )

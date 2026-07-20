@@ -44,6 +44,10 @@ BUILDER = load_module(
     "taohtml_visual_builder",
     ROOT / "evals" / "taohtml-quality-v1" / "scripts" / "build_visual_system_samples.py",
 )
+AUTHORIZATION = load_module(
+    "taohtml_visual_authorization",
+    SKILL_ROOT / "scripts" / "check_production_authorization.py",
+)
 
 
 class SlideTextCollector(HTMLParser):
@@ -76,6 +80,7 @@ class VisualSystemAssetTests(unittest.TestCase):
     def test_exactly_four_complete_system_directories_exist(self) -> None:
         actual = {path.name for path in SYSTEMS_ROOT.iterdir() if path.is_dir()}
         self.assertEqual(actual, set(EXPECTED))
+        self.assertEqual(AUTHORIZATION.BUILT_IN_THEME_IDS, actual)
         for theme_id, (name, description) in EXPECTED.items():
             theme_dir = SYSTEMS_ROOT / theme_id
             self.assertEqual(
@@ -176,6 +181,22 @@ class VisualSystemRoutingTests(unittest.TestCase):
             self.assertIn("recommendation never replaces complete catalog display", text)
         self.assertIn("Future built-in additions automatically join", router)
         self.assertIn("rather than a fixed count or shortlist", router)
+        table = router.split("## Customer-Facing Route Table", 1)[1].split(
+            "## Load Only The Selected System", 1
+        )[0]
+        catalog: dict[str, tuple[str, str]] = {}
+        for line in table.splitlines():
+            match = re.match(
+                r"^\| (?P<name>[^|]+) \| (?P<description>[^|]+) \| [^|]+ \| "
+                r"`assets/visual-systems/(?P<theme_id>[^/]+)/preview\.svg` \|$",
+                line,
+            )
+            if match:
+                catalog[match.group("theme_id")] = (
+                    match.group("name").strip(),
+                    match.group("description").strip(),
+                )
+        self.assertEqual(catalog, EXPECTED)
 
     def test_subset_requires_an_explicit_unambiguous_catalog_constraint(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -228,7 +249,7 @@ class VisualSystemRoutingTests(unittest.TestCase):
             self.assertIn("reflect that preference in the recommendation reason", text)
             self.assertIn("never invent an ad hoc subset", text)
 
-    def test_profile_reference_precedence_and_question_budget_are_explicit(self) -> None:
+    def test_profile_reference_precedence_and_independent_design_gate_are_explicit(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         router = (SKILL_ROOT / "references" / "visual-systems.md").read_text(
             encoding="utf-8"
@@ -248,16 +269,36 @@ class VisualSystemRoutingTests(unittest.TestCase):
         self.assertIn("render one VI board", intake)
         self.assertIn("infer dynamic behavior", intake)
         self.assertIn("Do not ask open-ended aesthetic questions", intake)
-        self.assertIn("never expands the six-question hard maximum", intake)
-        self.assertIn("choose the lowest-risk fit", intake)
-        self.assertIn("one selection round", router)
-        self.assertIn("choose once or delegate to TaoHtml", router)
+        self.assertIn("outside that counter", intake)
+        self.assertIn("never selects either value", intake)
+        self.assertIn("show it and wait", router)
+        self.assertIn("Only explicit delegation permits TaoHtml", router)
+        self.assertIn("one design-choice round", router)
+        for marker in (
+            "`minimal` | 少量",
+            "`moderate` | 适中",
+            "`rich` | 丰富",
+            "recommendation is not a selection",
+            "Do not repeat a known motion choice",
+        ):
+            self.assertIn(marker, router)
+        self.assertNotIn(
+            "At the cap, after three no-gain rounds, or under delegation", router
+        )
 
     def test_brief_records_source_selection_and_deviation(self) -> None:
         brief = (SKILL_ROOT / "references" / "design-brief-template.md").read_text(
             encoding="utf-8"
         )
-        for field in ("视觉来源", "用户参考", "所选内置主题", "必要偏离说明"):
+        for field in (
+            "视觉来源",
+            "用户参考",
+            "所选内置主题",
+            "内置主题决定",
+            "动效密度",
+            "动效决定",
+            "必要偏离说明",
+        ):
             self.assertIn(field, brief)
         self.assertIn("do not add a competing built-in-theme requirement", brief)
 

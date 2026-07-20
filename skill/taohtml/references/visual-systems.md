@@ -24,7 +24,19 @@ If a user preference or constraint does not map unambiguously to a declared cate
 
 Read the complete current catalog rather than a fixed count or shortlist. Future built-in additions automatically join the default complete display; update the catalog metadata and preview table with the new system instead of retaining a four-system or shortlist cap.
 
-Keep catalog display, recommendation marking, and selection in one selection round. Let the user choose once or delegate to TaoHtml. Never ask an open-ended taste question. Theme selection shares the existing six-question budget. At the cap, after three no-gain rounds, or under delegation, do not open another selection round: show the applicable catalog if it has not yet been shown, choose the lowest-risk fit, and disclose it in the Report Design Brief.
+Keep catalog display, recommendation marking, and selection in one design-choice round. Let the user choose once or explicitly delegate to TaoHtml. Never ask an open-ended taste question. This design-choice gate is independent from the ordinary six-question clarification budget: reaching six ordinary questions or three no-gain rounds ends ordinary intake but never authorizes TaoHtml to select a theme. If the applicable catalog has not yet been shown, show it and wait. Only explicit delegation permits TaoHtml to choose the lowest-risk matching system; use the fit guidance in the table and break an equal-risk tie by table order, then record `delegated_to_taohtml` and the exact delegation reference. Record an explicit concrete theme as `user_selected` with its exact decision reference. Do not repeat either decision after it is recorded.
+
+## Motion Density Choice
+
+Resolve motion density in the same independent design-choice gate for every visual route, including a static-reference project theme or reused enterprise Profile. Present the Report IR native enum through these customer labels:
+
+| Native value | Customer label | Meaning |
+|---|---|---|
+| `minimal` | 少量 | 只保留必要的分步出现和状态反馈，阅读稳定性优先 |
+| `moderate` | 适中 | 在关键论证与演讲节奏处使用分步呈现 |
+| `rich` | 丰富 | 更频繁地使用受控分步和状态变化，但仍受 Runtime 与可访问性约束 |
+
+TaoHtml may recommend exactly one density from the report task and delivery mode, but a recommendation is not a selection. Wait for the customer's choice or explicit delegation and record `user_selected | delegated_to_taohtml`, the native value, and the exact decision reference. Under delegation, choose the recommended density; if two densities are equally suitable, choose the lower density. Never infer motion from a static reference, a Workflow Profile default, the six-question cap, or no-gain stopping. Do not repeat a known motion choice. The built-in catalog and motion options may be displayed in the same customer turn, but they remain two separately auditable decisions.
 
 ## Customer-Facing Route Table
 

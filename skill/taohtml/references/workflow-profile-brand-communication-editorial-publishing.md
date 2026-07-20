@@ -315,7 +315,7 @@ may strengthen attention and memory, but it cannot strengthen the underlying cla
 - `visual_binding`: inherit the validated visual route
 - `evidence_rigor`: `standard`
 - `information_density`: `medium`
-- `motion_density`: `moderate`
+- `motion_density`: `moderate` recommendation only; require customer selection or explicit delegation
 - `continuation_state`: inherit the Handoff decision
 
 These defaults never override a known, confirmed, inherited, or explicitly delegated

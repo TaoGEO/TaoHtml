@@ -15,10 +15,18 @@ SCRIPT_ROOT = Path(__file__).resolve().parent
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
-SCHEMA_VERSION = "1.2"
-LEGACY_SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.3"
+LEGACY_SCHEMA_VERSIONS = {"1.1", "1.2"}
 ROUTES = {"idea_only", "word_pdf", "existing_ppt_html"}
 VISUAL_ROUTES = {"unresolved", "built_in", "static_reference", "profile_reuse"}
+BUILT_IN_THEME_IDS = {
+    "black-white-fluorescent-cards",
+    "rigorous-consulting-report",
+    "corporate-annual-report",
+    "editorial-collage",
+}
+MOTION_DENSITIES = {"minimal", "moderate", "rich"}
+DECIDED_SELECTION_STATUSES = {"user_selected", "delegated_to_taohtml"}
 ACTIONS = {
     "status",
     "material-summary-preview",
@@ -26,6 +34,8 @@ ACTIONS = {
     "reference-vi-preview",
     "project-theme-compile",
     "profile-use-bind",
+    "built-in-theme-selection",
+    "motion-density-selection",
     "design-brief-preview",
     "formal-html",
     "browser-qa",
@@ -40,16 +50,26 @@ TOP_LEVEL_KEYS = {
     "reference_vi",
     "profile_use",
     "project_theme_compiled",
+    "built_in_theme",
+    "motion_density",
     "design_brief",
 }
+V1_2_TOP_LEVEL_KEYS = TOP_LEVEL_KEYS - {
+    "built_in_theme",
+    "motion_density",
+}
+V1_1_TOP_LEVEL_KEYS = V1_2_TOP_LEVEL_KEYS - {"profile_use"}
 GATE_KEYS = {
     "status",
     "artifact_path",
     "artifact_sha256",
     "confirmation_ref",
 }
+DESIGN_BRIEF_KEYS = GATE_KEYS | {"design_decisions_sha256"}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 PROFILE_USE_KEYS = {"status", "artifact_path", "artifact_sha256"}
+BUILT_IN_THEME_KEYS = {"theme_id", "selection_status", "decision_ref"}
+MOTION_DENSITY_KEYS = {"density", "selection_status", "decision_ref"}
 
 
 def _exact_object(raw: object, keys: set[str], label: str) -> dict[str, Any]:
@@ -220,6 +240,122 @@ def _confirmation_gate(
     }
 
 
+def _design_brief_gate(
+    raw: object,
+    artifact_root: Path,
+) -> dict[str, str | None]:
+    gate = _exact_object(raw, DESIGN_BRIEF_KEYS, "design_brief")
+    confirmed_artifact = _confirmation_gate(
+        {key: gate[key] for key in GATE_KEYS},
+        "design_brief",
+        artifact_root,
+        allowed_statuses={"pending", "confirmed"},
+    )
+    decisions_sha256 = _optional_text(
+        gate["design_decisions_sha256"],
+        "design_brief.design_decisions_sha256",
+    )
+    if decisions_sha256 is not None and not SHA256.fullmatch(decisions_sha256):
+        raise ValueError(
+            "design_brief.design_decisions_sha256 must be a lowercase SHA-256 digest"
+        )
+    if confirmed_artifact["status"] == "confirmed":
+        if decisions_sha256 is None:
+            raise ValueError(
+                "design_brief confirmed state requires design_decisions_sha256"
+            )
+    elif decisions_sha256 is not None:
+        raise ValueError(
+            "design_brief pending state cannot contain design_decisions_sha256"
+        )
+    return {
+        **confirmed_artifact,
+        "design_decisions_sha256": decisions_sha256,
+    }
+
+
+def _selection_decision(
+    raw: object,
+    *,
+    label: str,
+    keys: set[str],
+    value_key: str,
+    allowed_values: set[str],
+    allow_not_required: bool,
+) -> dict[str, str | None]:
+    decision = _exact_object(raw, keys, label)
+    selection_status = decision["selection_status"]
+    allowed_statuses = {"pending", *DECIDED_SELECTION_STATUSES}
+    if allow_not_required:
+        allowed_statuses.add("not_required")
+    if selection_status not in allowed_statuses:
+        raise ValueError(
+            f"{label}.selection_status must be one of: "
+            + ", ".join(sorted(allowed_statuses))
+        )
+    value = _optional_text(decision[value_key], f"{label}.{value_key}")
+    decision_ref = _optional_text(decision["decision_ref"], f"{label}.decision_ref")
+    if selection_status in DECIDED_SELECTION_STATUSES:
+        if value is None or decision_ref is None:
+            raise ValueError(
+                f"{label} {selection_status} requires {value_key} and decision_ref"
+            )
+        if value not in allowed_values:
+            raise ValueError(
+                f"{label}.{value_key} must be one of: "
+                + ", ".join(sorted(allowed_values))
+            )
+    elif value is not None or decision_ref is not None:
+        raise ValueError(
+            f"{label} {selection_status} state cannot contain {value_key} or decision_ref"
+        )
+    return {
+        value_key: value,
+        "selection_status": selection_status,
+        "decision_ref": decision_ref,
+    }
+
+
+def _legacy_pending_decisions(
+    visual_route: str,
+) -> tuple[dict[str, None | str], dict[str, None | str]]:
+    built_in_status = "pending" if visual_route == "built_in" else "not_required"
+    return (
+        {
+            "theme_id": None,
+            "selection_status": built_in_status,
+            "decision_ref": None,
+        },
+        {
+            "density": None,
+            "selection_status": "pending",
+            "decision_ref": None,
+        },
+    )
+
+
+def design_decisions_sha256(
+    built_in_theme: dict[str, str | None],
+    motion_density: dict[str, str | None],
+) -> str:
+    """Return the canonical digest bound by a confirmed Report Design Brief."""
+    snapshot = {
+        "built_in_theme": {
+            key: built_in_theme[key] for key in sorted(BUILT_IN_THEME_KEYS)
+        },
+        "motion_density": {
+            key: motion_density[key] for key in sorted(MOTION_DENSITY_KEYS)
+        },
+    }
+    canonical = json.dumps(
+        snapshot,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
     try:
         resolved_artifact_root = artifact_root.expanduser().resolve(strict=True)
@@ -229,22 +365,48 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
         raise ValueError(f"artifact_root is not a directory: {resolved_artifact_root}")
     if not isinstance(raw, dict):
         raise ValueError("state must be an object")
-    schema_version = raw.get("schema_version")
-    if schema_version == LEGACY_SCHEMA_VERSION:
-        legacy_keys = TOP_LEVEL_KEYS - {"profile_use"}
-        legacy = _exact_object(raw, legacy_keys, "state")
-        state = {**legacy, "schema_version": SCHEMA_VERSION}
+    source_schema_version = raw.get("schema_version")
+    legacy_migration_required = source_schema_version in LEGACY_SCHEMA_VERSIONS
+    if source_schema_version == "1.1":
+        state = dict(_exact_object(raw, V1_1_TOP_LEVEL_KEYS, "state"))
         state["profile_use"] = {
             "status": "not_required",
             "artifact_path": None,
             "artifact_sha256": None,
         }
+    elif source_schema_version == "1.2":
+        state = dict(_exact_object(raw, V1_2_TOP_LEVEL_KEYS, "state"))
     else:
         state = _exact_object(raw, TOP_LEVEL_KEYS, "state")
-        if schema_version != SCHEMA_VERSION:
+        if source_schema_version != SCHEMA_VERSION:
             raise ValueError(
-                f"schema_version must be {SCHEMA_VERSION} (or legacy {LEGACY_SCHEMA_VERSION})"
+                f"schema_version must be {SCHEMA_VERSION} "
+                f"(or legacy {', '.join(sorted(LEGACY_SCHEMA_VERSIONS))})"
             )
+    if legacy_migration_required:
+        built_in_theme, motion_density = _legacy_pending_decisions(
+            str(state["visual_route"])
+        )
+        state = {
+            **state,
+            "schema_version": SCHEMA_VERSION,
+            "built_in_theme": built_in_theme,
+            "motion_density": motion_density,
+        }
+        legacy_brief = state["design_brief"]
+        if isinstance(legacy_brief, dict) and legacy_brief.get("status") == "confirmed":
+            state["design_brief"] = {
+                "status": "pending",
+                "artifact_path": legacy_brief.get("artifact_path"),
+                "artifact_sha256": None,
+                "confirmation_ref": None,
+                "design_decisions_sha256": None,
+            }
+        elif isinstance(legacy_brief, dict):
+            state["design_brief"] = {
+                **legacy_brief,
+                "design_decisions_sha256": None,
+            }
     task_id = _short_text(state["task_id"], "task_id")
     route = state["route"]
     if route not in ROUTES:
@@ -266,13 +428,27 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
         resolved_artifact_root,
         allowed_statuses={"not_required", "pending", "confirmed"},
     )
-    brief = _confirmation_gate(
+    brief = _design_brief_gate(
         state["design_brief"],
-        "design_brief",
         resolved_artifact_root,
-        allowed_statuses={"pending", "confirmed"},
     )
     profile_use = _profile_use_gate(state["profile_use"], resolved_artifact_root)
+    built_in_theme = _selection_decision(
+        state["built_in_theme"],
+        label="built_in_theme",
+        keys=BUILT_IN_THEME_KEYS,
+        value_key="theme_id",
+        allowed_values=BUILT_IN_THEME_IDS,
+        allow_not_required=True,
+    )
+    motion_density = _selection_decision(
+        state["motion_density"],
+        label="motion_density",
+        keys=MOTION_DENSITY_KEYS,
+        value_key="density",
+        allowed_values=MOTION_DENSITIES,
+        allow_not_required=False,
+    )
     project_theme_compiled = state["project_theme_compiled"]
     if not isinstance(project_theme_compiled, bool):
         raise ValueError("project_theme_compiled must be a boolean")
@@ -311,6 +487,14 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
             "A reusable profile binding requires visual_route=profile_reuse"
         )
 
+    if visual_route == "built_in":
+        if built_in_theme["selection_status"] == "not_required":
+            raise ValueError("built_in visual route requires a built-in theme decision")
+    elif built_in_theme["selection_status"] != "not_required":
+        raise ValueError(
+            f"{visual_route} requires built_in_theme.selection_status=not_required"
+        )
+
     source_ready = not source_backed_route or material["status"] == "confirmed"
     vi_ready = (
         visual_route != "static_reference"
@@ -323,6 +507,13 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
             and profile_use["validation_status"] == "valid_reuse"
         )
     )
+    built_in_theme_ready = (
+        visual_route != "built_in"
+        or built_in_theme["selection_status"] in DECIDED_SELECTION_STATUSES
+    )
+    motion_density_ready = (
+        motion_density["selection_status"] in DECIDED_SELECTION_STATUSES
+    )
     if reference_vi["status"] == "confirmed" and not source_ready:
         raise ValueError("reference VI cannot be confirmed before source grounding")
     if project_theme_compiled and not (vi_ready and profile_ready):
@@ -332,6 +523,8 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
         and visual_route != "unresolved"
         and vi_ready
         and profile_ready
+        and built_in_theme_ready
+        and motion_density_ready
         and (
             visual_route not in {"static_reference", "profile_reuse"}
             or project_theme_compiled
@@ -340,6 +533,18 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
     if brief["status"] == "confirmed" and not upstream_ready:
         raise ValueError(
             "design brief cannot be confirmed before all applicable upstream gates"
+        )
+    current_design_decisions_sha256 = design_decisions_sha256(
+        built_in_theme,
+        motion_density,
+    )
+    if (
+        brief["status"] == "confirmed"
+        and brief["design_decisions_sha256"] != current_design_decisions_sha256
+    ):
+        raise ValueError(
+            "design_brief.design_decisions_sha256 does not match the current "
+            "built-in theme and motion decisions; update and reconfirm the brief"
         )
 
     return {
@@ -351,7 +556,15 @@ def validate_state(raw: object, artifact_root: Path) -> dict[str, Any]:
         "reference_vi": reference_vi,
         "profile_use": profile_use,
         "project_theme_compiled": project_theme_compiled,
+        "built_in_theme": built_in_theme,
+        "motion_density": motion_density,
         "design_brief": brief,
+        "current_design_decisions_sha256": current_design_decisions_sha256,
+        "migration": {
+            "source_schema_version": source_schema_version,
+            "required": legacy_migration_required,
+            "brief_reconfirmation_required": legacy_migration_required,
+        },
         "artifact_root": str(resolved_artifact_root),
     }
 
@@ -374,9 +587,18 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
             and state["profile_use"]["validation_status"] == "valid_reuse"
         )
     )
-    theme_ready = (
+    project_theme_ready = (
         state["visual_route"] not in {"static_reference", "profile_reuse"}
         or state["project_theme_compiled"]
+    )
+    built_in_theme_ready = (
+        state["visual_route"] != "built_in"
+        or state["built_in_theme"]["selection_status"]
+        in DECIDED_SELECTION_STATUSES
+    )
+    motion_density_ready = (
+        state["motion_density"]["selection_status"]
+        in DECIDED_SELECTION_STATUSES
     )
     brief_ready = state["design_brief"]["status"] == "confirmed"
 
@@ -389,9 +611,23 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
         blocking_gates.append("reference_vi_confirmation")
     if visual_ready and vi_ready and not profile_ready:
         blocking_gates.append("profile_use_binding")
-    if visual_ready and vi_ready and profile_ready and not theme_ready:
+    if visual_ready and vi_ready and profile_ready and not project_theme_ready:
         blocking_gates.append("project_theme_compilation")
-    if material_ready and visual_ready and vi_ready and profile_ready and theme_ready and not brief_ready:
+    if visual_ready and vi_ready and profile_ready and project_theme_ready:
+        if not built_in_theme_ready:
+            blocking_gates.append("built_in_theme_selection")
+        if not motion_density_ready:
+            blocking_gates.append("motion_density_selection")
+    if (
+        material_ready
+        and visual_ready
+        and vi_ready
+        and profile_ready
+        and project_theme_ready
+        and built_in_theme_ready
+        and motion_density_ready
+        and not brief_ready
+    ):
         blocking_gates.append("design_brief_confirmation")
 
     allowed = {"status"}
@@ -404,8 +640,13 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
             allowed.add("reference-vi-preview")
         elif not profile_ready:
             allowed.add("profile-use-bind")
-        elif not theme_ready:
+        elif not project_theme_ready:
             allowed.add("project-theme-compile")
+        elif not (built_in_theme_ready and motion_density_ready):
+            if not built_in_theme_ready:
+                allowed.add("built-in-theme-selection")
+            if not motion_density_ready:
+                allowed.add("motion-density-selection")
         elif not brief_ready:
             allowed.add("design-brief-preview")
         else:
@@ -429,6 +670,20 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
                 "artifact_sha256": state["profile_use"]["artifact_sha256"],
             }
         )
+    verified_decisions = [
+        {
+            "gate": "built_in_theme",
+            "value": state["built_in_theme"]["theme_id"],
+            "selection_status": state["built_in_theme"]["selection_status"],
+            "decision_ref": state["built_in_theme"]["decision_ref"],
+        },
+        {
+            "gate": "motion_density",
+            "value": state["motion_density"]["density"],
+            "selection_status": state["motion_density"]["selection_status"],
+            "decision_ref": state["motion_density"]["decision_ref"],
+        },
+    ]
     return {
         "schema_version": SCHEMA_VERSION,
         "task_id": state["task_id"],
@@ -437,6 +692,11 @@ def evaluate_state(state: dict[str, Any]) -> dict[str, object]:
         "blocking_gates": blocking_gates,
         "allowed_actions": sorted(allowed),
         "verified_artifacts": verified_artifacts,
+        "verified_design_decisions": verified_decisions,
+        "current_design_decisions_sha256": state[
+            "current_design_decisions_sha256"
+        ],
+        "migration": state["migration"],
         "forbidden_formal_actions": (
             [] if authorized else ["formal-html", "browser-qa", "deliver-formal-html"]
         ),

@@ -12,7 +12,8 @@ Move through these states in order:
 | S0 Route handshake | Idea, Word/PDF, or PPT/HTML is bound to this invocation | A specific topic, an eligible bound source, or the user's answer to the latest active route options establishes the route |
 | S0A Startup completion | Reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
-| S2 Design completion | Only outcome-changing decisions and hard-boundary gaps are resolved, and the visual route is selected | The project passes the design-ready gate, or intake stops on a minimum hard boundary |
+| S2 Content design completion | Only ordinary outcome-changing decisions and hard-boundary gaps are resolved | The project passes the design-ready gate, or intake stops on a minimum hard boundary |
+| S2A Independent design choices | The visual source is resolved; a built-in route has one exact theme; motion density is recorded for every route | Each applicable choice is explicitly user-selected or explicitly delegated to TaoHtml; the ordinary clarification count and no-gain rule cannot skip this gate |
 | S3 Reference VI | On the supported static-reference route, one unified VI design standards board is shown; other visual routes bypass this state | The user clearly confirms the exact current board and its conversation reference is recorded, or the state is not applicable |
 | S4 Design brief | One customer-readable brief is shown | The user explicitly confirms the current brief |
 | S5 Production | HTML, visual system, presentation behavior, and objective QA are completed | Objective failures are fixed |
@@ -167,7 +168,7 @@ known | confirmed | inferred | missing
 
 - **known**: stated in the current conversation or directly supported by the source.
 - **confirmed**: explicitly accepted or corrected by the user.
-- **inferred**: a reversible design decision TaoHtml can make from context or user delegation; record its basis and expose it in the brief.
+- **inferred**: a reversible ordinary design decision TaoHtml can make from context or user delegation; record its basis and expose it in the brief. A built-in theme or motion density enters this bucket only after explicit delegation, never from context alone.
 - **missing**: an outcome-changing decision or hard-boundary fact that is not yet known and cannot be safely delegated.
 
 Rebuild the ledger after reading each source and update it after every answer. Move information instead of copying it across buckets. Treat a stated route, use mode, audience, desired outcome, content length, real action path, or hard presentation duration as `known`; do not ask for or confirm the same information again. Do not ask about any other `known`, `confirmed`, or safely `inferred` item.
@@ -226,7 +227,7 @@ For an idea-only route, evaluate these layers in order and skip any layer alread
 3. **Evidence or conclusion-level conflict**: proof required for important claims and any ambiguity that could reverse the main conclusion.
 4. **Structure choice**: ask only when multiple chapter structures are genuinely reasonable and would produce meaningfully different reports.
 
-Treat this as a judgment layer, not a four-question form. Visual style, motion density, minor chapter naming, and ordinary delivery defaults are normally low-risk inferences unless the user has made them consequential.
+Treat this as a judgment layer, not a four-question form. Minor chapter naming and ordinary delivery defaults may be low-risk inferences. Built-in theme and motion density are handled only by the independent design-choice gate below.
 
 ## Visual Source Selection
 
@@ -239,9 +240,10 @@ Resolve the visual source only after content and chapter structure are clear eno
 - For either mode, read `static-reference-vi.md`. Use the current session for only the minimal readability check defined there. When readable, analyze static visual facts, render one VI board through the shared contract, and wait for clear confirmation of that exact board without requiring a fixed reply phrase. In corporate fidelity, automatically identify each source role unless truly ambiguous; the board must expose all source thumbnails and role bindings, screenshot-visible fidelity boundary, shell-specific locked/editable regions, exact observed/extension/unknown labels, proposed unseen roles, and limitations. Customer corrections before confirmation replace the current contract. Do not require an internal-theme choice, infer dynamic behavior, or begin project-theme generation/report production before confirmation.
 - If the user has a clear reference but it is a PPT, webpage, video, state sequence, more than three corporate screenshots, or multiple screenshots for reconstruct, stop at the unsupported boundary and ask for a supported representative raster input. This is not the no-reference route: do not infer movement and do not recommend the four built-in systems unless the user explicitly abandons the reference route.
 - Treat model choice as a platform/session-entry decision. WorkBuddy first use gets one recommendation to use Auto; Codex and Claude Code continue with the current session model. Never ask the user to select or repeatedly switch models inside the intake. If the current session cannot locate reliable static facts, say “当前会话无法可靠读取参考图” and offer only a manual model change followed by a restarted task, or a downgrade to the four built-in systems.
-- Only when no enterprise profile applies and no clear reference route is active, read `visual-systems.md`. If the user already specified one concrete built-in system, adopt it directly without displaying the catalog. Show a category subset only when the user has proactively and explicitly constrained the acceptable range of the built-in catalog and that constraint maps unambiguously to one declared category; never infer a catalog-range constraint from project context. Otherwise, in the same round, show every system in the complete current built-in catalog with its exact customer-facing name, one-line description, and bundled preview. Do not hide any entry because the Agent considers it less suitable. Report goal, audience, content, report type, and reading or presentation mode are recommendation inputs only: use them to mark one or two displayed systems as **更推荐**, but never to shrink the catalog; recommendation never replaces complete catalog display. If a user preference or constraint does not map unambiguously to a declared category, show the complete current catalog, reflect that preference in the recommendation reason, and never invent an ad hoc subset. Ask the user to choose once, or invite explicit delegation to TaoHtml.
+- Only when no enterprise profile applies and no clear reference route is active, read `visual-systems.md`. If the user already specified one concrete built-in system, adopt it directly without displaying the catalog and record the exact decision reference. Show a category subset only when the user has proactively and explicitly constrained the acceptable range of the built-in catalog and that constraint maps unambiguously to one declared category; never infer a catalog-range constraint from project context. Otherwise, in the same round, show every system in the complete current built-in catalog with its exact customer-facing name, one-line description, and bundled preview. Do not hide any entry because the Agent considers it less suitable. Report goal, audience, content, report type, and reading or presentation mode are recommendation inputs only: use them to mark one or two displayed systems as **更推荐**, but never to shrink the catalog; recommendation never replaces complete catalog display. If a user preference or constraint does not map unambiguously to a declared category, show the complete current catalog, reflect that preference in the recommendation reason, and never invent an ad hoc subset. Ask the user to choose once, or invite explicit delegation to TaoHtml; without either, stop at this gate.
 - Do not ask open-ended aesthetic questions such as “What style do you like?”. Do not repeat a theme-selection question after the user chooses or delegates.
-- Reference-mode resolution and theme selection use the same clarification counter; visual route selection never expands the six-question hard maximum. Do not ask the reference-mode question after explicit intent. If the project reaches the maximum or the three-no-gain stop before a low-risk visual choice is selected, apply only a safely delegated choice: choose the lowest-risk fit and disclose the basis in the Report Design Brief. Never infer corporate fidelity from an ambiguous request because it creates a fixed-asset lock.
+- The one-time ambiguous reference-mode resolution remains an ordinary clarification and uses the existing counter. The exact built-in theme and motion-density choice are separate design decisions outside that counter. Reaching the six-question maximum or the three-no-gain stop ends ordinary clarification but never selects either value. Do not ask the reference-mode question after explicit intent, and never infer corporate fidelity from an ambiguous request because it creates a fixed-asset lock.
+- For every visual route, present `minimal | moderate | rich` as **少量 / 适中 / 丰富**, recommend at most one, and wait for the user's choice or explicit delegation. A Workflow Profile default, static input, project context, question cap, or model judgment is recommendation evidence only. Do not repeat a known motion choice.
 - A selected theme fixes a reusable visual grammar, not a palette. Preserve its composition, hierarchy, image treatment, module language, chart/evidence treatment, and motion grammar unless the brief records a necessary deviation.
 
 ## Select The Next Question
@@ -270,7 +272,7 @@ For a missing conversion action path, delegation authorizes TaoHtml to locate an
 
 ## Question Budget And Stop Rules
 
-Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt and the one-time ambiguous reference-mode choice as one. The prompt that asks the user to confirm the displayed Report Design Brief is a separate authorization gate and does not count toward this budget.
+Count agent-initiated clarification prompts within the current intake cycle. Count each single-decision startup prompt and the one-time ambiguous reference-mode choice as one. Built-in theme selection, motion-density selection, and confirmation of the displayed Report Design Brief are separate gates and do not count toward this budget.
 
 A read-only handoff uses zero clarification questions and does not start an intake
 cycle. A clear meaning-preserving local continuation also uses zero intake questions.
@@ -282,15 +284,15 @@ not receive extra questions for previously answered startup or design decisions.
 - Enforce **6 clarification questions** as a hard maximum, including for the most complex idea-only intake. Do not ask a seventh.
 - Ask about the same key gap at most **twice**. On the second attempt, replace the abstract wording with a concrete example or 2-3 real options. After that, infer or block according to risk.
 - Track whether each response produces actionable new information: it resolves or narrows a missing decision, corrects the ledger, supplies evidence, or clearly delegates a decision.
-- Stop questioning immediately after **three consecutive rounds without actionable new information**. Then infer all remaining low-risk gaps and either issue the brief or use the blocked-intake output.
+- Stop ordinary clarification immediately after **three consecutive rounds without actionable new information**. Then infer all remaining ordinary low-risk gaps and either enter the independent design-choice gate or use the blocked-intake output. Do not infer a built-in theme or motion density.
 
-Stop immediately when the design-ready gate passes; never continue asking to approach a target or maximum. At the hard maximum, apply the same resolution: infer reversible design decisions, route ordinary missing content to the creative-supplement ledger, and stop. Never use budget pressure as permission to cross a minimum hard boundary.
+Stop ordinary clarification immediately when the design-ready gate passes; never continue asking to approach a target or maximum. At the hard maximum, infer reversible ordinary design decisions, route ordinary missing content to the creative-supplement ledger, and stop ordinary clarification. Continue to the independent design-choice gate when no minimum hard boundary remains. Never use budget pressure as permission to cross a minimum hard boundary or select a theme/motion value.
 
 If the user initiates a change to the core goal or scope, invalidate any affected brief and start a new intake cycle with fresh counters. Preserve reusable facts in the ledger, but do not count the first question of the new cycle as question seven of the old one. Local wording, color, layout, or motion revisions do not start a new cycle unless they change the report's meaning or scope.
 
 ## Output-First And Hard-Boundary Rules
 
-Infer an outcome-changing design decision only when a reasonable choice is reversible during brief confirmation and cannot materially change the report's promise, scope, central meaning, factual integrity, or main conclusion. Record the inference and its basis in `待确认项`.
+Infer an outcome-changing ordinary design decision only when a reasonable choice is reversible during brief confirmation and cannot materially change the report's promise, scope, central meaning, factual integrity, or main conclusion. Record the inference and its basis in `待确认项`. Built-in theme and motion density require explicit selection or delegation instead.
 
 Ordinary information gaps do not automatically create a block. TaoHtml may add plausible scenes, numbers, viewpoints, comparisons, examples, and expression as creative supplements when they help complete a useful report. These are pending-verification generated content, not source facts and not automatic errors. Track the exact additions for the delivery list. Put an adjacent `示意 / 模拟 / 待核实` label in the HTML only when a simulated chart, fictional customer case, generated evidence-like artifact, or numeric display could reasonably be mistaken for real proof; keep ordinary projections in the delivery note so risk disclosure does not damage the presentation.
 
@@ -337,17 +339,25 @@ Treat a new build or meaning-changing continuation as design-ready when:
 - Evidence required by the report type is present, explicitly bounded, or separated from planned creative supplements without presenting those supplements as verified proof.
 - No unresolved conflict can reverse the main conclusion.
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
-- Visual direction is known or safely delegated to TaoHtml.
-- The visual source is recorded as one selected built-in visual system, a user reference with known `reference_mode`, or one live-validated corporate-profile binding. Corporate fidelity also records the screenshot-visible fidelity boundary, locked elements, and editable region. Profile reuse records profile id/version, theme fingerprint, resolution basis, and temporary-override state. Any necessary deviation is explicit.
-- On the static-reference route, the current VI board is explicitly confirmed and its contract/output paths are recorded; VI approval is not inferred from earlier agreement to use the reference.
-- On the profile-reuse route, the current task binding validates against the active profile/version and existing project-theme loader. It substitutes only the repeated VI step; it does not count as Report Design Brief confirmation.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
 - Every material in use has an eligible `source_binding` and recorded binding reason; no workspace convention or residue is acting as an implicit source.
 - For handoff or meaning-changing continuation work, every bound item also has an explicit source role, availability status, evidence-verification status, inspection coverage, support scope, and limitation; secondary summaries and current artifacts are not treated as original evidence, while retrieved public/third-party evidence has its own external role and availability.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.
 - No minimum hard-boundary item remains in `missing`; ordinary creative supplements may remain pending customer verification.
 
-Stop asking as soon as these conditions are met. A clear idea can therefore proceed directly to a brief with zero clarification questions.
+Stop ordinary clarification as soon as these conditions are met. A clear idea can therefore proceed directly to the independent design-choice gate with zero clarification questions.
+
+## Independent Design-Choice Gate
+
+Apply this gate only after the content and chapter structure are clear enough to make a useful recommendation. It does not add ordinary clarification budget and cannot be skipped by the six-question maximum or the three-no-gain rule.
+
+- Resolve the visual source as one built-in system, a supported static reference, or a validated enterprise Profile binding. Static-reference and Profile routes keep their existing VI/binding gates and set built-in theme selection to `not_required`; never ask them to choose an internal theme as well.
+- On the built-in route, a concrete theme already named by the user records `user_selected`, exact `theme_id`, and `decision_ref`. Otherwise display the applicable catalog under `visual-systems.md` and wait. Only an explicit “TaoHtml 决定 / 帮我选” or equivalent records `delegated_to_taohtml` and permits the deterministic lowest-risk choice described there.
+- On every visual route, record motion density as `minimal | moderate | rich`, show **少量 / 适中 / 丰富**, and wait for `user_selected` or explicit `delegated_to_taohtml`. TaoHtml may recommend one; it may choose only after delegation.
+- On the static-reference route, explicitly confirm the current VI board and record its contract/output paths; earlier agreement to use the reference is not VI approval. On the Profile route, validate the current task binding against the active profile/version and existing project-theme loader. Neither substitutes for the Report Design Brief confirmation.
+- Do not ask again after either choice is recorded. If one is known and the other remains pending, ask only for the pending choice.
+
+Do not create or confirm a Report Design Brief until this gate and every route-specific VI/profile/theme gate are complete. Copy both decisions, their selection status, exact decision reference, recommendation basis, and any deviation into the current brief.
 
 ## Confirmation Rules
 
