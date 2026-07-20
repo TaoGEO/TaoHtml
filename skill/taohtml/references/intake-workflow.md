@@ -9,7 +9,8 @@ Move through these states in order:
 | State | Result | Exit condition |
 |---|---|---|
 | H0 Task intent | New build, read-only review, or continuation is recorded independently from content route | The user's requested action establishes `new_build`, `review_only`, or `continue_existing` |
-| S0 Route handshake | Idea, Word/PDF, or PPT/HTML is bound to this invocation | A specific topic, an eligible bound source, or the user's answer to the latest active route options establishes the route |
+| S0 Route handshake | `idea_only`, `word_pdf`, or `existing_ppt_html` is recorded as `route_selected` | A specific topic, an eligible bound source, an explicit route/material intent, or the user's answer to the latest active route options establishes only the route |
+| S0B File source acquisition/binding | A file route has one eligible accessible source recorded as `source_bound`; `idea_only` bypasses this state | The current upload, resolvable exact path, task-instruction source, or user-confirmed discovered candidate is bound; otherwise request the source and stop in S0B |
 | S0A Startup completion | Reading/presentation and concise/standard/detailed are selected | Choices are known, evident from the input, or explicitly delegated |
 | S1 Source grounding | The available idea or source is represented accurately | The route-specific source gate passes |
 | S2 Content design completion | Only ordinary outcome-changing decisions and hard-boundary gaps are resolved | The project passes the design-ready gate, or intake stops on a minimum hard boundary |
@@ -22,8 +23,15 @@ Move through these states in order:
 Apply the source gate as follows:
 
 - **Idea only**: seed the ledger from the conversation. Do not create or ask the user to confirm a fictional Material Understanding Summary.
-- **Word/PDF**: show the Material Understanding Summary defined in `material-understanding.md` and wait for confirmation or correction.
-- **PPT/HTML**: show the same source-grounded Material Understanding Summary, preserve its confirmed core viewpoints, and resolve faithful migration versus reorganization only if both remain reasonable.
+- **Word/PDF**: require `source_bound` in S0B before asking any startup question or reading material; then show the Material Understanding Summary defined in `material-understanding.md` and wait for confirmation or correction.
+- **PPT/HTML**: require `source_bound` in S0B before asking any startup question or reading material; then show the same source-grounded Material Understanding Summary, preserve its confirmed core viewpoints, and resolve faithful migration versus reorganization only if both remain reasonable.
+
+`route_selected` and `source_bound` are independent facts. Selecting Word/PDF or
+PPT/HTML, including with a compact `2` or `3`, exits S0 but cannot exit S0B. While a
+file route remains in S0B, the only user-facing action is to request an upload or a
+resolvable exact path and then stop. Do not spend that turn on use mode, length,
+audience, Workflow Profile, material understanding, filesystem search, or content
+reading.
 
 For `review_only`, stop after the read-only role/availability map in
 `project-handoff.md`; do not enter S0-S6 merely to read the handoff. For
@@ -64,16 +72,23 @@ Treat the current message as route-bearing only when it contains at least one of
 
 - a specific topic, question, claim, or outcome that the user clearly wants TaoHtml
   to turn into a report; or
-- an upload, path, filename, or material description explicitly identified as input
-  for this task and eligible under `Source Binding` below.
+- an upload, resolvable exact path, or task-instruction source eligible under `Source
+  Binding` below; or
+- an explicit file-route selection, filename, unavailable attachment, or material
+  description identified as intended input, which may select the route but cannot
+  establish `source_bound` by itself.
 
-When either is present, infer the matching route and continue to the next genuinely
-missing startup decision without asking for the route again. For a new build or
+When any is present, infer the matching route without asking for it again. A
+specific topic enters the idea-only startup path. An eligible accessible file source
+may establish both the matching route and `source_bound`. A file description,
+unresolved filename, unavailable attachment, or route choice without an eligible
+source establishes only `route_selected` and enters S0B. For a new build or
 continuation, when neither is present, show exactly one route choice with **Idea only
-/ Word or PDF / Existing PPT or HTML**, record that option set as `latest_options`,
-and stop. Do not inspect the workspace, read `input/prompt.md`, summarize materials,
-draft a brief, or create HTML while S0 is unresolved. A read-only handoff is the sole
-exception to the route question, not a fourth route.
+/ Word or PDF: upload the file or provide its complete path / Existing PPT or HTML:
+upload the file or provide its complete path**, record that option set as
+`latest_options`, and stop. Do not inspect the workspace, read `input/prompt.md`,
+summarize materials, draft a brief, or create HTML while S0 is unresolved. A
+read-only handoff is the sole exception to the route question, not a fourth route.
 
 Judge semantic binding from the message's task meaning, not from a blacklist or an
 enumeration of tokens. Text that merely enables sending, acknowledges the Skill, or
@@ -97,17 +112,48 @@ documentation. Thus a compact answer after the Agent has just shown the three en
 routes can select that route; the same compact text attached to a fresh invocation
 cannot.
 
+## File Source Acquisition And Binding
+
+Apply this low-freedom gate immediately after S0 for `word_pdf` and
+`existing_ppt_html`. Do not apply it to `idea_only`. If the exact source is already
+eligible and accessible, bind it once and continue without requesting it again. If
+an explicit path cannot be resolved or accessed, report that exact-path problem and
+request a corrected path or upload; do not search its parent, siblings, the current
+working directory, or the wider workspace.
+
+Candidate discovery is disabled by default. It becomes available only when the user
+explicitly asks TaoHtml to find the source and identifies, or has already clearly
+placed in scope, a narrow directory. Discovery may inspect metadata needed to present
+exact candidate paths, but it must not open, extract, parse, summarize, or otherwise
+read candidate content. Show the exact path or paths and stop for confirmation. Only
+the confirmed candidate becomes `source_bound`; do not auto-bind even a single match.
+
+### Source Acquisition Decision Table
+
+| Case | route | source_status | discovery_authorization | allowed_actions | next_state | forbidden_actions |
+|---|---|---|---|---|---|---|
+| `idea_only_topic` | `idea_only` | `not_applicable` | `not_required` | `continue_startup` | `S0A` | `request_source,filesystem_search,source_read` |
+| `word_pdf_missing` | `word_pdf` | `missing` | `absent` | `request_source,stop` | `S0B` | `use_mode_question,length_question,audience_question,filesystem_search,candidate_discovery,source_read` |
+| `existing_ppt_html_missing` | `existing_ppt_html` | `missing` | `absent` | `request_source,stop` | `S0B` | `use_mode_question,length_question,audience_question,filesystem_search,candidate_discovery,source_read` |
+| `current_upload` | `file_route` | `accessible_current_upload` | `not_required` | `bind_exact_source,continue` | `S0A` | `request_source,candidate_discovery,broad_search` |
+| `explicit_path` | `file_route` | `resolvable_exact_path` | `not_required` | `bind_exact_path,continue` | `S0A` | `request_source,parent_search,sibling_search,broad_search` |
+| `task_instruction_source` | `file_route` | `accessible_task_bound_source` | `not_required` | `bind_exact_source,continue` | `S0A` | `request_source,candidate_discovery,broad_search` |
+| `authorized_directory_discovery` | `file_route` | `missing` | `explicit_narrow_directory` | `metadata_discovery,show_exact_paths,stop` | `S0B` | `content_read,extract,summarize,auto_bind,startup_questions` |
+| `confirmed_candidate` | `file_route` | `confirmed_candidate` | `explicit_narrow_directory` | `bind_confirmed_candidate,continue` | `S0A` | `read_unconfirmed_candidate,broaden_search` |
+| `workspace_or_history_residue` | `file_route` | `unbound_workspace_file` | `absent` | `request_source,stop` | `S0B` | `auto_bind,filesystem_search,candidate_discovery,source_read` |
+
 ## Source Binding
 
 Maintain a source ledger separate from the design and creative-supplement ledgers.
 A local or uploaded material is eligible only through one of these bindings:
 
-1. `current_upload_or_user_explicit`: the user uploads it now or explicitly names it
-   as material for this task;
-2. `task_instruction_explicit`: the current task instruction explicitly declares the
-   file or prepared input as this run's source; or
-3. `candidate_confirmed`: after the route exists, the Agent discovers a candidate,
-   states its exact path, and receives user confirmation to use it.
+1. `current_upload_or_user_explicit`: the user uploads it now and it is available in
+   this session, or provides one resolvable exact file path for this task;
+2. `task_instruction_explicit`: the current task instruction explicitly declares one
+   accessible file or prepared input as this run's source; or
+3. `candidate_confirmed`: after the user explicitly asks TaoHtml to find the source
+   in a narrow in-scope directory, the Agent presents an exact metadata-only
+   candidate path and receives confirmation to use it.
 
 An external network or connector source retrieved by the Agent uses
 `agent_retrieved_external` only when the current task authorizes browsing/evidence
@@ -116,26 +162,28 @@ inspection coverage, supported claim, and verification result. This is not a fou
 local-file binding: never apply it to a workspace candidate or use it to broaden
 filesystem discovery.
 
-Mere workspace presence, a conventional filename such as `input/prompt.md`, a
-directory convention, or residue from a previous task is never a binding. Do not
-silently promote such a file to `known`, even when its content looks relevant. Before
-route establishment, do not scan for candidates at all. After route establishment,
-candidate discovery is allowed only to present the path for confirmation; do not read
-or process its content before that confirmation.
+Mere workspace presence, the current working directory, a conventional filename such
+as `input/prompt.md`, a directory convention, or residue from a previous task is never
+a binding. Do not silently promote such a file to `known`, even when its content looks
+relevant. Before route establishment, do not scan for candidates at all. Route
+establishment alone still does not authorize discovery: a compact `2` or `3` is only
+a route selection. Without the user's explicit request to find a source, request an
+upload or resolvable exact path and stop.
 
 A read-only handoff whose content route remains unresolved may inspect only the
-task-scoped attachment or directory metadata that the user explicitly bound for the
-handoff audit, as defined in `project-handoff.md`. It may present an exact candidate
-for confirmation but still may not read candidate content or broaden the search.
+task-scoped attachment explicitly bound for the handoff audit, as defined in
+`project-handoff.md`. It may inspect directory metadata to present an exact candidate
+only after the user explicitly asks it to find that source; it still may not read
+candidate content or broaden the search.
 
-Candidate discovery must also stay inside task-scoped metadata or a location the
-user explicitly placed in scope. Do not recursively scan a home directory, Desktop,
-Downloads, platform cache, cloud-sync root, unrelated workspace, or other broad user
-location. A shell command that finds no match in one checked location is not evidence
-that the item was cleaned, deleted, or permanently lost. Apply the availability
-states in `project-handoff.md`; keep it `not_yet_verified` or
-`handoff_record_only` unless the user or an authoritative platform/source state
-confirms the exact item is missing.
+When explicitly authorized, candidate discovery must stay inside the narrow directory
+the user specified or clearly placed in scope and remain metadata-only. Do not
+recursively scan a home directory, Desktop, Downloads, platform cache, cloud-sync
+root, unrelated workspace, or other broad user location. A shell command that finds
+no match in one checked location is not evidence that the item was cleaned, deleted,
+or permanently lost. Apply the availability states in `project-handoff.md`; keep it
+`not_yet_verified` or `handoff_record_only` unless the user or an authoritative
+platform/source state confirms the exact item is missing.
 
 For every material actually used, record:
 
@@ -212,7 +260,7 @@ Preserve the three product choices:
 - **Use mode**: reading, where each page stands alone and content is visible by default; or presentation, where tighter copy follows a spoken staged sequence.
 - **Length**: concise, standard, or detailed.
 
-Resolve at most one missing startup choice per round and skip every choice already made. Complete the route handshake before asking use mode or length. If presentation mode is already known, do not ask the user to select the use mode again. Do not bundle route, use mode, and length into one prompt. For a message with a specific idea-only topic, the route is already known. When route and use mode are known but content length is missing, ask one question that offers **concise / standard / detailed**; do not infer a default length without explicit delegation, and do not replace these choices with duration or page-count options.
+Resolve at most one missing startup choice per round and skip every choice already made. Complete the route handshake and, for a file route, S0B source binding before asking use mode or length. If presentation mode is already known, do not ask the user to select the use mode again. Do not bundle route, use mode, and length into one prompt. For a message with a specific idea-only topic, the route is already known and S0B is not applicable. When route and use mode are known but content length is missing, ask one question that offers **concise / standard / detailed**; do not infer a default length without explicit delegation, and do not replace these choices with duration or page-count options.
 
 Estimate the page count dynamically from the actual material after the content length is selected, and record that estimate in the design brief. Never assign or present a fixed page range by length label alone.
 
@@ -251,7 +299,7 @@ Resolve the visual source only after content and chapter structure are clear eno
 Before asking, re-read the conversation, available source, ledger, prior attempts, and counters. Then:
 
 1. Remove gaps whose answers are already present or can be safely inferred.
-2. Resolve S0 first, then any missing startup choice according to `Startup Decisions`; after startup, rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
+2. Resolve S0 first, then S0B for a file route, then any missing startup choice according to `Startup Decisions`; after startup, rank the remaining gaps by how much they could change narrative, scope, conclusion, evidence, structure, or delivery.
 3. Ask only the largest current gap whose answer would change the report design.
 
 For continuation, classify the delta before ranking gaps. A clear
@@ -340,6 +388,7 @@ Treat a new build or meaning-changing continuation as design-ready when:
 - No unresolved conflict can reverse the main conclusion.
 - One chapter structure is selected or only one reasonable structure follows from the ledger.
 - Route and use mode are known or evident from the input, length is known or explicitly delegated, and required material delivery constraints are known or safely inferred; optional presentation duration may remain unspecified.
+- A Word/PDF or existing PPT/HTML route is `source_bound` before any source grounding or later startup/design work; `idea_only` remains unaffected.
 - Every material in use has an eligible `source_binding` and recorded binding reason; no workspace convention or residue is acting as an implicit source.
 - For handoff or meaning-changing continuation work, every bound item also has an explicit source role, availability status, evidence-verification status, inspection coverage, support scope, and limitation; secondary summaries and current artifacts are not treated as original evidence, while retrieved public/third-party evidence has its own external role and availability.
 - For a conversion objective, the exact real action path, its source, and its verification status are recorded; non-conversion reports do not need this field.

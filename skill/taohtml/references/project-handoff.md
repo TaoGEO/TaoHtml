@@ -143,12 +143,14 @@ explicitly bound by the current task instruction, or is an exact candidate path 
 user has confirmed. Keep `agent_retrieved_external` limited to external network or
 connector evidence; never use it to bypass confirmation for a local file.
 
-After the task route or handoff scope exists, candidate discovery may inspect only
-task-scoped metadata or directory locations the user has placed in scope. It may
-list a precise candidate path for confirmation, but it must not read that candidate
-first. Do not recursively scan a home directory, Desktop, Downloads, platform cache,
-cloud-sync root, unrelated workspaces, or other broad user locations in search of a
-presumed source.
+Candidate discovery is disabled by default. A selected route, workspace presence,
+handoff scope, or current working directory does not authorize it. Only when the user
+explicitly asks the Agent to find the source may discovery inspect metadata in a
+narrow directory the user specified or clearly placed in scope. It may list precise
+candidate paths for confirmation, but it must not read candidate content or auto-bind
+even a single match. Do not recursively scan a home directory, Desktop, Downloads,
+platform cache, cloud-sync root, unrelated workspaces, or other broad user locations
+in search of a presumed source.
 
 If a platform exposes an attachment or artifact that has not been retrieved, record
 `platform_visible_not_retrieved` and use the platform's supported retrieval path.

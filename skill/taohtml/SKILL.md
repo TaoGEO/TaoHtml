@@ -24,20 +24,29 @@ Start every new build or meaning-changing continuation that will create or revis
 HTML with a route handshake. A clear meaning-preserving local continuation applies
 the handoff overlay first and bypasses this handshake; it starts from the exact
 delivered artifact rather than reopening the content route. The current message may
-establish the route only when it contains a specific report topic or a source that is
-explicitly bound to this task. Low-information text attached only so a platform can
+establish the route when it contains a specific report topic, an explicit route
+selection, or a source that is explicitly bound to this task. A file-route selection
+without an eligible source establishes only `route_selected`. Low-information text attached only so a platform can
 send the Skill does not establish a route. Do not classify it with a list of forbidden
 words, and do not scan the workspace for a presumed input. A read-only handoff review
 applies the overlay below, records the route only when the bound evidence establishes
 it, and does not ask an entry-route question.
 
-If the current message already provides a specific topic or explicitly binds a source,
-record the matching route and ask only the next genuinely missing decision. Otherwise
-show exactly these three entry routes and stop after this one question:
+If the current message already provides a specific topic, explicitly selects a route,
+or binds a source, record the matching route and apply its next gate without asking
+for the route again. Otherwise show exactly these three entry routes and stop after
+this one question:
 
 1. **Idea only**: build the report definition from the conversation, then produce a brief only when it is design-ready.
-2. **Word / PDF**: extract and confirm the material before design. This is the fully specified reference route.
-3. **Existing PPT / HTML**: confirm whether to preserve the structure or reorganize it while keeping all core viewpoints.
+2. **Word / PDF**: upload the source or provide its complete resolvable path. TaoHtml does not search the local machine or begin material understanding before receiving it.
+3. **Existing PPT / HTML**: upload the source or provide its complete resolvable path. TaoHtml does not search the local machine or inspect the existing work before receiving it.
+
+For routes 2 and 3, `route_selected` never implies `source_bound`. If no eligible,
+accessible source is currently bound, ask only for an upload or a resolvable exact
+file path, then stop. Do not ask about use mode, length, audience, or any later
+decision; do not search for or read a file. Continue only after binding the source.
+Candidate discovery requires the user's explicit request to find a file and follows
+the narrow metadata-only confirmation boundary in `references/intake-workflow.md`.
 
 A short answer or ordinal selects an option only when it answers the Agent's most
 recent still-active option set in this conversation. The numbering above is
@@ -100,7 +109,7 @@ Steps 2-8 are the new-build or meaning-changing production path; a clear
 the Runtime boundary in step 9 and the exact-artifact QA/delivery work in step 10. It
 does not enter steps 2-8 or manufacture their confirmation artifacts.
 
-1. Read `references/project-handoff.md` when applicable and establish the task intent. For `review_only`, inspect only eligible bound items, report their roles, availability and limits, then stop without a route interview, brief, formal production, or HTML. For `continue_existing`, apply its Continuation Decision Matrix first. A clear `meaning_preserving_local` revision does not enter startup, intake, material-summary, or design-brief gates; preserve the exact delivered baseline and proceed only through the bounded revision plus applicable current QA/delivery checks. Otherwise establish or inherit the content route, then identify use mode and content length one decision at a time; skip every known choice. For presentation mode, treat a user-provided hard duration as a constraint, but never require duration to start. Record every used material's `source_binding`, role, availability status, evidence verification, inspection coverage, and binding reason; mere workspace presence never qualifies.
+1. Read `references/project-handoff.md` when applicable and establish the task intent. For `review_only`, inspect only eligible bound items, report their roles, availability and limits, then stop without a route interview, brief, formal production, or HTML. For `continue_existing`, apply its Continuation Decision Matrix first. A clear `meaning_preserving_local` revision does not enter startup, intake, material-summary, or design-brief gates; preserve the exact delivered baseline and proceed only through the bounded revision plus applicable current QA/delivery checks. Otherwise establish or inherit the content route. On Word/PDF or existing PPT/HTML routes, pass the source-acquisition/binding gate before identifying use mode, content length, or any other startup decision; when the source is unbound, request only an upload or resolvable exact path and stop. After the gate, identify use mode and content length one decision at a time and skip every known choice. For presentation mode, treat a user-provided hard duration as a constraint, but never require duration to start. Record every used material's `source_binding`, role, availability status, evidence verification, inspection coverage, and binding reason; mere workspace presence never qualifies.
 2. Read `references/environment-preflight.md` and run the smallest required profile before gated work. For a bound Word/PDF/PPT/HTML source, read `references/material-understanding.md`; run the `pdf` profile before opening or extracting a PDF, then inspect only eligible bound sources, show a Material Understanding Summary with source bindings and source-role/availability distinctions, and wait for confirmation or correction. For an idea-only input, do not invent a source-summary gate. For a `meaning_changing` continuation, summarize only the affected source delta and inherited limits; never promote a secondary handoff summary or current artifact to original evidence. Skip this step entirely for `meaning_preserving_local`.
 3. Read `references/intake-workflow.md`. Resolve the one primary Workflow Profile through the router above without reopening any known goal, then apply its design-ready additions without creating a new questionnaire. For a new build, resolve only the current largest missing decision that would change the report design. For a `meaning_changing` continuation, reuse still-supported decisions and ask only the single largest missing delta that would change the requested result; do not replay the full interview. A clear `meaning_preserving_local` continuation asks no intake questions. For an external conversion goal, distinguish the desired action from its verified real action path; do not impose this requirement on non-conversion reports. Complete ordinary missing scenes, numbers, viewpoints, and expression as creative supplements instead of extending intake. Stop according to the reference's readiness, repetition, information-gain, hard-boundary, and question-budget rules.
 4. When several report structures are genuinely reasonable, present 2-3 chapter-level options and let the user choose or delegate. Do not ask about structure when one option clearly follows from the confirmed goal and evidence.
@@ -134,9 +143,9 @@ Block only on the hard boundaries in `references/intake-workflow.md`: never inve
 
 ## Source And Meaning Protection
 
-- Use a local file only when it is a current upload or explicit user selection, the current task instruction explicitly declares it as input, or the Agent presents the discovered candidate path and the user confirms it. A conventional filename such as `input/prompt.md`, directory placement, or historical task residue is not a binding.
+- Use a local file only when it is a current accessible upload, a resolvable exact path the user provides, an accessible source explicitly bound by the current task instruction, or an exact candidate the user confirms after explicitly asking TaoHtml to find it in a narrow in-scope directory. A conventional filename such as `input/prompt.md`, current working directory placement, workspace presence, or historical task residue is not a binding.
 - For every material actually used, record its path, upload identity, or exact external locator; `source_binding`; source role; availability status; evidence-verification status; inspection coverage; and binding reason in the applicable source ledger and, when a brief is required, the Report Design Brief. Keep original customer material, external public evidence, secondary handoff summaries, current artifacts, visual references, Agent-generated material, and described-but-unavailable material distinct. Use `agent_retrieved_external | external_public_evidence | external_retrieved_inspected` only for current-task external retrieval with exact provenance; never use it for a local candidate. Do not read an unbound candidate merely to decide whether it is useful.
-- Discover candidates only inside task-scoped metadata or locations the user placed in scope. Never broadly scan user directories. A shell lookup that finds nothing does not prove that material was cleaned, deleted, or permanently lost.
+- Candidate discovery is disabled by default. A route number, workspace scope, or current working directory is not search authorization. Only after the user explicitly asks TaoHtml to find the file may it inspect metadata in a narrow directory the user specified or clearly placed in scope, show exact candidate paths, and wait for confirmation without reading content. Never broadly scan user directories. A shell lookup that finds nothing does not prove that material was cleaned, deleted, or permanently lost.
 - You may reorganize, compress, and improve expression, but preserve every confirmed core viewpoint.
 - Separate source facts from interpretation.
 - Keep creative supplements distinct from source facts without treating the supplements as automatic errors.

@@ -61,6 +61,7 @@ def contract_table(text: str, heading: str) -> dict[str, dict[str, str]]:
 class IntakeContractTests(unittest.TestCase):
     def test_fresh_placeholder_cannot_bind_stale_workspace_prompt(self) -> None:
         combined = SKILL + INTAKE
+        intake_flat = " ".join(INTAKE.split())
         self.assertIn(
             "Start every new build or meaning-changing continuation that will create or revise\nHTML with a route handshake",
             SKILL,
@@ -72,7 +73,7 @@ class IntakeContractTests(unittest.TestCase):
         )
         self.assertIn("do not scan the workspace for a presumed input", SKILL)
         self.assertIn("`input/prompt.md`", INTAKE)
-        self.assertIn("is never a binding", INTAKE)
+        self.assertIn("is never a binding", intake_flat)
         self.assertIn("do not scan for candidates at all", INTAKE)
         self.assertIn("show exactly one route choice", INTAKE)
         self.assertIn("Do not inspect the workspace", combined)
@@ -152,13 +153,16 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("agent_retrieved_external", PUBLIC_WORKFLOW)
 
     def test_handoff_candidate_discovery_stays_source_bound_and_narrow(self) -> None:
+        intake_flat = " ".join(INTAKE.split())
         self.assertIn(
             "Apply the existing local/upload source-binding rules without exception",
             HANDOFF,
         )
-        self.assertIn("must not read that candidate\nfirst", HANDOFF)
+        self.assertIn("Candidate discovery is disabled by default", HANDOFF)
+        self.assertIn("explicitly asks the Agent to find the source", HANDOFF)
+        self.assertIn("must not read candidate content or auto-bind", HANDOFF)
         self.assertIn("Do not recursively scan a home directory", HANDOFF)
-        self.assertIn("Do not recursively scan a home directory", INTAKE)
+        self.assertIn("Do not recursively scan a home directory", intake_flat)
         self.assertIn("does not prove that the material was\ncleaned", HANDOFF)
         self.assertIn("without converting it to `confirmed_missing`", HANDOFF)
 
@@ -245,6 +249,7 @@ class IntakeContractTests(unittest.TestCase):
         self.assertIn("cannot", INTAKE)
 
     def test_user_explicit_input_prompt_path_is_eligible_and_recorded(self) -> None:
+        intake_flat = " ".join(INTAKE.split())
         self.assertIn("current_upload_or_user_explicit", INTAKE)
         self.assertIn("task_instruction_explicit", INTAKE)
         self.assertIn("candidate_confirmed", INTAKE)
@@ -252,8 +257,9 @@ class IntakeContractTests(unittest.TestCase):
             "source identity/path | source_binding | source role | availability status",
             INTAKE,
         )
-        self.assertIn("conventional filename such as `input/prompt.md`", INTAKE)
-        self.assertIn("the user uploads it now or explicitly names it", INTAKE)
+        self.assertIn("conventional filename such as `input/prompt.md`", intake_flat)
+        self.assertIn("the user uploads it now and it is available", INTAKE)
+        self.assertIn("provides one resolvable exact file path", INTAKE)
         self.assertIn("source_binding", MATERIAL)
         self.assertIn("source_binding", BRIEF)
         self.assertIn("must never be relabeled as a creative supplement", INTAKE)
@@ -312,6 +318,125 @@ class IntakeContractTests(unittest.TestCase):
             INTAKE,
         )
         self.assertIn("Do not impose this gate on an idea-only input", INTAKE)
+
+    def test_file_source_gate_precedes_every_startup_or_read_action(self) -> None:
+        self.assertLess(
+            INTAKE.index("| S0 Route handshake |"),
+            INTAKE.index("| S0B File source acquisition/binding |"),
+        )
+        self.assertLess(
+            INTAKE.index("| S0B File source acquisition/binding |"),
+            INTAKE.index("| S0A Startup completion |"),
+        )
+        self.assertIn("`route_selected` and `source_bound` are independent facts", INTAKE)
+        self.assertIn("including with a compact `2` or `3`", INTAKE)
+
+    def test_word_pdf_without_source_only_requests_source_and_stops(self) -> None:
+        case = contract_table(INTAKE, "Source Acquisition Decision Table")[
+            "word_pdf_missing"
+        ]
+        self.assertEqual(case["allowed_actions"], "request_source,stop")
+        self.assertEqual(case["next_state"], "S0B")
+        self.assertEqual(
+            set(case["forbidden_actions"].split(",")),
+            {
+                "use_mode_question",
+                "length_question",
+                "audience_question",
+                "filesystem_search",
+                "candidate_discovery",
+                "source_read",
+            },
+        )
+
+    def test_existing_ppt_html_without_source_only_requests_source_and_stops(
+        self,
+    ) -> None:
+        case = contract_table(INTAKE, "Source Acquisition Decision Table")[
+            "existing_ppt_html_missing"
+        ]
+        self.assertEqual(case["allowed_actions"], "request_source,stop")
+        self.assertEqual(case["next_state"], "S0B")
+        self.assertIn("filesystem_search", case["forbidden_actions"].split(","))
+        self.assertIn("candidate_discovery", case["forbidden_actions"].split(","))
+        self.assertIn("source_read", case["forbidden_actions"].split(","))
+
+    def test_current_upload_binds_once_without_reasking(self) -> None:
+        case = contract_table(INTAKE, "Source Acquisition Decision Table")[
+            "current_upload"
+        ]
+        self.assertEqual(case["allowed_actions"], "bind_exact_source,continue")
+        self.assertEqual(case["next_state"], "S0A")
+        self.assertIn("request_source", case["forbidden_actions"].split(","))
+
+    def test_explicit_path_uses_only_that_path(self) -> None:
+        case = contract_table(INTAKE, "Source Acquisition Decision Table")[
+            "explicit_path"
+        ]
+        self.assertEqual(case["allowed_actions"], "bind_exact_path,continue")
+        self.assertEqual(case["next_state"], "S0A")
+        self.assertEqual(
+            set(case["forbidden_actions"].split(",")),
+            {"request_source", "parent_search", "sibling_search", "broad_search"},
+        )
+
+    def test_explicit_narrow_directory_search_is_metadata_only_until_confirmation(
+        self,
+    ) -> None:
+        cases = contract_table(INTAKE, "Source Acquisition Decision Table")
+        discovery = cases["authorized_directory_discovery"]
+        self.assertEqual(
+            discovery["discovery_authorization"], "explicit_narrow_directory"
+        )
+        self.assertEqual(
+            discovery["allowed_actions"], "metadata_discovery,show_exact_paths,stop"
+        )
+        for action in ("content_read", "extract", "summarize", "auto_bind"):
+            self.assertIn(action, discovery["forbidden_actions"].split(","))
+        self.assertEqual(discovery["next_state"], "S0B")
+
+        confirmed = cases["confirmed_candidate"]
+        self.assertEqual(
+            confirmed["allowed_actions"], "bind_confirmed_candidate,continue"
+        )
+        self.assertEqual(confirmed["next_state"], "S0A")
+
+    def test_workspace_and_history_files_never_auto_bind(self) -> None:
+        case = contract_table(INTAKE, "Source Acquisition Decision Table")[
+            "workspace_or_history_residue"
+        ]
+        self.assertEqual(case["allowed_actions"], "request_source,stop")
+        self.assertEqual(case["discovery_authorization"], "absent")
+        self.assertEqual(case["next_state"], "S0B")
+        self.assertIn("auto_bind", case["forbidden_actions"].split(","))
+        self.assertIn("filesystem_search", case["forbidden_actions"].split(","))
+
+    def test_task_instruction_source_can_bind_without_search(self) -> None:
+        case = contract_table(INTAKE, "Source Acquisition Decision Table")[
+            "task_instruction_source"
+        ]
+        self.assertEqual(case["allowed_actions"], "bind_exact_source,continue")
+        self.assertEqual(case["next_state"], "S0A")
+        self.assertIn("candidate_discovery", case["forbidden_actions"].split(","))
+
+    def test_idea_only_bypasses_file_source_acquisition_unchanged(self) -> None:
+        case = contract_table(INTAKE, "Source Acquisition Decision Table")[
+            "idea_only_topic"
+        ]
+        self.assertEqual(case["source_status"], "not_applicable")
+        self.assertEqual(case["allowed_actions"], "continue_startup")
+        self.assertEqual(case["next_state"], "S0A")
+        self.assertIn("Do not apply it to `idea_only`", INTAKE)
+
+    def test_public_entry_copy_exposes_upload_or_path_stop_gate(self) -> None:
+        self.assertIn("Word / PDF：选择后请上传源文件", PUBLIC_WORKFLOW)
+        self.assertIn("已有 PPT / HTML：选择后请上传现有文件", PUBLIC_WORKFLOW)
+        self.assertIn("“已选入口”不等于“已绑定来源”", PUBLIC_WORKFLOW)
+        self.assertIn(
+            "必须只请求上传文件或提供可解析的完整路径",
+            PUBLIC_WORKFLOW,
+        )
+        self.assertIn("候选发现默认禁止", PUBLIC_WORKFLOW)
 
     def test_ordinary_intake_targets_three_to_five_questions(self) -> None:
         self.assertIn("Treat **3-5 clarification questions** as the ordinary target", INTAKE)
