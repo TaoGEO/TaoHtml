@@ -26,12 +26,12 @@
 
 每行只允许以下四个独立结论：
 
-1. `contract_static`：输入/输出身份、文件清单与哈希、Direct HTML 边界、简报/授权当前文件绑定、Handoff 四层 readiness 和证据措辞。
-2. `blackbox_flow`：Profile 路由、已知选择复用、场景决策进入同一简报、简报确认与 Production Authorization 分离、证据状态以及共享门禁顺序。
-3. `html_browser_qa`：由控制端对当前 HTML 实际运行 `skill/taohtml/scripts/check_html_deck.py` 后记录；参与者自己的 PASS 不计入。
+1. `contract_static`：输入/输出身份、文件清单与哈希、Direct HTML 边界、设计简报的实际决策/事实依据/状态边界、现行 v1.3 `gates/production-state.json` 当前文件绑定、Handoff 四层 readiness 和证据措辞。
+2. `blackbox_flow`：只以控制端/平台保存的真实 turn trace 与三次现行 checker 记录为主证据，检查 Profile 路由、已知选择复用、简报真实确认、`formal-html` 前 HTML 不存在、后续 `browser-qa` / `deliver-formal-html` 复查以及共享门禁顺序。参与者 `profile-evidence.json` 只能补充，不能独立让本层 PASS。
+3. `html_browser_qa`：由控制端对当前 HTML 在 1366×768、1600×900、1920×1080 三个视口分别实际运行 `skill/taohtml/scripts/check_html_deck.py`；验收器从控制端根目录解析原始报告和截图，重算哈希并核对截图尺寸。参与者自己的 PASS 不计入。
 4. `human_visual_review`：真人基于浏览器截图和实际阅读/讲述/练习体验逐项判断。
 
-任一层 `FAIL`，该行即 `FAIL`；没有失败但浏览器或人工记录缺失时保持 `PENDING`；只有四层都为 `PASS` 时该行才为 `PASS`。矩阵还要求九个不同 scenario、九个不同 Profile 和九个不同 run_id 全部 PASS。参与者在 `submission.json` 中写的 `participant_claimed_status` 仅供审计，验收器永远不会用它提升结果。
+任一层 `FAIL`，该行即 `FAIL`；没有失败但真实 turn trace、任一次 checker 记录、任一浏览器视口或人工记录缺失时保持 `PENDING`；只有四层都为 `PASS` 时该行才为 `PASS`。矩阵还要求九个不同 scenario、九个不同 Profile 和九个不同 run_id 全部 PASS。参与者在 `submission.json` 中写的 `participant_claimed_status` 仅供审计，验收器永远不会用它提升结果。
 
 ## 生成一个无答案运行包
 
@@ -45,13 +45,31 @@
   --runs-root .artifacts/taohtml-cross-agent-v1/profile-release-runs
 ```
 
-只把输出的 `PARTICIPANT_ZIP` 交给全新、隔离的执行任务。`controller/receipt.json` 包含答案摘要和 HMAC 密钥，必须留在控制端。每个场景必须重新准备；不能复用 ZIP、run_id、nonce 或输出目录。
+只把输出的 `PARTICIPANT_ZIP` 交给全新、隔离的执行任务。participant `run.json` 只有不可推断 Profile 的不透明 `case_id`；语义化 scenario id、预期 Profile、关键判断、简报标签、required/forbidden claims、答案摘要和 HMAC 密钥只存在于 `controller/receipt.json` 与控制端矩阵。每个场景必须重新准备；不能复用 ZIP、run_id、nonce 或输出目录。
 
 对于 `community-program-story`，执行方按合同展示九项并提出一个业务目标问题后，控制者才如实回复：
 
 > 优先做成对外发布的项目故事；志愿者讲解只作为次要用途。
 
 不能把这句控制端答复提前写进参与者包。
+
+## 控制端会话与 Production Authorization 记录
+
+参与者先形成同一份完整 `design-brief.md` 与现行 v1.3 `gates/production-state.json`，由用户在真实会话中确认当前简报。每个 Profile 要求的场景决策必须在 `## 场景特有决策` 下使用三级标题，并分别提供非占位的“实际决策”“事实依据”“状态边界”；仅有标签或“已记录”会失败。控制端保存 `conversation-trace.json`，其观察项必须引用实际 assistant/user turn，不能由 participant 包中的自报问题、目录、回答或时间戳替代。
+
+正式 HTML 还不存在时，控制端运行：
+
+```bash
+/Users/taomir/Documents/SKILL空间/.venv/bin/python \
+  evals/taohtml-cross-agent-v1/scripts/record_profile_release_production_check.py \
+  --receipt .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/receipt.json \
+  --returned /absolute/path/to/live-returned-root \
+  --action formal-html
+```
+
+只有现行 checker 允许后，参与者才保存首个 `build/index.html`。HTML 生成后先执行 `--action browser-qa`，再运行三视口浏览器 QA；只有当前 HTML 的控制端浏览器记录 PASS 后，才能执行 `--action deliver-formal-html`，并在其后形成最终 Handoff/交付。三个记录固定保存到控制端 `production-checks/<action>.json`，并绑定同一份当前 production-state、当前设计简报和现行 checker；`formal-html` 记录还必须证明当时 `build/index.html` 不存在，后两次记录必须绑定当前 HTML SHA-256，交付记录还必须绑定当前浏览器记录。
+
+`production-authorization.json` 不是 TaoHtml 当前合同，也是本矩阵的显式禁用输出。自报 UTC 时间、`authorization_ref` 或目标 HTML 哈希不能证明时序，不能让 `blackbox_flow` PASS。
 
 ## 浏览器与人工记录
 
@@ -63,6 +81,7 @@
   --receipt .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/receipt.json \
   --returned /absolute/path/to/returned-root-or.zip \
   --output-dir .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/browser-qa \
+  --production-check .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/production-checks/browser-qa.json \
   --record .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/browser-review.json
 ```
 
@@ -70,17 +89,54 @@
 
 ```json
 {
-  "review_contract_version": "taohtml-profile-release-browser-review-1",
+  "review_contract_version": "taohtml-profile-release-browser-review-2",
   "scenario_id": "committee-record-closure",
   "run_id": "profile-...",
   "html_sha256": "当前 HTML 的 SHA-256",
   "status": "PASS",
   "tool": "taohtml-check-html-deck",
   "executed_at": "UTC 时间",
-  "process_exit_code": 0,
-  "qa_stdout_marker": "HTML_DECK_QA_OK",
-  "qa_report_sha256": "qa-report.json 的 SHA-256",
-  "screenshots_sha256": {"page-01.png": "SHA-256"}
+  "viewports": [
+    {
+      "viewport_id": "1366x768",
+      "width": 1366,
+      "height": 768,
+      "html_sha256": "当前 HTML 的 SHA-256",
+      "process_exit_code": 0,
+      "qa_stdout_marker": "HTML_DECK_QA_OK",
+      "report_path": "browser-qa/1366x768/qa-report.json",
+      "report_sha256": "实际报告 SHA-256",
+      "screenshots_sha256": {
+        "browser-qa/1366x768/page-01.png": "实际截图 SHA-256"
+      }
+    },
+    {
+      "viewport_id": "1600x900",
+      "width": 1600,
+      "height": 900,
+      "html_sha256": "当前 HTML 的 SHA-256",
+      "process_exit_code": 0,
+      "qa_stdout_marker": "HTML_DECK_QA_OK",
+      "report_path": "browser-qa/1600x900/qa-report.json",
+      "report_sha256": "实际报告 SHA-256",
+      "screenshots_sha256": {
+        "browser-qa/1600x900/page-01.png": "实际截图 SHA-256"
+      }
+    },
+    {
+      "viewport_id": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "html_sha256": "当前 HTML 的 SHA-256",
+      "process_exit_code": 0,
+      "qa_stdout_marker": "HTML_DECK_QA_OK",
+      "report_path": "browser-qa/1920x1080/qa-report.json",
+      "report_sha256": "实际报告 SHA-256",
+      "screenshots_sha256": {
+        "browser-qa/1920x1080/page-01.png": "实际截图 SHA-256"
+      }
+    }
+  ]
 }
 ```
 
@@ -111,6 +167,8 @@
   evals/taohtml-cross-agent-v1/scripts/evaluate_profile_release_result.py \
   --receipt .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/receipt.json \
   --returned /absolute/path/to/returned-root-or.zip \
+  --conversation-trace /absolute/path/to/controller/conversation-trace.json \
+  --production-checks /absolute/path/to/controller/production-checks \
   --browser-review /absolute/path/to/browser-review.json \
   --human-review /absolute/path/to/human-review.json \
   --output .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/result.json
@@ -133,4 +191,4 @@
 
 当前 Skill Hub 与插件打包脚本会复制整个 `skill/taohtml` 真源，因此会自动包含 Report IR 参考、Schema、Compiler 和 pilot orchestration 文件。文件在包内是事实，但不表示正式通用可用。当前 Compiler 仍不支持高级 Composition Graph、非单调状态 Runtime 和增量编译；九路径 PASS 也不能提升这些上限。发布说明不得声称这些文件“不在包内”，也不得把静态/schema/compile 能力写成已完成用户侧通用验收。
 
-控制端 HMAC 能证明结果没有被无密钥参与者或事后编辑者篡改，不能证明持有 receipt 的控制者真的执行了浏览器或真人验收。控制端文件访问、浏览器运行记录和 reviewer 责任仍是流程信任根。
+控制端 HMAC 能证明结果没有被无密钥参与者或事后编辑者篡改，不能证明持有 receipt 的控制者真的导出了真实会话、执行了浏览器或完成了真人验收。控制端 turn trace、checker 原始结果、三视口文件访问和 reviewer 责任仍是流程信任根；拿不到这些真实记录时应保留 `PENDING`，不得补写 PASS。

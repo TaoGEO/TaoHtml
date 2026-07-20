@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import secrets
 import subprocess
 import sys
@@ -62,13 +63,17 @@ def instructions(run_id: str, nonce: str, output_directory: str) -> str:
 
 本矩阵走 TaoHtml 默认 Direct HTML 路线。不要创建 Report IR、Compiler Manifest、normalized IR 或 source map；Profile 选择不构成 Report IR 工程授权。Report IR/Compiler 即使随安装包可见，在 v0.5.0 本矩阵中仍是 experimental/pilot-only。
 
-把场景特有决策写进同一份完整 Report Design Brief。完整简报确认与精确到当前 HTML 的 Production Authorization 必须是两个不同记录。授权后使用当前 Runtime 生成 HTML，并完成 Handoff。浏览器 QA 和人工视觉验收由控制端独立分层记录；参与者不得宣称这些控制端层已经 PASS。
+把 Profile 要求的场景特有决策写进同一份完整 Report Design Brief。每项决策使用三级 Markdown 小节，并分别写明非占位的“实际决策”“事实依据”“状态边界”；标签由所选 Profile 的现行定义决定，不要从测试包猜答案。完整简报确认只是用户确认，不是 Production Authorization。
+
+使用现行 `gates/production-state.json` v1.3 合同，并让 `design_brief` 绑定当前简报、确认引用和 checker 生成的 `design_decisions_sha256`。不得创建 `production-authorization.json`。保存第一个正式 `build/index.html` 前暂停，由控制端运行 `check_production_authorization.py --action formal-html` 并记录 HTML 尚不存在；生成后，在浏览器 QA 前再次暂停并由控制端运行 `--action browser-qa`。只有控制端三视口浏览器记录 PASS 后，才在 Handoff 交付前运行 `--action deliver-formal-html`。不要用参与者自报时间、引用或 gate sequence 代替这些控制端记录。
+
+控制端另行保存真实 conversation turn trace、三视口浏览器原始报告与截图、人工视觉验收；`profile-evidence.json` 只是参与者补充说明，不能证明实际提问、目录展示、用户答复或门禁顺序。参与者不得宣称任何控制端层已经 PASS。
 
 唯一输出目录为 `{output_directory}`。至少交付：
 
 {chr(10).join(f'- `{item}`' for item in REQUIRED_OUTPUTS)}
 
-`profile-evidence.json` 使用合同 `{EVIDENCE_CONTRACT_VERSION}`，记录：运行身份；路由模式、唯一 primary Profile、选择依据、是否展示目录和用户答复；问题的 `topic/text`；复用的五项已知选择；设计简报路径/哈希/确认引用/UTC 时间/场景决策；Production Authorization 路径/哈希/独立授权引用/UTC 时间/当前 HTML 路径与哈希；证据边界 id/status；以及 `direct_html`、`taohtml-runtime-1`、共享门禁顺序和 Handoff 路径/哈希。共享门禁顺序固定为：`profile_routing`、`design_brief_confirmation`、`production_authorization`、`direct_html`、`runtime_qa`、`browser_qa`、`handoff`。
+`profile-evidence.json` 使用合同 `{EVIDENCE_CONTRACT_VERSION}`，只记录：运行身份；所选 primary Profile 的三字段对象与非空选择依据；当前设计简报路径/哈希；证据边界 id/status；以及 `direct_html`、`taohtml-runtime-1` 和 Handoff 路径/哈希。不要把问题、目录展示、用户答复、确认时间或 checker 执行顺序自报成控制端证据。
 
 `submission.json` 使用下面的最小绑定；`artifacts` 必须列出输出目录内除 `submission.json` 自身外的每个文件及 SHA-256：
 
@@ -77,7 +82,7 @@ def instructions(run_id: str, nonce: str, output_directory: str) -> str:
   "submission_contract_version": "{SUBMISSION_CONTRACT_VERSION}",
   "run_id": "{run_id}",
   "nonce": "{nonce}",
-  "scenario_id": "与 run.json 一致",
+  "case_id": "与 run.json 一致的不透明 case id",
   "participant_claimed_status": "PASS | FAIL | PENDING（仅审计，控制端不会据此判 PASS）",
   "artifacts": {{"design-brief.md": "sha256", "...": "sha256"}}
 }}
@@ -99,6 +104,7 @@ def prepare(
     scenario = scenario_by_id(scenario_id)
     run_id = safe_identifier(run_id or generated_run_id(), "run_id")
     nonce = safe_nonce(nonce or secrets.token_hex(16))
+    case_id = "case-" + hashlib.sha256(f"{run_id}:{nonce}".encode()).hexdigest()[:20]
     created_at = created_at or utc_now()
     parse_utc(created_at, "created_at")
     if not isinstance(runner_label, str) or not runner_label.strip():
@@ -126,7 +132,7 @@ def prepare(
         "run_contract_version": RUN_CONTRACT_VERSION,
         "run_id": run_id,
         "nonce": nonce,
-        "scenario_id": scenario_id,
+        "case_id": case_id,
         "runner_label": runner_label,
         "created_at": created_at,
         "request": "request.md",
@@ -148,6 +154,7 @@ def prepare(
         "run_id": run_id,
         "nonce": nonce,
         "scenario_id": scenario_id,
+        "case_id": case_id,
         "runner_label": runner_label,
         "created_at": created_at,
         "output_directory": output_directory,

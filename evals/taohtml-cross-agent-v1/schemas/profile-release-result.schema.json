@@ -14,7 +14,7 @@
     "provenance"
   ],
   "properties": {
-    "result_contract_version": {"const": "taohtml-profile-release-result-1"},
+    "result_contract_version": {"const": "taohtml-profile-release-result-2"},
     "evaluated_at": {"type": "string", "minLength": 1},
     "run": {
       "type": "object",
@@ -82,6 +82,8 @@
         "participant_zip_sha256",
         "returned_artifact",
         "release_toolchain_sha256",
+        "conversation_trace_sha256",
+        "production_checks_sha256",
         "browser_review_sha256",
         "human_review_sha256",
         "result_hmac_sha256"
@@ -100,6 +102,12 @@
           }
         },
         "release_toolchain_sha256": {"$ref": "#/$defs/sha256"},
+        "conversation_trace_sha256": {
+          "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "production_checks_sha256": {
+          "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
         "browser_review_sha256": {
           "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
         },
@@ -119,6 +127,7 @@
         "status": {"enum": ["PASS", "FAIL", "PENDING"]},
         "issues": {"type": "array", "items": {"type": "string"}},
         "handoff_validator": {"type": ["object", "null"]},
+        "controller_evidence": {"type": ["object", "null"]},
         "review": {"type": ["object", "null"]}
       },
       "additionalProperties": false

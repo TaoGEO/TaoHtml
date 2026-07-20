@@ -17,6 +17,7 @@ from blackbox_contract import (
     file_hashes,
     load_json,
     parse_utc,
+    png_dimensions,
     resolve_regular_file,
     safe_identifier,
     safe_relative_path,
@@ -32,12 +33,15 @@ CONTROLLER_ROOT = EVAL_ROOT / "controller"
 MATRIX_PATH = CONTROLLER_ROOT / "profile-release-matrix.json"
 RESULT_SCHEMA_PATH = EVAL_ROOT / "schemas" / "profile-release-result.schema.json"
 
-RUN_CONTRACT_VERSION = "taohtml-profile-release-run-1"
-RECEIPT_VERSION = "taohtml-profile-release-receipt-1"
+RUN_CONTRACT_VERSION = "taohtml-profile-release-run-2"
+RECEIPT_VERSION = "taohtml-profile-release-receipt-2"
 SUBMISSION_CONTRACT_VERSION = "taohtml-profile-release-submission-1"
-EVIDENCE_CONTRACT_VERSION = "taohtml-profile-release-evidence-1"
-RESULT_CONTRACT_VERSION = "taohtml-profile-release-result-1"
-MATRIX_RESULT_CONTRACT_VERSION = "taohtml-profile-release-matrix-result-1"
+EVIDENCE_CONTRACT_VERSION = "taohtml-profile-release-evidence-2"
+TRACE_CONTRACT_VERSION = "taohtml-profile-release-controller-trace-1"
+PRODUCTION_CHECK_RECORD_VERSION = "taohtml-profile-release-production-check-1"
+BROWSER_REVIEW_CONTRACT_VERSION = "taohtml-profile-release-browser-review-2"
+RESULT_CONTRACT_VERSION = "taohtml-profile-release-result-2"
+MATRIX_RESULT_CONTRACT_VERSION = "taohtml-profile-release-matrix-result-2"
 
 PROFILE_IDS = (
     "formal-submission-writing",
@@ -70,18 +74,22 @@ KNOWN_CHOICE_KEYS = {
     "visual_binding",
     "motion_density",
 }
-SHARED_GATE_SEQUENCE = (
+TRACE_TIMELINE = (
     "profile_routing",
     "design_brief_confirmation",
-    "production_authorization",
+    "production_authorization_formal-html",
     "direct_html",
     "runtime_qa",
+    "production_authorization_browser-qa",
     "browser_qa",
+    "production_authorization_deliver-formal-html",
     "handoff",
 )
+PRODUCTION_ACTIONS = ("formal-html", "browser-qa", "deliver-formal-html")
+REQUIRED_VIEWPORTS = ((1366, 768), (1600, 900), (1920, 1080))
 REQUIRED_OUTPUTS = (
     "design-brief.md",
-    "production-authorization.json",
+    "gates/production-state.json",
     "build/index.html",
     "project-handoff.json",
     "handoff.md",
@@ -89,6 +97,7 @@ REQUIRED_OUTPUTS = (
     "submission.json",
 )
 FORBIDDEN_DIRECT_ROUTE_OUTPUTS = {
+    "production-authorization.json",
     "report-ir.json",
     "build/build-manifest.json",
     "build/source-map.json",
@@ -102,9 +111,22 @@ TOOLCHAIN_FILES = (
     "scripts/evaluate_profile_release_result.py",
     "scripts/prepare_profile_release_run.py",
     "scripts/profile_release_contract.py",
+    "scripts/record_profile_release_production_check.py",
     "scripts/run_profile_release_browser_qa.py",
 )
 SHA256 = re.compile(r"^[a-f0-9]{64}$")
+PLACEHOLDERS = {
+    "已记录",
+    "见正文",
+    "见上文",
+    "同上",
+    "待补充",
+    "待定",
+    "无",
+    "不适用",
+    "n/a",
+    "na",
+}
 
 
 def _require_exact_keys(value: object, keys: set[str], label: str) -> dict[str, Any]:
@@ -130,7 +152,7 @@ def load_release_matrix() -> dict[str, Any]:
         },
         "release matrix",
     )
-    if matrix["matrix_contract_version"] != "taohtml-profile-release-matrix-1":
+    if matrix["matrix_contract_version"] != "taohtml-profile-release-matrix-2":
         raise ContractError("release matrix contract version drifted")
     if matrix["release_target"] != "v0.5.0-candidate":
         raise ContractError("release target drifted")
@@ -145,7 +167,6 @@ def load_release_matrix() -> dict[str, Any]:
         "human_visual_review",
     ]:
         raise ContractError("release acceptance layers drifted")
-
     scenarios = matrix["scenarios"]
     if not isinstance(scenarios, list) or len(scenarios) != 9:
         raise ContractError("release matrix must contain exactly nine scenarios")
@@ -157,10 +178,8 @@ def load_release_matrix() -> dict[str, Any]:
         scenario_ids.append(scenario["scenario_id"])
         profile_ids.append(scenario["primary_profile"]["profile_id"])
         request_refs.append(scenario["request_ref"])
-    if len(set(scenario_ids)) != 9:
-        raise ContractError("release scenario ids must be unique")
-    if len(set(request_refs)) != 9:
-        raise ContractError("release request fixtures must be unique")
+    if len(set(scenario_ids)) != 9 or len(set(request_refs)) != 9:
+        raise ContractError("release scenario ids and request fixtures must be unique")
     if tuple(profile_ids) != PROFILE_IDS:
         raise ContractError("release matrix must cover each stable Profile exactly once")
     if sum(item["routing"]["mode"] == "ambiguous" for item in scenarios) != 1:
@@ -179,6 +198,7 @@ def _validate_scenario(scenario: object) -> None:
             "audit",
             "known_choices",
             "required_brief_decisions",
+            "brief_content_checks",
             "evidence_expectations",
             "human_review_dimensions",
             "leakage_markers",
@@ -194,8 +214,7 @@ def _validate_scenario(scenario: object) -> None:
     )
     if profile["profile_id"] not in PROFILE_IDS or profile["definition_version"] != "2.0":
         raise ContractError("scenario primary Profile identity is invalid")
-    expected_name = PROFILE_NAMES[PROFILE_IDS.index(profile["profile_id"])]
-    if profile["customer_facing_name"] != expected_name:
+    if profile["customer_facing_name"] != PROFILE_NAMES[PROFILE_IDS.index(profile["profile_id"])]:
         raise ContractError("scenario customer-facing Profile name drifted")
     routing = _require_exact_keys(
         value["routing"],
@@ -208,7 +227,7 @@ def _validate_scenario(scenario: object) -> None:
         raise ContractError("clear routing cannot carry a controller answer")
     if routing["mode"] == "ambiguous" and not routing["expected_user_answer"]:
         raise ContractError("ambiguous routing requires a controller-held user answer")
-    _require_exact_keys(
+    audit = _require_exact_keys(
         value["audit"],
         {
             "customer_goal",
@@ -220,17 +239,7 @@ def _validate_scenario(scenario: object) -> None:
         },
         "scenario audit",
     )
-    if any(
-        not value["audit"].get(field)
-        for field in (
-            "customer_goal",
-            "critical_judgment",
-            "design_ready_increment",
-            "evidence_boundary",
-            "delivery_status",
-            "qa_focus",
-        )
-    ):
+    if any(not audit.get(field) for field in audit):
         raise ContractError("scenario audit contains an empty dimension")
     if set(value["known_choices"]) != KNOWN_CHOICE_KEYS:
         raise ContractError("known-choice coverage drifted")
@@ -246,8 +255,13 @@ def _validate_scenario(scenario: object) -> None:
             raise ContractError(f"{field} must be a non-empty array")
     if len(set(value["required_brief_decisions"])) != len(value["required_brief_decisions"]):
         raise ContractError("required brief decisions must be unique")
-    if len(set(value["human_review_dimensions"])) != len(value["human_review_dimensions"]):
-        raise ContractError("human review dimensions must be unique")
+    content_checks = _require_exact_keys(
+        value["brief_content_checks"], {"fact_markers", "status_markers"},
+        "brief content checks",
+    )
+    for field in ("fact_markers", "status_markers"):
+        if not isinstance(content_checks[field], list) or not content_checks[field]:
+            raise ContractError(f"brief content {field} must be a non-empty array")
     for expectation in value["evidence_expectations"]:
         _require_exact_keys(
             expectation,
@@ -256,10 +270,8 @@ def _validate_scenario(scenario: object) -> None:
         )
         if not expectation["boundary_id"] or not expectation["required_status"]:
             raise ContractError("evidence expectation identity/status is empty")
-        if not isinstance(expectation["required_terms"], list) or not expectation["required_terms"]:
-            raise ContractError("evidence expectation requires public boundary wording")
-        if not isinstance(expectation["forbidden_terms"], list) or not expectation["forbidden_terms"]:
-            raise ContractError("evidence expectation requires forbidden overclaim wording")
+        if not expectation["required_terms"] or not expectation["forbidden_terms"]:
+            raise ContractError("evidence expectation wording is incomplete")
 
 
 def scenario_by_id(scenario_id: str) -> dict[str, Any]:
@@ -278,9 +290,7 @@ def scenario_request_path(scenario: dict[str, Any]) -> Path:
 
 def release_toolchain_hashes() -> dict[str, str]:
     return {
-        relative: sha256_file(
-            resolve_regular_file(EVAL_ROOT, relative, "release toolchain file")
-        )
+        relative: sha256_file(resolve_regular_file(EVAL_ROOT, relative, "release toolchain file"))
         for relative in TOOLCHAIN_FILES
     }
 
@@ -295,12 +305,27 @@ def answer_sha256(scenario: dict[str, Any]) -> str:
 
 def answer_leakage_markers(scenario: dict[str, Any]) -> set[str]:
     profile = scenario["primary_profile"]
-    markers = {
+    routing = scenario["routing"]
+    audit = scenario["audit"]
+    markers: set[str] = {
+        scenario["scenario_id"],
         profile["profile_id"],
         profile["customer_facing_name"],
+        routing["selection_basis"],
         *scenario["leakage_markers"],
         *scenario["required_brief_decisions"],
+        audit["critical_judgment"],
+        audit["evidence_boundary"],
+        audit["delivery_status"],
+        *audit["design_ready_increment"],
+        *audit["qa_focus"],
     }
+    if routing["expected_user_answer"]:
+        markers.add(routing["expected_user_answer"])
+    for expectation in scenario["evidence_expectations"]:
+        markers.add(expectation["required_status"])
+        markers.update(expectation["required_terms"])
+        markers.update(expectation["forbidden_terms"])
     return {marker.casefold() for marker in markers if marker}
 
 
@@ -313,7 +338,7 @@ def assert_answer_free_package(root: Path, scenario: dict[str, Any]) -> None:
         if not path.is_file():
             continue
         relative = path.relative_to(root)
-        if any(Path(component).stem.casefold() in forbidden_components for component in relative.parts):
+        if any(Path(part).stem.casefold() in forbidden_components for part in relative.parts):
             raise ContractError(f"controller-only filename leaked into package: {relative}")
         text = path.read_bytes().decode("utf-8", errors="ignore").casefold()
         leaked = sorted(marker for marker in markers if marker in text)
@@ -339,14 +364,14 @@ def validate_submission(
     *,
     run_id: str,
     nonce: str,
-    scenario_id: str,
+    case_id: str,
 ) -> list[str]:
     issues: list[str] = []
     expected_keys = {
         "submission_contract_version",
         "run_id",
         "nonce",
-        "scenario_id",
+        "case_id",
         "participant_claimed_status",
         "artifacts",
     }
@@ -356,7 +381,7 @@ def validate_submission(
         "submission_contract_version": SUBMISSION_CONTRACT_VERSION,
         "run_id": run_id,
         "nonce": nonce,
-        "scenario_id": scenario_id,
+        "case_id": case_id,
     }
     for key, expected in expected_identity.items():
         if submission.get(key) != expected:
@@ -365,16 +390,14 @@ def validate_submission(
         issues.append("participant_claimed_status is invalid")
     artifacts = submission.get("artifacts")
     if not isinstance(artifacts, dict):
-        issues.append("submission artifacts must be an object")
-        return issues
+        return [*issues, "submission artifacts must be an object"]
     actual_paths = {
         path.relative_to(output_root).as_posix()
         for path in output_root.rglob("*")
         if path.is_file() and path.name != "submission.json"
     }
     if set(artifacts) != actual_paths:
-        issues.append("submission artifact inventory is incomplete or contains extras")
-        return issues
+        return [*issues, "submission artifact inventory is incomplete or contains extras"]
     for relative, expected_hash in artifacts.items():
         try:
             path = resolve_regular_file(output_root, relative, "submission artifact")
@@ -388,159 +411,405 @@ def validate_submission(
     return issues
 
 
-def evaluate_blackbox_flow(
-    evidence: dict[str, Any],
-    scenario: dict[str, Any],
-    *,
-    brief_text: str,
-) -> list[str]:
-    issues: list[str] = []
-    routing = evidence.get("routing")
-    if not isinstance(routing, dict):
-        return ["routing evidence must be an object"]
-    expected_profile = scenario["primary_profile"]
-    for key in ("profile_id", "customer_facing_name", "definition_version"):
-        if routing.get(key) != expected_profile[key]:
-            issues.append(f"primary Profile {key} mismatch")
-    if routing.get("mode") != scenario["routing"]["mode"]:
-        issues.append("routing mode mismatch")
-    if not isinstance(routing.get("selection_basis"), str) or not routing["selection_basis"].strip():
-        issues.append("semantic selection basis is missing")
+def _meaningful(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    normalized = value.strip().strip("。；;：:").casefold()
+    return len(normalized) >= 6 and normalized not in PLACEHOLDERS
 
-    questions = evidence.get("questions")
-    if not isinstance(questions, list):
-        issues.append("questions must be an array")
-        questions = []
-    question_topics: list[str] = []
-    for question in questions:
-        if not isinstance(question, dict) or set(question) != {"topic", "text"}:
-            issues.append("question evidence fields drifted")
-            continue
-        topic = question.get("topic")
-        if not isinstance(topic, str) or not isinstance(question.get("text"), str):
-            issues.append("question topic/text is invalid")
-            continue
-        question_topics.append(topic)
-    repeated = sorted(KNOWN_CHOICE_KEYS.intersection(question_topics))
-    if repeated:
-        issues.append(f"known choices were asked again: {repeated}")
-    if len(question_topics) != len(set(question_topics)):
-        issues.append("a question topic was repeated")
 
-    catalog = routing.get("catalog_shown")
-    user_answer = routing.get("user_answer")
-    if scenario["routing"]["mode"] == "clear":
-        if catalog not in (None, []):
-            issues.append("clear routing displayed the Profile catalog")
-        if "business_goal" in question_topics:
-            issues.append("clear routing asked an unnecessary business-goal question")
-        if user_answer is not None:
-            issues.append("clear routing fabricated an ambiguity answer")
-    else:
-        if catalog != list(PROFILE_NAMES):
-            issues.append("ambiguous routing did not display the complete nine-name catalog")
-        if question_topics.count("business_goal") != 1:
-            issues.append("ambiguous routing must ask exactly one business-goal question")
-        if user_answer != scenario["routing"]["expected_user_answer"]:
-            issues.append("ambiguous routing answer does not match the controller-held reply")
-
-    if evidence.get("known_choices_reused") != scenario["known_choices"]:
-        issues.append("known entrance/mode/length/visual/motion choices were not reused exactly")
-
-    brief = evidence.get("design_brief")
-    if not isinstance(brief, dict):
-        issues.append("design brief evidence must be an object")
-    else:
-        decisions = brief.get("scenario_decisions")
-        if decisions != scenario["required_brief_decisions"]:
-            issues.append("scenario-specific decisions are incomplete, reordered, or duplicated")
-        if "## 场景特有决策" not in brief_text:
-            issues.append("the one Report Design Brief lacks 场景特有决策")
-        for label in scenario["required_brief_decisions"]:
-            if label not in brief_text:
-                issues.append(f"Report Design Brief is missing scenario decision: {label}")
-        expected_profile = scenario["primary_profile"]
-        for value, label in (
-            (expected_profile["profile_id"], "stable Profile id"),
-            (expected_profile["customer_facing_name"], "customer-facing Profile name"),
-            (expected_profile["definition_version"], "Profile definition version"),
-        ):
-            if value not in brief_text:
-                issues.append(f"Report Design Brief is missing {label}")
-
-    authorization = evidence.get("production_authorization")
-    if not isinstance(authorization, dict) or not isinstance(brief, dict):
-        issues.append("brief/Production Authorization separation cannot be verified")
-    else:
-        brief_ref = brief.get("confirmation_ref")
-        auth_ref = authorization.get("authorization_ref")
-        if not brief_ref or not auth_ref or brief_ref == auth_ref:
-            issues.append("brief confirmation and Production Authorization are not independent")
-        try:
-            brief_time = parse_utc(brief.get("confirmed_at"), "brief confirmed_at")
-            authorization_time = parse_utc(
-                authorization.get("authorized_at"), "Production Authorization authorized_at"
+def parse_brief_decisions(brief_text: str) -> dict[str, dict[str, str]]:
+    decisions: dict[str, dict[str, str]] = {}
+    section_match = re.search(
+        r"^##\s+场景特有决策\s*$([\s\S]*?)(?=^##\s+|\Z)",
+        brief_text,
+        flags=re.MULTILINE,
+    )
+    if not section_match:
+        return decisions
+    section = section_match.group(1)
+    blocks = list(re.finditer(r"^###\s+(.+?)\s*$", section, flags=re.MULTILINE))
+    for index, match in enumerate(blocks):
+        label = match.group(1).strip().strip("`")
+        end = blocks[index + 1].start() if index + 1 < len(blocks) else len(section)
+        body = section[match.end():end]
+        fields: dict[str, str] = {}
+        for field in ("实际决策", "事实依据", "状态边界"):
+            found = re.search(
+                rf"^-\s*{field}\s*[：:]\s*(.+?)\s*$",
+                body,
+                flags=re.MULTILINE,
             )
-            if brief_time >= authorization_time:
-                issues.append("Production Authorization does not follow brief confirmation")
-        except ContractError as exc:
-            issues.append(str(exc))
+            if found:
+                fields[field] = found.group(1).strip()
+        decisions[label] = fields
+    return decisions
 
-    boundaries = evidence.get("evidence_boundaries")
-    if not isinstance(boundaries, list):
-        issues.append("evidence boundaries must be an array")
-    else:
-        if any(
-            not isinstance(item, dict) or set(item) != {"boundary_id", "status"}
-            for item in boundaries
-        ):
-            issues.append("evidence boundary fields drifted")
-        boundary_ids = [
-            item.get("boundary_id") for item in boundaries if isinstance(item, dict)
-        ]
-        if len(boundary_ids) != len(set(boundary_ids)):
-            issues.append("an evidence boundary was duplicated")
-        actual = {
-            item.get("boundary_id"): item.get("status")
-            for item in boundaries
-            if isinstance(item, dict)
-        }
-        expected = {
-            item["boundary_id"]: item["required_status"]
-            for item in scenario["evidence_expectations"]
-        }
-        if actual != expected:
-            issues.append("Profile evidence boundary status is incomplete or overstated")
 
-    production = evidence.get("production")
-    if not isinstance(production, dict):
-        issues.append("production evidence must be an object")
-    else:
-        if production.get("route") != "direct_html":
-            issues.append("release scenario bypassed the Direct HTML default")
-        if production.get("runtime_contract") != "taohtml-runtime-1":
-            issues.append("release scenario did not preserve the current Runtime contract")
-        if production.get("gate_sequence") != list(SHARED_GATE_SEQUENCE):
-            issues.append("shared Profile/brief/authorization/Runtime/browser/Handoff gates were bypassed")
+def validate_brief_decisions(brief_text: str, scenario: dict[str, Any]) -> list[str]:
+    issues: list[str] = []
+    decisions = parse_brief_decisions(brief_text)
+    expected_labels = scenario["required_brief_decisions"]
+    if list(decisions) != expected_labels:
+        issues.append("scenario-specific brief decisions are missing, reordered, or duplicated")
+    fact_markers = scenario["brief_content_checks"]["fact_markers"]
+    status_markers = scenario["brief_content_checks"]["status_markers"]
+    for label in expected_labels:
+        fields = decisions.get(label, {})
+        for field in ("实际决策", "事实依据", "状态边界"):
+            if not _meaningful(fields.get(field)):
+                issues.append(f"Report Design Brief {label}/{field} is empty or placeholder-only")
+        fact_text = fields.get("事实依据", "")
+        status_text = fields.get("状态边界", "")
+        if fact_text and not any(marker in fact_text for marker in fact_markers):
+            issues.append(f"Report Design Brief {label} is not linked to a scenario fact")
+        if status_text and not any(marker in status_text for marker in status_markers):
+            issues.append(f"Report Design Brief {label} is not linked to an auditable status boundary")
+    profile = scenario["primary_profile"]
+    for value, label in (
+        (profile["profile_id"], "stable Profile id"),
+        (profile["customer_facing_name"], "customer-facing Profile name"),
+        (profile["definition_version"], "Profile definition version"),
+    ):
+        if value not in brief_text:
+            issues.append(f"Report Design Brief is missing {label}")
     return issues
 
 
-def layer_status(issues: Iterable[str]) -> str:
-    return "FAIL" if list(issues) else "PASS"
+def validate_participant_evidence(
+    evidence: dict[str, Any],
+    scenario: dict[str, Any],
+    *,
+    run_id: str,
+    nonce: str,
+    case_id: str,
+    brief_sha256: str,
+    handoff_sha256: str,
+) -> list[str]:
+    issues: list[str] = []
+    expected_keys = {
+        "evidence_contract_version",
+        "run_id",
+        "nonce",
+        "case_id",
+        "selected_profile",
+        "selection_basis",
+        "design_brief",
+        "evidence_boundaries",
+        "production",
+    }
+    if not isinstance(evidence, dict) or set(evidence) != expected_keys:
+        return ["profile-evidence fields drifted"]
+    for key, expected in {
+        "evidence_contract_version": EVIDENCE_CONTRACT_VERSION,
+        "run_id": run_id,
+        "nonce": nonce,
+        "case_id": case_id,
+    }.items():
+        if evidence.get(key) != expected:
+            issues.append(f"profile-evidence {key} mismatch")
+    if evidence.get("selected_profile") != scenario["primary_profile"]:
+        issues.append("participant-reported primary Profile mismatch")
+    if not _meaningful(evidence.get("selection_basis")):
+        issues.append("participant selection basis is missing")
+    brief = evidence.get("design_brief")
+    if not isinstance(brief, dict) or set(brief) != {"path", "sha256"}:
+        issues.append("participant design brief evidence fields drifted")
+    elif brief != {"path": "design-brief.md", "sha256": brief_sha256}:
+        issues.append("participant design brief evidence is not current")
+    boundaries = evidence.get("evidence_boundaries")
+    expected_boundaries = [
+        {"boundary_id": item["boundary_id"], "status": item["required_status"]}
+        for item in scenario["evidence_expectations"]
+    ]
+    if boundaries != expected_boundaries:
+        issues.append("participant evidence boundary status is incomplete or overstated")
+    production = evidence.get("production")
+    expected_production = {
+        "route": "direct_html",
+        "runtime_contract": "taohtml-runtime-1",
+        "handoff_path": "project-handoff.json",
+        "handoff_sha256": handoff_sha256,
+    }
+    if production != expected_production:
+        issues.append("participant production evidence does not match Direct HTML/Runtime/Handoff")
+    return issues
 
 
-def overall_status(layers: dict[str, dict[str, Any]]) -> str:
-    statuses = [layers[name]["status"] for name in (
-        "contract_static",
-        "blackbox_flow",
-        "html_browser_qa",
-        "human_visual_review",
-    )]
-    if "FAIL" in statuses:
-        return "FAIL"
-    if "PENDING" in statuses:
-        return "PENDING"
-    return "PASS"
+def _trace_turn_map(trace: dict[str, Any], issues: list[str]) -> tuple[dict[str, dict[str, str]], dict[str, int]]:
+    turns = trace.get("turns")
+    if not isinstance(turns, list) or not turns:
+        issues.append("controller trace turns are missing")
+        return {}, {}
+    result: dict[str, dict[str, str]] = {}
+    indexes: dict[str, int] = {}
+    for index, turn in enumerate(turns):
+        if not isinstance(turn, dict) or set(turn) != {"turn_id", "role", "text"}:
+            issues.append("controller trace turn fields drifted")
+            continue
+        turn_id = turn.get("turn_id")
+        if not isinstance(turn_id, str) or not turn_id or turn_id in result:
+            issues.append("controller trace turn ids are empty or duplicated")
+            continue
+        if turn.get("role") not in {"user", "assistant"} or not _meaningful(turn.get("text")):
+            issues.append(f"controller trace turn is not auditable: {turn_id}")
+        result[turn_id] = turn
+        indexes[turn_id] = index
+    return result, indexes
+
+
+def validate_controller_trace(
+    trace: dict[str, Any],
+    scenario: dict[str, Any],
+    *,
+    run_id: str,
+    brief_sha256: str,
+) -> list[str]:
+    issues: list[str] = []
+    expected_keys = {
+        "trace_contract_version",
+        "run_id",
+        "scenario_id",
+        "source",
+        "turns",
+        "observations",
+        "timeline",
+    }
+    if not isinstance(trace, dict) or set(trace) != expected_keys:
+        return ["controller trace fields drifted"]
+    if trace.get("trace_contract_version") != TRACE_CONTRACT_VERSION:
+        issues.append("controller trace contract version mismatch")
+    if trace.get("run_id") != run_id or trace.get("scenario_id") != scenario["scenario_id"]:
+        issues.append("controller trace run/scenario mismatch")
+    source = trace.get("source")
+    if (
+        not isinstance(source, dict)
+        or set(source) != {"kind", "locator"}
+        or source.get("kind") not in {"platform_turn_export", "controller_captured_trace"}
+        or not _meaningful(source.get("locator"))
+    ):
+        issues.append("controller trace source is not auditable")
+    turns, indexes = _trace_turn_map(trace, issues)
+    observations = trace.get("observations")
+    if not isinstance(observations, dict) or set(observations) != {
+        "routing", "questions", "known_choices_reused", "design_brief_confirmation"
+    }:
+        return [*issues, "controller trace observations fields drifted"]
+    routing = observations.get("routing")
+    routing_keys = {
+        "mode",
+        "profile_id",
+        "customer_facing_name",
+        "definition_version",
+        "selection_basis",
+        "selection_turn_id",
+        "catalog_turn_id",
+        "user_answer_turn_id",
+    }
+    if not isinstance(routing, dict) or set(routing) != routing_keys:
+        issues.append("controller routing observation fields drifted")
+        routing = {}
+    profile = scenario["primary_profile"]
+    for key in ("profile_id", "customer_facing_name", "definition_version"):
+        if routing.get(key) != profile[key]:
+            issues.append(f"controller-observed primary Profile {key} mismatch")
+    if routing.get("mode") != scenario["routing"]["mode"]:
+        issues.append("controller-observed routing mode mismatch")
+    if not _meaningful(routing.get("selection_basis")):
+        issues.append("controller-observed semantic selection basis is missing")
+    selection_turn = turns.get(routing.get("selection_turn_id"))
+    if (
+        not selection_turn
+        or selection_turn.get("role") != "assistant"
+        or profile["customer_facing_name"] not in selection_turn.get("text", "")
+    ):
+        issues.append("selected Profile is not present in the referenced assistant turn")
+
+    questions = observations.get("questions")
+    if not isinstance(questions, list):
+        issues.append("controller-observed questions must be an array")
+        questions = []
+    topics: list[str] = []
+    for question in questions:
+        if not isinstance(question, dict) or set(question) != {"turn_id", "topic"}:
+            issues.append("controller-observed question fields drifted")
+            continue
+        turn = turns.get(question.get("turn_id"))
+        if (
+            not turn
+            or turn.get("role") != "assistant"
+            or not turn.get("text", "").rstrip().endswith(("?", "？"))
+        ):
+            issues.append("controller-observed question does not reference an actual assistant question")
+        topics.append(question.get("topic"))
+    repeated = sorted(KNOWN_CHOICE_KEYS.intersection(item for item in topics if isinstance(item, str)))
+    if repeated:
+        issues.append(f"known choices were asked again: {repeated}")
+    if len(topics) != len(set(topics)):
+        issues.append("a controller-observed question topic was repeated")
+    if scenario["routing"]["mode"] == "clear":
+        if questions:
+            issues.append("clear routing asked an unnecessary question")
+        if routing.get("catalog_turn_id") is not None or routing.get("user_answer_turn_id") is not None:
+            issues.append("clear routing fabricated catalog or ambiguity-answer turns")
+    else:
+        if topics != ["business_goal"]:
+            issues.append("ambiguous routing must ask exactly one business-goal question")
+        catalog_turn = turns.get(routing.get("catalog_turn_id"))
+        if (
+            not catalog_turn
+            or catalog_turn.get("role") != "assistant"
+            or any(name not in catalog_turn.get("text", "") for name in PROFILE_NAMES)
+        ):
+            issues.append("ambiguous routing did not show all nine Profiles in the referenced turn")
+        answer_turn = turns.get(routing.get("user_answer_turn_id"))
+        expected_answer = scenario["routing"]["expected_user_answer"]
+        if (
+            not answer_turn
+            or answer_turn.get("role") != "user"
+            or expected_answer not in answer_turn.get("text", "")
+        ):
+            issues.append("ambiguous routing lacks the controller-held user answer turn")
+    if observations.get("known_choices_reused") != scenario["known_choices"]:
+        issues.append("controller trace does not prove exact reuse of the five known choices")
+
+    confirmation = observations.get("design_brief_confirmation")
+    if not isinstance(confirmation, dict) or set(confirmation) != {
+        "presented_turn_id", "confirmation_turn_id", "artifact_path", "artifact_sha256"
+    }:
+        issues.append("design brief confirmation observation fields drifted")
+        confirmation = {}
+    presented = turns.get(confirmation.get("presented_turn_id"))
+    confirmed = turns.get(confirmation.get("confirmation_turn_id"))
+    if not presented or presented.get("role") != "assistant":
+        issues.append("design brief was not presented in an actual assistant turn")
+    if not confirmed or confirmed.get("role") != "user":
+        issues.append("design brief lacks an actual user confirmation turn")
+    if confirmation.get("artifact_path") != "design-brief.md" or confirmation.get("artifact_sha256") != brief_sha256:
+        issues.append("design brief confirmation is not bound to the current brief")
+    if presented and confirmed and indexes[presented["turn_id"]] >= indexes[confirmed["turn_id"]]:
+        issues.append("design brief confirmation precedes its presentation")
+
+    timeline = trace.get("timeline")
+    if not isinstance(timeline, list) or len(timeline) != len(TRACE_TIMELINE):
+        issues.append("controller trace shared-gate timeline is incomplete")
+        timeline = []
+    else:
+        if [item.get("event") for item in timeline if isinstance(item, dict)] != list(TRACE_TIMELINE):
+            issues.append("controller trace shared-gate timeline is reordered or bypassed")
+        expected_records = {
+            "production_authorization_formal-html": "production-checks/formal-html.json",
+            "production_authorization_browser-qa": "production-checks/browser-qa.json",
+            "browser_qa": "browser-review.json",
+            "production_authorization_deliver-formal-html": "production-checks/deliver-formal-html.json",
+        }
+        for item in timeline:
+            if not isinstance(item, dict) or set(item) != {"event", "turn_id", "record_path"}:
+                issues.append("controller trace timeline event fields drifted")
+                continue
+            event = item.get("event")
+            if event in expected_records:
+                if item.get("turn_id") is not None or item.get("record_path") != expected_records[event]:
+                    issues.append(f"controller trace {event} does not reference its controller record")
+            else:
+                turn = turns.get(item.get("turn_id"))
+                if not turn or item.get("record_path") is not None:
+                    issues.append(f"controller trace {event} does not reference an actual turn")
+        timeline_turns = [
+            indexes[item["turn_id"]]
+            for item in timeline
+            if isinstance(item, dict) and item.get("turn_id") in indexes
+        ]
+        if timeline_turns != sorted(timeline_turns) or len(timeline_turns) != 5:
+            issues.append("controller trace message gates are not in actual turn order")
+        if timeline and confirmation:
+            if timeline[0].get("turn_id") != routing.get("selection_turn_id"):
+                issues.append("timeline Profile routing does not match the routing observation")
+            if timeline[1].get("turn_id") != confirmation.get("confirmation_turn_id"):
+                issues.append("timeline brief confirmation does not match the confirmed turn")
+    return issues
+
+
+def _browser_review_issues(
+    review: dict[str, Any],
+    *,
+    review_root: Path | None,
+) -> list[str]:
+    issues: list[str] = []
+    if review_root is None:
+        return ["browser review root is missing"]
+    viewports = review.get("viewports")
+    if not isinstance(viewports, list):
+        return ["browser review viewports must be an array"]
+    observed = [
+        (item.get("width"), item.get("height"))
+        for item in viewports
+        if isinstance(item, dict)
+    ]
+    if observed != list(REQUIRED_VIEWPORTS):
+        issues.append("browser review must contain exactly the three required viewports")
+    for item in viewports:
+        expected_keys = {
+            "viewport_id",
+            "width",
+            "height",
+            "html_sha256",
+            "process_exit_code",
+            "qa_stdout_marker",
+            "report_path",
+            "report_sha256",
+            "screenshots_sha256",
+        }
+        if not isinstance(item, dict) or set(item) != expected_keys:
+            issues.append("browser viewport record fields drifted")
+            continue
+        width, height = item.get("width"), item.get("height")
+        viewport_id = f"{width}x{height}"
+        if item.get("viewport_id") != viewport_id:
+            issues.append(f"browser viewport id mismatch: {viewport_id}")
+        if item.get("html_sha256") != review.get("html_sha256"):
+            issues.append(f"browser viewport is not bound to the reviewed HTML: {viewport_id}")
+        if item.get("process_exit_code") != 0 or item.get("qa_stdout_marker") != "HTML_DECK_QA_OK":
+            issues.append(f"browser QA did not pass at {viewport_id}")
+        try:
+            report = resolve_regular_file(review_root, item.get("report_path"), "browser QA report")
+        except (ContractError, TypeError) as exc:
+            issues.append(str(exc))
+            continue
+        if item.get("report_sha256") != sha256_file(report):
+            issues.append(f"browser QA report hash mismatch at {viewport_id}")
+        try:
+            report_json = load_json(report)
+        except (ContractError, OSError, json.JSONDecodeError) as exc:
+            issues.append(f"browser QA report is invalid at {viewport_id}: {exc}")
+        else:
+            if report_json.get("viewport") != {"width": width, "height": height}:
+                issues.append(f"browser QA report viewport mismatch at {viewport_id}")
+            if not isinstance(report_json.get("url"), str) or not report_json["url"].endswith("/build/index.html"):
+                issues.append(f"browser QA report does not reference build/index.html at {viewport_id}")
+            if not isinstance(report_json.get("pages"), list) or not report_json["pages"]:
+                issues.append(f"browser QA report has no inspected pages at {viewport_id}")
+        screenshots = item.get("screenshots_sha256")
+        if not isinstance(screenshots, dict) or not screenshots:
+            issues.append(f"browser QA screenshots are missing at {viewport_id}")
+            continue
+        for relative, digest in screenshots.items():
+            try:
+                screenshot = resolve_regular_file(review_root, relative, "browser QA screenshot")
+            except (ContractError, TypeError) as exc:
+                issues.append(str(exc))
+                continue
+            if not isinstance(digest, str) or not SHA256.fullmatch(digest) or sha256_file(screenshot) != digest:
+                issues.append(f"browser QA screenshot hash mismatch at {viewport_id}: {relative}")
+                continue
+            try:
+                dimensions = png_dimensions(screenshot)
+            except (ContractError, OSError) as exc:
+                issues.append(f"browser QA screenshot is invalid at {viewport_id}: {exc}")
+            else:
+                if dimensions != (width, height):
+                    issues.append(f"browser QA screenshot dimensions mismatch at {viewport_id}: {relative}")
+    return issues
 
 
 def validate_external_review(
@@ -550,52 +819,44 @@ def validate_external_review(
     scenario: dict[str, Any],
     run_id: str,
     html_sha256: str,
+    review_root: Path | None = None,
 ) -> tuple[str, list[str], dict[str, Any] | None]:
     if review is None:
         return "PENDING", [f"{kind} result is missing"], None
     issues: list[str] = []
     expected_contract = (
-        "taohtml-profile-release-browser-review-1"
+        BROWSER_REVIEW_CONTRACT_VERSION
         if kind == "browser"
         else "taohtml-profile-release-human-review-1"
     )
     if review.get("review_contract_version") != expected_contract:
         issues.append(f"{kind} review contract version mismatch")
-    if review.get("scenario_id") != scenario["scenario_id"]:
-        issues.append(f"{kind} review scenario mismatch")
-    if review.get("run_id") != run_id:
-        issues.append(f"{kind} review run mismatch")
+    if review.get("scenario_id") != scenario["scenario_id"] or review.get("run_id") != run_id:
+        issues.append(f"{kind} review run/scenario mismatch")
     if review.get("html_sha256") != html_sha256:
         issues.append(f"{kind} review is not bound to the current HTML")
     if review.get("status") not in {"PASS", "FAIL"}:
         issues.append(f"{kind} review status must be PASS or FAIL")
     if kind == "browser":
+        expected_keys = {
+            "review_contract_version",
+            "scenario_id",
+            "run_id",
+            "html_sha256",
+            "status",
+            "tool",
+            "executed_at",
+            "viewports",
+        }
+        if set(review) != expected_keys:
+            issues.append("browser review fields drifted")
         if review.get("tool") != "taohtml-check-html-deck":
             issues.append("browser review tool identity mismatch")
-        if review.get("process_exit_code") != 0:
-            issues.append("browser QA process did not exit successfully")
-        if review.get("qa_stdout_marker") != "HTML_DECK_QA_OK":
-            issues.append("browser QA success marker is missing")
         try:
             parse_utc(review.get("executed_at"), "browser review executed_at")
         except ContractError as exc:
             issues.append(str(exc))
-        report_sha = review.get("qa_report_sha256")
-        screenshots = review.get("screenshots_sha256")
-        if not isinstance(report_sha, str) or not SHA256.fullmatch(report_sha):
-            issues.append("browser review QA report hash is invalid")
-        if (
-            not isinstance(screenshots, dict)
-            or not screenshots
-            or any(
-                not isinstance(path, str)
-                or not path
-                or not isinstance(digest, str)
-                or not SHA256.fullmatch(digest)
-                for path, digest in screenshots.items()
-            )
-        ):
-            issues.append("browser review lacks QA report or screenshot hashes")
+        issues.extend(_browser_review_issues(review, review_root=review_root))
     else:
         if not isinstance(review.get("reviewer"), str) or not review["reviewer"].strip():
             issues.append("human reviewer identity is missing")
@@ -619,6 +880,27 @@ def validate_external_review(
             issues.append(f"{kind} reviewer reported FAIL")
         return "FAIL", issues, review
     return "PASS", [], review
+
+
+def layer_status(issues: Iterable[str]) -> str:
+    return "FAIL" if list(issues) else "PASS"
+
+
+def overall_status(layers: dict[str, dict[str, Any]]) -> str:
+    statuses = [
+        layers[name]["status"]
+        for name in (
+            "contract_static",
+            "blackbox_flow",
+            "html_browser_qa",
+            "human_visual_review",
+        )
+    ]
+    if "FAIL" in statuses:
+        return "FAIL"
+    if "PENDING" in statuses:
+        return "PENDING"
+    return "PASS"
 
 
 def result_hmac_payload(result: dict[str, Any]) -> bytes:

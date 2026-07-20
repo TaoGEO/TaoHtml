@@ -92,4 +92,4 @@ HMAC 的信任边界是控制端目录：它能证明结果未被参与者或验
 
 控制端 full 矩阵固定为九条 Golden Path × Codex/WorkBuddy，共 18 行。该跨平台 full 矩阵仍只声明矩阵和门禁，不提供 18 个 full fixtures，也不执行任何跨平台运行；`evaluate_matrix.py` 不会把缺失结果、WorkBuddy 结果或人工结论补成通过。
 
-v0.5.0 另有一套每条 Profile 一次、平台中立、Direct HTML 默认的九路径轻量发布验收，见 `PROFILE_RELEASE_ACCEPTANCE.md`。它提供九个无答案 fixture 与四层 fail-closed 验收入口，但不自动开启或替代这里的 18 行跨平台 full 矩阵，也不把 Report IR/Compiler 从 experimental/pilot 提升为正式通用能力。
+v0.5.0 另有一套每条 Profile 一次、平台中立、Direct HTML 默认的九路径轻量发布验收，见 `PROFILE_RELEASE_ACCEPTANCE.md`。它提供九个无答案 fixture 与四层 fail-closed 验收入口；黑盒流程只接受控制端/平台真实 turn trace 与现行 `production-state.json` checker 的三动作记录，浏览器层只接受控制端三视口原始报告和截图。participant 自报、哈希形状或缺失记录均不能补成 PASS。该矩阵不自动开启或替代这里的 18 行跨平台 full 矩阵，也不把 Report IR/Compiler 从 experimental/pilot 提升为正式通用能力。

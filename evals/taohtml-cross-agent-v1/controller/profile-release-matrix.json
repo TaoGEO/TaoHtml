@@ -1,5 +1,5 @@
 {
-  "matrix_contract_version": "taohtml-profile-release-matrix-1",
+  "matrix_contract_version": "taohtml-profile-release-matrix-2",
   "release_target": "v0.5.0-candidate",
   "status": "DEFINED_PENDING_REAL_RUNS",
   "expected_run_count": 9,
@@ -81,6 +81,10 @@
         "责任与签批边界",
         "关键缺口与风险"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["委员会", "夜间开放", "风险清单", "下月", "签批"],
+        "status_markers": ["已知", "一致同意", "未说明", "待确认", "未授权"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "signoff-authority",
@@ -144,6 +148,10 @@
         "目标结论强度",
         "关键局限/缺口"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["两天", "现场观察", "使用者反馈", "对照组", "规则变更"],
+        "status_markers": ["已观察", "缺少", "暂定", "不能确认", "待验证"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "causal-strength",
@@ -206,6 +214,10 @@
         "关键差异/驱动",
         "决策/行动/owner"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["78%", "74%", "新建工单", "期末", "账号开通"],
+        "status_markers": ["实际", "建议", "尚未决定", "不可比较", "待修订"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "metric-comparability",
@@ -270,6 +282,10 @@
         "推荐依据",
         "风险与失效条件"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["群聊", "统一表单", "两个团队", "上线成本", "可逆性"],
+        "status_markers": ["现状", "选项", "建议", "未表决", "假设"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "approval-state",
@@ -335,6 +351,10 @@
         "动效/口播意图",
         "最终行动"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["7 分钟", "负责人", "升级", "虚构情境", "两个小组"],
+        "status_markers": ["已知", "没有统计", "示意", "尚未实施", "待决定"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "trial-outcome",
@@ -398,6 +418,10 @@
         "练习/回顾与反馈方式",
         "完成/评价边界"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["25 分钟", "新同事", "三条", "两个假设案例", "第一条响应"],
+        "status_markers": ["练习", "假设", "没有标准", "没有数据", "不代表认证"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "mastery-claim",
@@ -463,6 +487,10 @@
         "所需决策、行动与 owner",
         "验收/收尾条件、未结义务"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["家具", "网络", "周五", "机房权限", "消防复核", "会议室设备"],
+        "status_markers": ["已完成", "未验收", "预测", "依赖", "未批准"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "completion-acceptance",
@@ -528,6 +556,10 @@
         "公开/内部使用边界、分发限制",
         "关键缺口、风险与交付边界"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["社区维修", "公众", "志愿者", "口头反馈", "现场照片", "300 人"],
+        "status_markers": ["目标未定", "未确认", "未找到记录", "不可公开", "待核实"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "publication-rights",
@@ -591,6 +623,10 @@
         "格式/截止/答辩约束",
         "缺口/冲突与提交风险"
       ],
+      "brief_content_checks": {
+        "fact_markers": ["法人资格", "两年", "预算表", "本周五", "在线系统", "10 分钟"],
+        "status_markers": ["必须", "缺少", "未知", "不可提交", "待确认"]
+      },
       "evidence_expectations": [
         {
           "boundary_id": "submit-readiness",
