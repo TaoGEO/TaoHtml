@@ -45,6 +45,7 @@ Keep these hooks when generating or redesigning a deck:
 - `.fragment.visible`: a step already revealed in presentation mode.
 - `data-taohtml-step-contract="fragment-v1"`: the current single controlled-presentation-step contract. QA normalizes `.fragment` plus `data-step` into per-page `data-taohtml-step` values through this named contract. A future equivalent state-node system must declare a new contract and update Runtime and QA together; it must not bypass the zero-step gate with an unrelated selector.
 - `data-step-index` on each slide: current numeric presentation state, available to page-specific CSS.
+- `data-taohtml-interactive`: mark a custom chart, attachment viewer, or other interactive subtree whose clicks must remain local instead of advancing the report.
 - `#pageIndicator`: current page and total pages.
 - `#prev` / `#next`: whole-page navigation controls.
 - `#modeToggle`: reading/presentation switch.
@@ -59,9 +60,10 @@ Page-specific design may add classes and data attributes, but must not remove th
 ### Presentation mode
 
 - `ArrowRight`, Space, or a blank-page click advances one fragment; after the last fragment, it moves to the next page.
-- `ArrowLeft` reverses one fragment; at the initial state, it moves to the previous page. The first page safely remains at the first page.
+- `ArrowLeft` reverses exactly one fragment. At the initial state it is a no-op and must never perform whole-page navigation.
 - `PageDown` moves to the next page immediately without completing remaining fragments.
 - `PageUp` moves to the previous page immediately.
+- `#prev` and `#next` always move by one whole page.
 - Returning to a page restores its prior fragment stage.
 
 ### Reading mode
@@ -70,7 +72,7 @@ Page-specific design may add classes and data attributes, but must not remove th
 - `ArrowRight`, `ArrowLeft`, Space, `PageDown`, `PageUp`, blank-page click, and navigation buttons move by whole page.
 - Switching from reading to presentation resets the current page to its first presentation state.
 
-Buttons, links, inputs, and open modals must consume their own events rather than advancing the page.
+Only an unconsumed primary-button click on report whitespace is a blank-page click. Links, buttons, attachments, source viewers, forms and their controls, editable content, dialogs, menus, media, embedded documents, SVG/canvas charts, semantic interactive roles, and `[data-taohtml-interactive]` subtrees consume their own clicks rather than advancing the report. An open modal blocks report navigation regardless of its clicked descendant.
 
 ### Edit mode
 
@@ -81,10 +83,12 @@ Buttons, links, inputs, and open modals must consume their own events rather tha
 
 ### Controls and fullscreen
 
-- Opening the more menu keeps controls visible and suspends the auto-hide timer.
-- Entering or exiting fullscreen closes the more menu, sets its toggle to `aria-expanded="false"`, and restarts the auto-hide timer after `fullscreenchange`.
-- Pointer movement reveals the controls again. Fullscreen and non-fullscreen states must not retain a stale menu overlay.
-- Edit mode keeps controls visible; leaving it rearms the ordinary auto-hide timer.
+- The auto-hide policy applies while presentation mode is fullscreen. `#prev`, `#next`, and the top-right more control are hidden immediately on entry; `#pageIndicator` remains visible. Outside this state, controls remain visible.
+- Only a trusted `mousemove` that represents actual pointer movement may reveal hidden controls. The Runtime must ignore browser-generated pointer-coordinate relayout events during a short post-entry fullscreen stabilization window before accepting mouse movement. Keyboard or presenter-remote keys, blank-page clicks, `pointerdown`, `fullscreenchange`, mode changes, and Runtime navigation calls must not reveal or flash them.
+- After mouse movement reveals the controls, about two seconds of pointer inactivity hides them again.
+- Opening the more menu, entering edit mode, or actively interacting with the controls keeps them visible and suspends hiding. Closing the menu, leaving edit mode, or ending control interaction rearms the two-second hide timer when the auto-hide policy still applies.
+- Entering or exiting fullscreen closes the more menu and sets its toggle to `aria-expanded="false"`. Fullscreen changes synchronize the correct hidden or visible state without treating the event as pointer activity.
+- If an implementation hides the cursor with the controls, the same trusted `mousemove` must restore it. Cursor hiding is optional.
 
 ## Public API
 
@@ -126,10 +130,12 @@ Before delivery, verify:
 - Step and whole-page keys have different behavior.
 - Elements that share `data-step` change together.
 - Whole-page jumps work before all fragments are revealed.
-- `ArrowLeft` returns to the previous page from stage 0 while preserving that page's prior stage; the first page does not underflow.
+- `ArrowLeft` at stage 0 leaves both page index and all stored stages unchanged; `PageUp` remains the explicit previous-page input.
 - Returning to a page restores its stage.
 - Hash routes and page numbers match the active page.
-- Controls and fullscreen actions do not advance the report; fullscreen closes the more menu and controls auto-hide again after idle time.
+- Links, attachments, charts/interactive regions, forms, editable content, dialogs, menus, and media do not advance steps or pages.
+- Controls and fullscreen actions do not advance the report. Presentation fullscreen remains hidden after the post-entry stabilization window; keyboard, blank-click, `pointerdown`, browser coordinate relayout, and `fullscreenchange` do not reveal controls; the first real mouse movement after stabilization does; idle time hides them again; menus, edit mode, and active control interaction pin them visible; the page number stays visible throughout.
+- Direct HTML, Report IR Compiler output, and all built-in visual systems retain the same bundled Runtime script and behavior; themes may style controls but must not fork navigation or visibility state.
 - Edit mode pauses keyboard/blank-click/reveal advance, keeps page buttons usable, locks system UI, and restores the pre-edit Runtime state on exit.
 - Text, image replacement, and crop focus share Ctrl/Cmd undo and redo; refresh recovery and export/reopen pass `content-editor.md`.
 - Asset, console, and visible-bound checks pass at the target viewport.
