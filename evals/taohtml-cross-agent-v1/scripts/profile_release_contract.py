@@ -255,13 +255,44 @@ def _validate_scenario(scenario: object) -> None:
             raise ContractError(f"{field} must be a non-empty array")
     if len(set(value["required_brief_decisions"])) != len(value["required_brief_decisions"]):
         raise ContractError("required brief decisions must be unique")
-    content_checks = _require_exact_keys(
-        value["brief_content_checks"], {"fact_markers", "status_markers"},
-        "brief content checks",
-    )
-    for field in ("fact_markers", "status_markers"):
-        if not isinstance(content_checks[field], list) or not content_checks[field]:
-            raise ContractError(f"brief content {field} must be a non-empty array")
+    content_checks = value["brief_content_checks"]
+    if not isinstance(content_checks, list) or not content_checks:
+        raise ContractError("brief content checks must be a non-empty array")
+    check_labels: list[str] = []
+    check_signatures: list[tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]] = []
+    for content_check in content_checks:
+        check = _require_exact_keys(
+            content_check,
+            {"label", "decision_any_of", "fact_any_of", "status_any_of"},
+            "brief content check",
+        )
+        if not isinstance(check["label"], str) or not check["label"]:
+            raise ContractError("brief content check label must be a non-empty string")
+        check_labels.append(check["label"])
+        for field in ("decision_any_of", "fact_any_of", "status_any_of"):
+            terms = check[field]
+            if (
+                not isinstance(terms, list)
+                or not terms
+                or any(not isinstance(term, str) or not term for term in terms)
+                or len(terms) != len(set(terms))
+            ):
+                raise ContractError(
+                    f"brief content check {check['label']}/{field} must contain unique non-empty terms"
+                )
+        check_signatures.append(
+            (
+                tuple(check["decision_any_of"]),
+                tuple(check["fact_any_of"]),
+                tuple(check["status_any_of"]),
+            )
+        )
+    if check_labels != value["required_brief_decisions"]:
+        raise ContractError(
+            "brief content checks must bind every required brief decision once and in order"
+        )
+    if len(check_signatures) != len(set(check_signatures)):
+        raise ContractError("brief content checks cannot reuse one rule set across decisions")
     for expectation in value["evidence_expectations"]:
         _require_exact_keys(
             expectation,
@@ -452,19 +483,32 @@ def validate_brief_decisions(brief_text: str, scenario: dict[str, Any]) -> list[
     expected_labels = scenario["required_brief_decisions"]
     if list(decisions) != expected_labels:
         issues.append("scenario-specific brief decisions are missing, reordered, or duplicated")
-    fact_markers = scenario["brief_content_checks"]["fact_markers"]
-    status_markers = scenario["brief_content_checks"]["status_markers"]
+    checks_by_label = {
+        item["label"]: item for item in scenario["brief_content_checks"]
+    }
+    field_rules = (
+        ("实际决策", "decision_any_of", "a decision semantic"),
+        ("事实依据", "fact_any_of", "its related scenario fact"),
+        ("状态边界", "status_any_of", "its related status boundary"),
+    )
     for label in expected_labels:
         fields = decisions.get(label, {})
+        check = checks_by_label[label]
         for field in ("实际决策", "事实依据", "状态边界"):
             if not _meaningful(fields.get(field)):
                 issues.append(f"Report Design Brief {label}/{field} is empty or placeholder-only")
-        fact_text = fields.get("事实依据", "")
-        status_text = fields.get("状态边界", "")
-        if fact_text and not any(marker in fact_text for marker in fact_markers):
-            issues.append(f"Report Design Brief {label} is not linked to a scenario fact")
-        if status_text and not any(marker in status_text for marker in status_markers):
-            issues.append(f"Report Design Brief {label} is not linked to an auditable status boundary")
+        for field, rule, description in field_rules:
+            text = fields.get(field, "")
+            if text and not any(term in text for term in check[rule]):
+                issues.append(
+                    f"Report Design Brief {label}/{field} is not linked to {description}"
+                )
+    for field in ("实际决策", "事实依据", "状态边界"):
+        contents = [decisions.get(label, {}).get(field, "") for label in expected_labels]
+        if len(contents) > 1 and all(contents) and len(set(contents)) == 1:
+            issues.append(
+                f"Report Design Brief reuses identical {field} content across every decision"
+            )
     profile = scenario["primary_profile"]
     for value, label in (
         (profile["profile_id"], "stable Profile id"),
@@ -630,18 +674,30 @@ def validate_controller_trace(
         issues.append("controller-observed questions must be an array")
         questions = []
     topics: list[str] = []
+    observed_question_turn_ids: list[object] = []
     for question in questions:
         if not isinstance(question, dict) or set(question) != {"turn_id", "topic"}:
             issues.append("controller-observed question fields drifted")
             continue
+        observed_question_turn_ids.append(question.get("turn_id"))
         turn = turns.get(question.get("turn_id"))
         if (
             not turn
             or turn.get("role") != "assistant"
-            or not turn.get("text", "").rstrip().endswith(("?", "？"))
+            or not any(mark in turn.get("text", "") for mark in ("?", "？"))
         ):
             issues.append("controller-observed question does not reference an actual assistant question")
         topics.append(question.get("topic"))
+    actual_question_turn_ids = [
+        turn_id
+        for turn_id, turn in turns.items()
+        if turn.get("role") == "assistant"
+        and any(mark in turn.get("text", "") for mark in ("?", "？"))
+    ]
+    if observed_question_turn_ids != actual_question_turn_ids:
+        issues.append(
+            "controller-observed questions must reference every actual assistant question exactly once and in turn order"
+        )
     repeated = sorted(KNOWN_CHOICE_KEYS.intersection(item for item in topics if isinstance(item, str)))
     if repeated:
         issues.append(f"known choices were asked again: {repeated}")
@@ -778,6 +834,8 @@ def _browser_review_issues(
             continue
         if item.get("report_sha256") != sha256_file(report):
             issues.append(f"browser QA report hash mismatch at {viewport_id}")
+        report_json: dict[str, Any] | None = None
+        report_pages: list[Any] = []
         try:
             report_json = load_json(report)
         except (ContractError, OSError, json.JSONDecodeError) as exc:
@@ -789,10 +847,51 @@ def _browser_review_issues(
                 issues.append(f"browser QA report does not reference build/index.html at {viewport_id}")
             if not isinstance(report_json.get("pages"), list) or not report_json["pages"]:
                 issues.append(f"browser QA report has no inspected pages at {viewport_id}")
+            else:
+                report_pages = report_json["pages"]
         screenshots = item.get("screenshots_sha256")
         if not isinstance(screenshots, dict) or not screenshots:
             issues.append(f"browser QA screenshots are missing at {viewport_id}")
             continue
+        page_numbers = [
+            page.get("page") if isinstance(page, dict) else None
+            for page in report_pages
+        ]
+        expected_page_numbers = list(range(1, len(report_pages) + 1))
+        if page_numbers != expected_page_numbers:
+            issues.append(
+                f"browser QA report pages must be unique and contiguous from 1 at {viewport_id}"
+            )
+        report_parent = Path(item["report_path"]).parent
+        expected_screenshots = {
+            (report_parent / f"page-{page_number:02d}.png").as_posix()
+            for page_number in expected_page_numbers
+        }
+        report_screenshots: set[str] = set()
+        for page, page_number in zip(report_pages, expected_page_numbers):
+            screenshot_value = page.get("screenshot") if isinstance(page, dict) else None
+            if (
+                not isinstance(screenshot_value, str)
+                or Path(screenshot_value).name != f"page-{page_number:02d}.png"
+            ):
+                issues.append(
+                    f"browser QA report page screenshot binding mismatch at {viewport_id}: page {page_number}"
+                )
+                continue
+            try:
+                report_screenshot = Path(screenshot_value).resolve().relative_to(
+                    review_root.resolve()
+                )
+            except (OSError, ValueError):
+                issues.append(
+                    f"browser QA report page screenshot escapes the controller root at {viewport_id}: page {page_number}"
+                )
+            else:
+                report_screenshots.add(report_screenshot.as_posix())
+        if set(screenshots) != expected_screenshots or set(screenshots) != report_screenshots:
+            issues.append(
+                f"browser QA screenshot set does not exactly cover report pages at {viewport_id}"
+            )
         for relative, digest in screenshots.items():
             try:
                 screenshot = resolve_regular_file(review_root, relative, "browser QA screenshot")

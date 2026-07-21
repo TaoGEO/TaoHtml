@@ -74,8 +74,6 @@ def png_bytes(width: int, height: int) -> bytes:
 def brief_text(scenario: dict[str, object], *, placeholder: bool = False) -> str:
     profile = scenario["primary_profile"]
     checks = scenario["brief_content_checks"]
-    fact_markers = checks["fact_markers"]
-    status_markers = checks["status_markers"]
     lines = [
         "# Report Design Brief",
         "",
@@ -87,10 +85,12 @@ def brief_text(scenario: dict[str, object], *, placeholder: bool = False) -> str
         "## 场景特有决策",
         "",
     ]
-    for index, label in enumerate(scenario["required_brief_decisions"]):
-        fact = fact_markers[index % len(fact_markers)]
-        status = status_markers[index % len(status_markers)]
-        value = "已记录" if placeholder else f"采用与{fact}相符的可审计处理方案"
+    for check in checks:
+        label = check["label"]
+        decision = check["decision_any_of"][0]
+        fact = check["fact_any_of"][0]
+        status = check["status_any_of"][0]
+        value = "已记录" if placeholder else f"本项明确采用{decision}处理{label}"
         lines.extend(
             [
                 f"### {label}",
@@ -302,7 +302,7 @@ def create_browser_review(
             {
                 "url": "file:///controller-return/build/index.html",
                 "viewport": {"width": width, "height": height},
-                "pages": [{"page": 1}],
+                "pages": [{"page": 1, "screenshot": str(screenshot_path)}],
             },
         )
         screenshot_path.write_bytes(png_bytes(width, height))
@@ -512,8 +512,25 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
     def test_every_scenario_audits_profile_contract_and_content_checks(self) -> None:
         for scenario in self.matrix["scenarios"]:
             self.assertEqual(set(scenario["known_choices"]), contract.KNOWN_CHOICE_KEYS)
-            self.assertTrue(scenario["brief_content_checks"]["fact_markers"])
-            self.assertTrue(scenario["brief_content_checks"]["status_markers"])
+            request_text = (
+                EVAL_ROOT / scenario["request_ref"]
+            ).read_text(encoding="utf-8")
+            self.assertEqual(
+                [item["label"] for item in scenario["brief_content_checks"]],
+                scenario["required_brief_decisions"],
+            )
+            for item in scenario["brief_content_checks"]:
+                self.assertEqual(
+                    set(item),
+                    {"label", "decision_any_of", "fact_any_of", "status_any_of"},
+                )
+                self.assertTrue(item["decision_any_of"])
+                self.assertTrue(item["fact_any_of"])
+                self.assertTrue(item["status_any_of"])
+                self.assertTrue(
+                    any(term in request_text for term in item["fact_any_of"]),
+                    (scenario["scenario_id"], item["label"]),
+                )
             definition = (
                 ROOT
                 / "skill"
@@ -557,6 +574,39 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
         self.assertEqual(
             contract.validate_brief_decisions(brief_text(scenario), scenario), []
         )
+
+    def test_all_nine_scenario_brief_fixtures_pass_per_decision_semantics(self) -> None:
+        for scenario in self.matrix["scenarios"]:
+            self.assertEqual(
+                contract.validate_brief_decisions(brief_text(scenario), scenario),
+                [],
+                scenario["scenario_id"],
+            )
+
+    def test_copied_generic_brief_content_fails_per_decision_semantics(self) -> None:
+        scenario = self.matrix["scenarios"][0]
+        profile = scenario["primary_profile"]
+        lines = [
+            "# Report Design Brief",
+            (
+                f"primary_profile = {profile['profile_id']} | "
+                f"{profile['customer_facing_name']} | {profile['definition_version']}"
+            ),
+            "## 场景特有决策",
+        ]
+        for label in scenario["required_brief_decisions"]:
+            lines.extend(
+                [
+                    f"### {label}",
+                    "- 实际决策：采用统一的可审计处理方案",
+                    "- 事实依据：统一事实依据",
+                    "- 状态边界：统一状态边界",
+                ]
+            )
+        issues = contract.validate_brief_decisions("\n".join(lines) + "\n", scenario)
+        self.assertTrue(any("reuses identical 实际决策" in item for item in issues))
+        self.assertTrue(any("reuses identical 事实依据" in item for item in issues))
+        self.assertTrue(any("reuses identical 状态边界" in item for item in issues))
 
     def test_controller_trace_proves_clear_and_ambiguous_routing(self) -> None:
         for scenario in self.matrix["scenarios"]:
@@ -612,6 +662,29 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
             trace, ambiguous, run_id="profile-test-run", brief_sha256="a" * 64
         )
         self.assertTrue(any("all nine Profiles" in item for item in issues))
+
+    def test_trace_rejects_unobserved_assistant_question_about_known_choice(self) -> None:
+        scenario = self.matrix["scenarios"][0]
+        trace = controller_trace(
+            scenario, run_id="profile-test-run", brief_sha="a" * 64
+        )
+        trace["turns"].insert(
+            1,
+            {
+                "turn_id": "a-extra",
+                "role": "assistant",
+                "text": "你要阅读模式还是演示模式？",
+            },
+        )
+        issues = contract.validate_controller_trace(
+            trace,
+            scenario,
+            run_id="profile-test-run",
+            brief_sha256="a" * 64,
+        )
+        self.assertTrue(
+            any("every actual assistant question exactly once" in item for item in issues)
+        )
 
     def test_real_production_state_fixture_runs_all_three_current_checker_actions(self) -> None:
         fixture = ROOT / "tests" / "fixtures" / "profile-release-production-state"
@@ -775,6 +848,39 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
             )
         self.assertEqual((status, issues), ("PASS", []))
 
+    def test_browser_review_rejects_two_report_pages_with_one_screenshot(self) -> None:
+        scenario = self.matrix["scenarios"][0]
+        with tempfile.TemporaryDirectory() as raw:
+            controller_root = Path(raw)
+            review_path = create_browser_review(
+                controller_root,
+                scenario,
+                run_id="profile-test-run",
+                html_sha="a" * 64,
+            )
+            review = json.loads(review_path.read_text(encoding="utf-8"))
+            viewport = review["viewports"][0]
+            report_path = controller_root / viewport["report_path"]
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            report["pages"].append(
+                {
+                    "page": 2,
+                    "screenshot": str(report_path.parent / "page-02.png"),
+                }
+            )
+            write_json(report_path, report)
+            viewport["report_sha256"] = sha256(report_path)
+            status, issues, _ = contract.validate_external_review(
+                review,
+                kind="browser",
+                scenario=scenario,
+                run_id="profile-test-run",
+                html_sha256="a" * 64,
+                review_root=controller_root,
+            )
+        self.assertEqual(status, "FAIL")
+        self.assertTrue(any("does not exactly cover report pages" in item for item in issues))
+
     def test_browser_runner_invokes_all_three_viewports(self) -> None:
         scenario = self.matrix["scenarios"][0]
         with tempfile.TemporaryDirectory() as raw:
@@ -791,7 +897,12 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
                     {
                         "url": (built["output"] / "build" / "index.html").as_uri(),
                         "viewport": {"width": width, "height": height},
-                        "pages": [{"page": 1}],
+                        "pages": [
+                            {
+                                "page": 1,
+                                "screenshot": str(viewport_root / "page-01.png"),
+                            }
+                        ],
                     },
                 )
                 (viewport_root / "page-01.png").write_bytes(png_bytes(width, height))

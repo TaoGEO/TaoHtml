@@ -81,10 +81,38 @@
         "责任与签批边界",
         "关键缺口与风险"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["委员会", "夜间开放", "风险清单", "下月", "签批"],
-        "status_markers": ["已知", "一致同意", "未说明", "待确认", "未授权"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "正式对象与目的",
+          "decision_any_of": ["委员独立阅读", "内部流转", "归档"],
+          "fact_any_of": ["委员会", "委员"],
+          "status_any_of": ["内部流转", "归档", "正式草稿"]
+        },
+        {
+          "label": "必须覆盖项",
+          "decision_any_of": ["夜间开放", "风险清单"],
+          "fact_any_of": ["夜间开放", "风险清单"],
+          "status_any_of": ["一致同意", "已知"]
+        },
+        {
+          "label": "术语与口径",
+          "decision_any_of": ["下月", "试行", "风险"],
+          "fact_any_of": ["下月", "试行"],
+          "status_any_of": ["未说明", "待确认"]
+        },
+        {
+          "label": "责任与签批边界",
+          "decision_any_of": ["签批", "责任"],
+          "fact_any_of": ["由谁签批", "签批"],
+          "status_any_of": ["待确认", "未授权"]
+        },
+        {
+          "label": "关键缺口与风险",
+          "decision_any_of": ["缺口", "风险"],
+          "fact_any_of": ["授权", "签批"],
+          "status_any_of": ["未说明", "待确认"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "signoff-authority",
@@ -148,10 +176,50 @@
         "目标结论强度",
         "关键局限/缺口"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["两天", "现场观察", "使用者反馈", "对照组", "规则变更"],
-        "status_markers": ["已观察", "缺少", "暂定", "不能确认", "待验证"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "研究问题与决策语境",
+          "decision_any_of": ["共享工位", "自动释放规则"],
+          "fact_any_of": ["共享工位", "自动释放规则"],
+          "status_any_of": ["待验证", "研究问题"]
+        },
+        {
+          "label": "范围与术语口径",
+          "decision_any_of": ["两天", "观察范围"],
+          "fact_any_of": ["两天", "现场观察"],
+          "status_any_of": ["有限范围", "暂定"]
+        },
+        {
+          "label": "方法与已检查材料",
+          "decision_any_of": ["现场观察", "使用者反馈"],
+          "fact_any_of": ["现场观察", "使用者反馈"],
+          "status_any_of": ["已检查", "已观察"]
+        },
+        {
+          "label": "核心 Claim–Evidence 状态",
+          "decision_any_of": ["Claim–Evidence", "因果"],
+          "fact_any_of": ["上午空置", "忘记取消"],
+          "status_any_of": ["不能确认", "暂定"]
+        },
+        {
+          "label": "替代解释/冲突",
+          "decision_any_of": ["替代解释", "忘记取消"],
+          "fact_any_of": ["忘记取消", "对照组"],
+          "status_any_of": ["缺少", "待验证"]
+        },
+        {
+          "label": "目标结论强度",
+          "decision_any_of": ["暂定结论", "关联"],
+          "fact_any_of": ["两天", "反馈"],
+          "status_any_of": ["不能确认", "暂定"]
+        },
+        {
+          "label": "关键局限/缺口",
+          "decision_any_of": ["局限", "验证"],
+          "fact_any_of": ["对照组", "规则变更"],
+          "status_any_of": ["缺少", "待验证"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "causal-strength",
@@ -214,10 +282,44 @@
         "关键差异/驱动",
         "决策/行动/owner"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["78%", "74%", "新建工单", "期末", "账号开通"],
-        "status_markers": ["实际", "建议", "尚未决定", "不可比较", "待修订"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "经营周期与 cutoff",
+          "decision_any_of": ["本季度", "下季度"],
+          "fact_any_of": ["本季度", "下季度"],
+          "status_any_of": ["实际", "周期"]
+        },
+        {
+          "label": "指标与口径",
+          "decision_any_of": ["关闭率", "分母"],
+          "fact_any_of": ["78%", "新建工单"],
+          "status_any_of": ["口径", "实际"]
+        },
+        {
+          "label": "比较基准",
+          "decision_any_of": ["不可直接比较", "比较基准"],
+          "fact_any_of": ["74%", "期末"],
+          "status_any_of": ["不可比较", "待修订"]
+        },
+        {
+          "label": "数据完整性与修订",
+          "decision_any_of": ["数据完整性", "修订"],
+          "fact_any_of": ["新建工单", "全部未结"],
+          "status_any_of": ["待修订", "口径不同"]
+        },
+        {
+          "label": "关键差异/驱动",
+          "decision_any_of": ["账号开通", "积压"],
+          "fact_any_of": ["账号开通", "高优先级"],
+          "status_any_of": ["已知", "实际"]
+        },
+        {
+          "label": "决策/行动/owner",
+          "decision_any_of": ["优先清理", "管理决定"],
+          "fact_any_of": ["负责人建议", "账号开通"],
+          "status_any_of": ["建议", "尚未决定"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "metric-comparability",
@@ -282,10 +384,50 @@
         "推荐依据",
         "风险与失效条件"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["群聊", "统一表单", "两个团队", "上线成本", "可逆性"],
-        "status_markers": ["现状", "选项", "建议", "未表决", "假设"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "决策问题",
+          "decision_any_of": ["选择需求入口", "两周试行"],
+          "fact_any_of": ["三个", "需求入口"],
+          "status_any_of": ["待决策", "未表决"]
+        },
+        {
+          "label": "决策人及责任边界",
+          "decision_any_of": ["运营委员会", "决策责任"],
+          "fact_any_of": ["运营委员会", "当场选择"],
+          "status_any_of": ["未表决", "待决定"]
+        },
+        {
+          "label": "选项集合及来源状态",
+          "decision_any_of": ["群聊", "统一表单", "轻量门槛"],
+          "fact_any_of": ["群聊", "统一表单", "两个团队"],
+          "status_any_of": ["现状", "选项"]
+        },
+        {
+          "label": "评价标准",
+          "decision_any_of": ["上线成本", "信息完整度", "团队摩擦", "可逆性"],
+          "fact_any_of": ["上线成本", "信息完整度", "团队摩擦", "可逆性"],
+          "status_any_of": ["评价标准", "待比较"]
+        },
+        {
+          "label": "关键取舍",
+          "decision_any_of": ["取舍", "可逆性"],
+          "fact_any_of": ["上线成本", "团队摩擦"],
+          "status_any_of": ["假设", "待验证"]
+        },
+        {
+          "label": "推荐依据",
+          "decision_any_of": ["两周试行", "推荐"],
+          "fact_any_of": ["两个团队", "个人倾向"],
+          "status_any_of": ["建议", "尚未批准"]
+        },
+        {
+          "label": "风险与失效条件",
+          "decision_any_of": ["停止条件", "失效条件"],
+          "fact_any_of": ["没有真实节省金额", "没有历史试验结果"],
+          "status_any_of": ["假设", "待验证"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "approval-state",
@@ -351,10 +493,56 @@
         "动效/口播意图",
         "最终行动"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["7 分钟", "负责人", "升级", "虚构情境", "两个小组"],
-        "status_markers": ["已知", "没有统计", "示意", "尚未实施", "待决定"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "受众当前状态",
+          "decision_any_of": ["负责人", "升级延误"],
+          "fact_any_of": ["负责人", "升级经常延误"],
+          "status_any_of": ["已知", "当前认知"]
+        },
+        {
+          "label": "目标移动",
+          "decision_any_of": ["同意试行", "允许试行"],
+          "fact_any_of": ["负责人", "两个小组"],
+          "status_any_of": ["待决定", "尚未实施"]
+        },
+        {
+          "label": "核心主张",
+          "decision_any_of": ["升级响应仪式", "试行"],
+          "fact_any_of": ["升级", "响应仪式"],
+          "status_any_of": ["建议", "待验证"]
+        },
+        {
+          "label": "决定性证据",
+          "decision_any_of": ["证据", "机制说明"],
+          "fact_any_of": ["没有正式统计", "虚构情境"],
+          "status_any_of": ["示意", "没有统计"]
+        },
+        {
+          "label": "主要阻力",
+          "decision_any_of": ["阻力", "成效证据"],
+          "fact_any_of": ["没有已经实施后的成效", "没有正式统计"],
+          "status_any_of": ["缺少", "待验证"]
+        },
+        {
+          "label": "现场约束",
+          "decision_any_of": ["7 分钟", "管理例会"],
+          "fact_any_of": ["7 分钟", "当场决定"],
+          "status_any_of": ["现场", "时间限制"]
+        },
+        {
+          "label": "动效/口播意图",
+          "decision_any_of": ["口播", "动效"],
+          "fact_any_of": ["虚构情境", "7 分钟"],
+          "status_any_of": ["示意", "演示"]
+        },
+        {
+          "label": "最终行动",
+          "decision_any_of": ["两个小组", "试行一周"],
+          "fact_any_of": ["两个小组", "一周"],
+          "status_any_of": ["待决定", "尚未批准"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "trial-outcome",
@@ -418,10 +606,44 @@
         "练习/回顾与反馈方式",
         "完成/评价边界"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["25 分钟", "新同事", "三条", "两个假设案例", "第一条响应"],
-        "status_markers": ["练习", "假设", "没有标准", "没有数据", "不代表认证"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "学习者与已有基础",
+          "decision_any_of": ["新同事", "值班协调"],
+          "fact_any_of": ["刚接手", "新同事"],
+          "status_any_of": ["已有基础", "初学"]
+        },
+        {
+          "label": "目标能力/可观察表现",
+          "decision_any_of": ["区分", "第一条响应"],
+          "fact_any_of": ["三类", "第一条响应"],
+          "status_any_of": ["可观察", "练习表现"]
+        },
+        {
+          "label": "先备知识与范围边界",
+          "decision_any_of": ["三条内部原则", "范围"],
+          "fact_any_of": ["三条内部原则", "值班协调"],
+          "status_any_of": ["现有材料", "有限范围"]
+        },
+        {
+          "label": "关键示例、误解与失败模式",
+          "decision_any_of": ["假设案例", "失败模式"],
+          "fact_any_of": ["两个假设案例", "紧急升级"],
+          "status_any_of": ["假设", "示范"]
+        },
+        {
+          "label": "练习/回顾与反馈方式",
+          "decision_any_of": ["练习", "反馈", "回顾"],
+          "fact_any_of": ["解释", "示范", "练习", "反馈", "最后回顾"],
+          "status_any_of": ["练习", "形成性反馈"]
+        },
+        {
+          "label": "完成/评价边界",
+          "decision_any_of": ["完成边界", "评价边界"],
+          "fact_any_of": ["没有正式认证标准", "没有真实岗位表现数据"],
+          "status_any_of": ["不代表认证", "仅证明练习"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "mastery-claim",
@@ -487,10 +709,56 @@
         "所需决策、行动与 owner",
         "验收/收尾条件、未结义务"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["家具", "网络", "周五", "机房权限", "消防复核", "会议室设备"],
-        "status_markers": ["已完成", "未验收", "预测", "依赖", "未批准"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "项目目标、sponsor/受众与治理目的",
+          "decision_any_of": ["进入下一阶段", "阶段判断"],
+          "fact_any_of": ["项目发起人", "行政", "IT 负责人"],
+          "status_any_of": ["待判断", "阶段评审"]
+        },
+        {
+          "label": "baseline/范围版本",
+          "decision_any_of": ["搬迁范围", "baseline"],
+          "fact_any_of": ["办公室搬迁", "会议室设备"],
+          "status_any_of": ["基线", "变更"]
+        },
+        {
+          "label": "当前阶段与 reporting cutoff",
+          "decision_any_of": ["当前阶段", "周五"],
+          "fact_any_of": ["周五", "下一阶段"],
+          "status_any_of": ["当前", "预测"]
+        },
+        {
+          "label": "里程碑/交付物及状态证据",
+          "decision_any_of": ["家具安装", "网络完成"],
+          "fact_any_of": ["家具安装", "网络承包商"],
+          "status_any_of": ["已完成但未验收", "预测"]
+        },
+        {
+          "label": "变化/偏差与影响",
+          "decision_any_of": ["会议室设备", "变更影响"],
+          "fact_any_of": ["新增会议室设备", "网络"],
+          "status_any_of": ["未批准", "变更"]
+        },
+        {
+          "label": "issue/risk/dependency",
+          "decision_any_of": ["依赖", "风险"],
+          "fact_any_of": ["机房权限", "消防复核"],
+          "status_any_of": ["依赖", "未完成"]
+        },
+        {
+          "label": "所需决策、行动与 owner",
+          "decision_any_of": ["go/no-go", "所需决策"],
+          "fact_any_of": ["项目发起人", "行政", "IT 负责人"],
+          "status_any_of": ["待决定", "待行动"]
+        },
+        {
+          "label": "验收/收尾条件、未结义务",
+          "decision_any_of": ["业务验收", "收尾条件"],
+          "fact_any_of": ["未由业务验收", "消防复核"],
+          "status_any_of": ["未验收", "未结"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "completion-acceptance",
@@ -556,10 +824,56 @@
         "公开/内部使用边界、分发限制",
         "关键缺口、风险与交付边界"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["社区维修", "公众", "志愿者", "口头反馈", "现场照片", "300 人"],
-        "status_markers": ["目标未定", "未确认", "未找到记录", "不可公开", "待核实"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "外部受众与传播/出版场景",
+          "decision_any_of": ["公众介绍", "外部传播"],
+          "fact_any_of": ["公众", "社区维修"],
+          "status_any_of": ["目标已选择", "外部传播"]
+        },
+        {
+          "label": "核心传播目标、central message 与 story angle",
+          "decision_any_of": ["社区维修", "故事角度"],
+          "fact_any_of": ["活动流程", "社区维修"],
+          "status_any_of": ["编辑方向", "待核实"]
+        },
+        {
+          "label": "品牌/主体身份、语气与视觉边界",
+          "decision_any_of": ["项目主体", "传播语气"],
+          "fact_any_of": ["社区维修活动", "公众"],
+          "status_any_of": ["主体待确认", "内部编辑"]
+        },
+        {
+          "label": "approved/source-backed/unverified claims",
+          "decision_any_of": ["300 人", "claims"],
+          "fact_any_of": ["300 人", "没找到记录"],
+          "status_any_of": ["未核实", "unverified"]
+        },
+        {
+          "label": "素材来源、权利与真实资产保护",
+          "decision_any_of": ["现场照片", "使用权限"],
+          "fact_any_of": ["现场照片", "公开使用权限"],
+          "status_any_of": ["未确认", "不可公开"]
+        },
+        {
+          "label": "引用/证言状态",
+          "decision_any_of": ["口头反馈", "证言"],
+          "fact_any_of": ["参与者口头反馈", "口头反馈"],
+          "status_any_of": ["未确认", "待核实"]
+        },
+        {
+          "label": "公开/内部使用边界、分发限制",
+          "decision_any_of": ["内部编辑稿", "分发限制"],
+          "fact_any_of": ["照片权限", "300 人"],
+          "status_any_of": ["不可公开", "内部使用"]
+        },
+        {
+          "label": "关键缺口、风险与交付边界",
+          "decision_any_of": ["权利缺口", "核实缺口"],
+          "fact_any_of": ["公开使用权限", "没找到记录"],
+          "status_any_of": ["待核实", "内部编辑稿"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "publication-rights",
@@ -623,10 +937,44 @@
         "格式/截止/答辩约束",
         "缺口/冲突与提交风险"
       ],
-      "brief_content_checks": {
-        "fact_markers": ["法人资格", "两年", "预算表", "本周五", "在线系统", "10 分钟"],
-        "status_markers": ["必须", "缺少", "未知", "不可提交", "待确认"]
-      },
+      "brief_content_checks": [
+        {
+          "label": "规则身份与版本",
+          "decision_any_of": ["资助通知", "规则版本"],
+          "fact_any_of": ["社区创新资助", "通知"],
+          "status_any_of": ["通知摘要", "待核对"]
+        },
+        {
+          "label": "资格与强制项",
+          "decision_any_of": ["法人资格", "两年项目经历", "预算表"],
+          "fact_any_of": ["法人资格证明", "两年项目经历", "预算表"],
+          "status_any_of": ["必须", "缺少"]
+        },
+        {
+          "label": "评分与权重",
+          "decision_any_of": ["评分权重", "30 分", "20 分"],
+          "fact_any_of": ["问题重要性 30 分", "方法 30 分", "团队 20 分", "预算 20 分"],
+          "status_any_of": ["已知", "通知写明"]
+        },
+        {
+          "label": "响应—证据状态",
+          "decision_any_of": ["响应—证据", "证据缺口"],
+          "fact_any_of": ["缺法人资格证明", "两年项目经历", "预算表"],
+          "status_any_of": ["缺少", "待补"]
+        },
+        {
+          "label": "格式/截止/答辩约束",
+          "decision_any_of": ["在线系统", "本周五", "10 分钟"],
+          "fact_any_of": ["指定在线系统", "本周五", "答辩 10 分钟"],
+          "status_any_of": ["必须", "待确认"]
+        },
+        {
+          "label": "缺口/冲突与提交风险",
+          "decision_any_of": ["提交风险", "不可提交"],
+          "fact_any_of": ["缺法人资格证明", "没有确认离线 HTML"],
+          "status_any_of": ["不可提交", "未知"]
+        }
+      ],
       "evidence_expectations": [
         {
           "boundary_id": "submit-readiness",

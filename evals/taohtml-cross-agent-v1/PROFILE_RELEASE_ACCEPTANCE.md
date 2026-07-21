@@ -55,7 +55,7 @@
 
 ## 控制端会话与 Production Authorization 记录
 
-参与者先形成同一份完整 `design-brief.md` 与现行 v1.3 `gates/production-state.json`，由用户在真实会话中确认当前简报。每个 Profile 要求的场景决策必须在 `## 场景特有决策` 下使用三级标题，并分别提供非占位的“实际决策”“事实依据”“状态边界”；仅有标签或“已记录”会失败。控制端保存 `conversation-trace.json`，其观察项必须引用实际 assistant/user turn，不能由 participant 包中的自报问题、目录、回答或时间戳替代。
+参与者先形成同一份完整 `design-brief.md` 与现行 v1.3 `gates/production-state.json`，由用户在真实会话中确认当前简报。每个 Profile 要求的场景决策必须在 `## 场景特有决策` 下使用三级标题，并分别提供非占位的“实际决策”“事实依据”“状态边界”；控制端按每个决策标签分别核对允许的决策语义、相关原始事实和真实状态边界，所有标签复制同一套通用内容不能通过。控制端保存 `conversation-trace.json`，其观察项必须引用实际 assistant/user turn，不能由 participant 包中的自报问题、目录、回答或时间戳替代。完整 turns 中每个带 `?` 或 `？` 的 assistant 问句都必须在 `observations.questions` 恰好登记一次并保持原顺序，观察项也不能引用非问句；因此故意省略重复询问仍会失败。
 
 正式 HTML 还不存在时，控制端运行：
 
@@ -84,6 +84,8 @@
   --production-check .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/production-checks/browser-qa.json \
   --record .artifacts/taohtml-cross-agent-v1/profile-release-runs/<run-id>/controller/browser-review.json
 ```
+
+每个视口的 `qa-report.json.pages` 必须非空，页码从 1 唯一连续；报告中的逐页截图、review 记录中的截图集合与控制端目录中的实际 PNG 必须完全一致。缺页、多出无关截图、报告页截图指向控制端目录外、哈希不符或视口尺寸不符都会使浏览器层失败。
 
 浏览器记录由控制端创建，至少包含：
 
