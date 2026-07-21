@@ -704,12 +704,12 @@ def validate_controller_trace(
     if len(topics) != len(set(topics)):
         issues.append("a controller-observed question topic was repeated")
     if scenario["routing"]["mode"] == "clear":
-        if questions:
-            issues.append("clear routing asked an unnecessary question")
+        if "business_goal" in topics:
+            issues.append("clear routing asked an unnecessary business-goal question")
         if routing.get("catalog_turn_id") is not None or routing.get("user_answer_turn_id") is not None:
             issues.append("clear routing fabricated catalog or ambiguity-answer turns")
     else:
-        if topics != ["business_goal"]:
+        if topics.count("business_goal") != 1:
             issues.append("ambiguous routing must ask exactly one business-goal question")
         catalog_turn = turns.get(routing.get("catalog_turn_id"))
         if (
@@ -891,6 +891,15 @@ def _browser_review_issues(
         if set(screenshots) != expected_screenshots or set(screenshots) != report_screenshots:
             issues.append(
                 f"browser QA screenshot set does not exactly cover report pages at {viewport_id}"
+            )
+        actual_screenshots = {
+            path.relative_to(review_root.resolve()).as_posix()
+            for path in report.parent.glob("page-*.png")
+            if path.is_file() or path.is_symlink()
+        }
+        if set(screenshots) != actual_screenshots:
+            issues.append(
+                f"browser QA review screenshot set does not exactly match actual viewport PNGs at {viewport_id}"
             )
         for relative, digest in screenshots.items():
             try:

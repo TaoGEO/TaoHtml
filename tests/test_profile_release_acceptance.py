@@ -619,6 +619,51 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
                 [],
             )
 
+    def test_clear_trace_allows_registered_design_brief_confirmation_question(self) -> None:
+        scenario = self.matrix["scenarios"][0]
+        trace = controller_trace(
+            scenario, run_id="profile-test-run", brief_sha="a" * 64
+        )
+        brief_turn = next(
+            turn for turn in trace["turns"] if turn["turn_id"] == "a-brief"
+        )
+        brief_turn["text"] = "请确认当前完整设计简报是否无误？"
+        trace["observations"]["questions"] = [
+            {"turn_id": "a-brief", "topic": "design_brief_confirmation"}
+        ]
+        self.assertEqual(
+            contract.validate_controller_trace(
+                trace,
+                scenario,
+                run_id="profile-test-run",
+                brief_sha256="a" * 64,
+            ),
+            [],
+        )
+
+        ambiguous = next(
+            item for item in self.matrix["scenarios"] if item["routing"]["mode"] == "ambiguous"
+        )
+        ambiguous_trace = controller_trace(
+            ambiguous, run_id="profile-test-run", brief_sha="a" * 64
+        )
+        ambiguous_brief_turn = next(
+            turn for turn in ambiguous_trace["turns"] if turn["turn_id"] == "a-brief"
+        )
+        ambiguous_brief_turn["text"] = "请确认当前完整设计简报是否无误？"
+        ambiguous_trace["observations"]["questions"].append(
+            {"turn_id": "a-brief", "topic": "design_brief_confirmation"}
+        )
+        self.assertEqual(
+            contract.validate_controller_trace(
+                ambiguous_trace,
+                ambiguous,
+                run_id="profile-test-run",
+                brief_sha256="a" * 64,
+            ),
+            [],
+        )
+
     def test_forged_participant_evidence_cannot_replace_controller_trace(self) -> None:
         scenario = self.matrix["scenarios"][0]
         with tempfile.TemporaryDirectory() as raw:
@@ -645,8 +690,16 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
     def test_trace_rejects_repeated_known_choice_and_missing_catalog(self) -> None:
         clear = self.matrix["scenarios"][0]
         clear_trace = controller_trace(clear, run_id="profile-test-run", brief_sha="a" * 64)
+        clear_trace["turns"].insert(
+            1,
+            {
+                "turn_id": "a-use-mode",
+                "role": "assistant",
+                "text": "你要阅读模式还是演示模式？",
+            },
+        )
         clear_trace["observations"]["questions"] = [
-            {"turn_id": "a-profile", "topic": "use_mode"}
+            {"turn_id": "a-use-mode", "topic": "use_mode"}
         ]
         issues = contract.validate_controller_trace(
             clear_trace, clear, run_id="profile-test-run", brief_sha256="a" * 64
@@ -880,6 +933,31 @@ class ProfileReleaseAcceptanceTests(unittest.TestCase):
             )
         self.assertEqual(status, "FAIL")
         self.assertTrue(any("does not exactly cover report pages" in item for item in issues))
+
+    def test_browser_review_rejects_unregistered_viewport_png(self) -> None:
+        scenario = self.matrix["scenarios"][0]
+        with tempfile.TemporaryDirectory() as raw:
+            controller_root = Path(raw)
+            review_path = create_browser_review(
+                controller_root,
+                scenario,
+                run_id="profile-test-run",
+                html_sha="a" * 64,
+            )
+            review = json.loads(review_path.read_text(encoding="utf-8"))
+            viewport = review["viewports"][0]
+            report_path = controller_root / viewport["report_path"]
+            (report_path.parent / "page-99.png").write_bytes(png_bytes(1366, 768))
+            status, issues, _ = contract.validate_external_review(
+                review,
+                kind="browser",
+                scenario=scenario,
+                run_id="profile-test-run",
+                html_sha256="a" * 64,
+                review_root=controller_root,
+            )
+        self.assertEqual(status, "FAIL")
+        self.assertTrue(any("actual viewport PNGs" in item for item in issues))
 
     def test_browser_runner_invokes_all_three_viewports(self) -> None:
         scenario = self.matrix["scenarios"][0]
