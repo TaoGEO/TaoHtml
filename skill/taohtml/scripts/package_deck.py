@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import stat
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -36,8 +37,12 @@ def _file_type(mode: int) -> str:
     return "special file"
 
 
-def _is_link_like(path: Path, mode: int) -> bool:
-    if stat.S_ISLNK(mode):
+def _is_link_like(path: Path, entry_stat: os.stat_result) -> bool:
+    if stat.S_ISLNK(entry_stat.st_mode):
+        return True
+    reparse_point = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    file_attributes = getattr(entry_stat, "st_file_attributes", 0)
+    if reparse_point and file_attributes & reparse_point:
         return True
     is_junction = getattr(path, "is_junction", None)
     return bool(is_junction and is_junction())
@@ -49,7 +54,7 @@ def _inspect_entry(path: Path, deck_root: Path) -> tuple[str, os.stat_result]:
     except OSError as exc:
         raise PackageDeckError(f"Cannot inspect deck entry '{path}': {exc}") from exc
 
-    if _is_link_like(path, entry_stat.st_mode):
+    if _is_link_like(path, entry_stat):
         raise PackageDeckError(
             f"Unsafe deck entry '{path}': symbolic links and junctions are not allowed"
         )
@@ -78,7 +83,7 @@ def _resolve_deck_root(deck_dir: Path) -> tuple[Path, os.stat_result]:
         deck_stat = deck_dir.lstat()
     except OSError as exc:
         raise PackageDeckError(f"Cannot inspect deck directory '{deck_dir}': {exc}") from exc
-    if _is_link_like(deck_dir, deck_stat.st_mode):
+    if _is_link_like(deck_dir, deck_stat):
         raise PackageDeckError(
             f"Unsafe deck directory '{deck_dir}': symbolic links and junctions are not allowed"
         )
@@ -100,7 +105,7 @@ def _validate_output_path(
     except OSError as exc:
         raise PackageDeckError(f"Cannot inspect output archive '{zip_path}': {exc}") from exc
     if output_stat is not None:
-        if _is_link_like(zip_path, output_stat.st_mode):
+        if _is_link_like(zip_path, output_stat):
             raise PackageDeckError(
                 f"Unsafe output archive '{zip_path}': symbolic links and junctions are not allowed"
             )
@@ -159,6 +164,52 @@ def _revalidate_file(path: Path, deck_root: Path) -> None:
         )
 
 
+def _write_archive(files: list[Path], deck_root: Path, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{output_path.name}.",
+        suffix=".tmp",
+        dir=output_path.parent,
+    )
+    temporary_path = Path(temporary_name)
+
+    try:
+        with os.fdopen(descriptor, "w+b") as temporary_file:
+            with zipfile.ZipFile(
+                temporary_file, "w", compression=zipfile.ZIP_DEFLATED
+            ) as archive:
+                for path in files:
+                    _revalidate_file(path, deck_root)
+                    relative = path.relative_to(deck_root)
+                    archive.write(path, (Path(deck_root.name) / relative).as_posix())
+        os.replace(temporary_path, output_path)
+    finally:
+        try:
+            temporary_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def package_deck(deck_dir: Path, zip_path: Path) -> Path:
+    deck_root, root_stat = _resolve_deck_root(deck_dir)
+    output_path, output_stat = _validate_output_path(zip_path, deck_root)
+    files = _collect_deck_files(deck_root, root_stat)
+    index_path = deck_root / "index.html"
+    if index_path not in files:
+        raise PackageDeckError(f"index.html not found as a regular file in: {deck_root}")
+    if output_stat is not None:
+        output_identity = (output_stat.st_dev, output_stat.st_ino)
+        for path in files:
+            source_stat = path.lstat()
+            if (source_stat.st_dev, source_stat.st_ino) == output_identity:
+                raise PackageDeckError(
+                    f"Unsafe output archive '{zip_path}': aliases deck file '{path}'"
+                )
+
+    _write_archive(files, deck_root, output_path)
+    return output_path
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create a portable zip for an HTML deck folder.")
     parser.add_argument("deck_dir", type=Path, help="Folder containing index.html and assets.")
@@ -166,29 +217,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        deck_root, root_stat = _resolve_deck_root(args.deck_dir)
-        output_path, output_stat = _validate_output_path(args.zip_path, deck_root)
-        files = _collect_deck_files(deck_root, root_stat)
-        index_path = deck_root / "index.html"
-        if index_path not in files:
-            raise PackageDeckError(f"index.html not found as a regular file in: {deck_root}")
-        if output_stat is not None:
-            output_identity = (output_stat.st_dev, output_stat.st_ino)
-            for path in files:
-                source_stat = path.lstat()
-                if (source_stat.st_dev, source_stat.st_ino) == output_identity:
-                    raise PackageDeckError(
-                        f"Unsafe output archive '{args.zip_path}': aliases deck file '{path}'"
-                    )
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(
-            output_path, "w", compression=zipfile.ZIP_DEFLATED
-        ) as archive:
-            for path in files:
-                _revalidate_file(path, deck_root)
-                relative = path.relative_to(deck_root)
-                archive.write(path, (Path(deck_root.name) / relative).as_posix())
+        package_deck(args.deck_dir, args.zip_path)
     except (OSError, PackageDeckError, zipfile.BadZipFile) as exc:
         raise SystemExit(str(exc)) from None
 

@@ -1,16 +1,31 @@
 from __future__ import annotations
 
+import importlib.util
 import os
+import stat
 import subprocess
 import sys
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_DECK = ROOT / "skill" / "taohtml" / "scripts" / "package_deck.py"
+
+
+def load_package_deck() -> ModuleType:
+    spec = importlib.util.spec_from_file_location("taohtml_package_deck", PACKAGE_DECK)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+PACKAGE_DECK_MODULE = load_package_deck()
 
 
 class PackageDeckTests(unittest.TestCase):
@@ -45,6 +60,12 @@ class PackageDeckTests(unittest.TestCase):
         for message in messages:
             self.assertIn(message, output)
 
+    def assert_no_temporary_archives(self, archive: Path) -> None:
+        self.assertEqual(
+            list(archive.parent.glob(f".{archive.name}.*.tmp")),
+            [],
+        )
+
     def test_packages_deck_with_relative_folder_root(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -60,6 +81,7 @@ class PackageDeckTests(unittest.TestCase):
                     set(bundle.namelist()),
                     {"example-deck/index.html", "example-deck/assets/evidence.txt"},
                 )
+            self.assert_no_temporary_archives(archive)
 
     def test_rejects_symlink_to_file_outside_deck(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -154,6 +176,65 @@ class PackageDeckTests(unittest.TestCase):
             result = self.run_packager(deck, archive)
 
             self.assert_rejected(result, archive, str(fifo), "FIFO", "regular file")
+
+    def test_reparse_point_is_link_like_without_path_is_junction(self) -> None:
+        class LegacyPath:
+            pass
+
+        legacy_path = LegacyPath()
+        entry_stat = SimpleNamespace(
+            st_mode=stat.S_IFDIR,
+            st_file_attributes=0x400,
+        )
+        self.assertFalse(hasattr(legacy_path, "is_junction"))
+
+        with mock.patch.object(
+            PACKAGE_DECK_MODULE.stat,
+            "FILE_ATTRIBUTE_REPARSE_POINT",
+            0x400,
+            create=True,
+        ):
+            self.assertTrue(PACKAGE_DECK_MODULE._is_link_like(legacy_path, entry_stat))
+
+    def test_write_failure_leaves_no_output_or_temporary_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            deck = self.create_deck(root)
+            archive = root / "dist" / "example-deck.zip"
+
+            with mock.patch.object(
+                PACKAGE_DECK_MODULE.zipfile.ZipFile,
+                "write",
+                side_effect=OSError("simulated write failure"),
+            ):
+                with self.assertRaisesRegex(OSError, "simulated write failure"):
+                    PACKAGE_DECK_MODULE.package_deck(deck, archive)
+
+            self.assertFalse(archive.exists())
+            self.assert_no_temporary_archives(archive)
+
+    def test_write_failure_preserves_existing_output_and_cleans_temporary_archive(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            deck = self.create_deck(root)
+            archive = root / "dist" / "example-deck.zip"
+            archive.parent.mkdir(parents=True)
+            with zipfile.ZipFile(archive, "w") as existing:
+                existing.writestr("previous-delivery.txt", b"known-good")
+            original = archive.read_bytes()
+
+            with mock.patch.object(
+                PACKAGE_DECK_MODULE.zipfile.ZipFile,
+                "write",
+                side_effect=OSError("simulated compression failure"),
+            ):
+                with self.assertRaisesRegex(OSError, "simulated compression failure"):
+                    PACKAGE_DECK_MODULE.package_deck(deck, archive)
+
+            self.assertEqual(archive.read_bytes(), original)
+            self.assert_no_temporary_archives(archive)
 
 
 if __name__ == "__main__":
