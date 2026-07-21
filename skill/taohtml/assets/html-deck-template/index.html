@@ -451,6 +451,7 @@
     const fullscreenToggle = document.getElementById('fullscreenToggle');
     const CONTROLLED_STEP_SELECTOR = '.fragment';
     const CONTROL_HIDE_DELAY_MS = 2000;
+    const FULLSCREEN_POINTER_SETTLE_MS = 500;
     const INTERACTIVE_CLICK_SELECTOR = [
       'a',
       'button',
@@ -525,6 +526,7 @@
       editing: false,
     };
     let controlsTimer;
+    let fullscreenPointerSettlingUntil = 0;
 
     function stepCount(slide) {
       return fragments(slide).reduce(
@@ -653,10 +655,12 @@
     function syncControlsForContext({ fullscreenChanged = false } = {}) {
       clearControlsTimer();
       if (!shouldAutoHideControls()) {
+        fullscreenPointerSettlingUntil = 0;
         deck.classList.remove('controls-hidden');
         return;
       }
       if (fullscreenChanged) {
+        fullscreenPointerSettlingUntil = performance.now() + FULLSCREEN_POINTER_SETTLE_MS;
         deck.classList.add('controls-hidden');
         return;
       }
@@ -809,6 +813,11 @@
 
     document.addEventListener('mousemove', event => {
       if (!event.isTrusted || (event.movementX === 0 && event.movementY === 0)) return;
+      if (performance.now() < fullscreenPointerSettlingUntil) {
+        deck.classList.add('controls-hidden');
+        return;
+      }
+      fullscreenPointerSettlingUntil = 0;
       revealControlsFromMouse();
     }, { passive: true });
     document.querySelectorAll('.controls').forEach(control => {

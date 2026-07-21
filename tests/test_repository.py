@@ -124,16 +124,20 @@ class RepositoryMetadataTests(unittest.TestCase):
         )
 
         self.assertIn("const CONTROL_HIDE_DELAY_MS = 2000;", template)
+        self.assertIn("const FULLSCREEN_POINTER_SETTLE_MS = 500;", template)
         self.assertIn("function closeMoreMenu({ rearm = true } = {})", template)
         self.assertIn("function revealControlsFromMouse()", template)
         self.assertIn("document.addEventListener('mousemove', event => {", template)
         self.assertIn("if (!event.isTrusted", template)
+        self.assertIn("performance.now() < fullscreenPointerSettlingUntil", template)
         self.assertNotIn("['mousemove', 'pointerdown']", template)
         self.assertIn("syncControlsForContext({ fullscreenChanged: true });", template)
 
         self.assertIn("At the initial state it is a no-op", contract)
         self.assertIn("Only a trusted `mousemove`", contract)
+        self.assertIn("post-entry fullscreen stabilization window", contract)
         self.assertIn("`#pageIndicator` remains visible", contract)
+        self.assertIn("FULLSCREEN_CONTROL_STABILITY_MS = 550", qa_script)
         self.assertIn(
             "ArrowLeft at step zero must not perform whole-page navigation", qa_script
         )
@@ -239,10 +243,9 @@ class RepositoryMetadataTests(unittest.TestCase):
 
             page.locator("#moreToggle").click()
             page.locator("#fullscreenToggle").click()
-            page.wait_for_function(
-                """() => Boolean(document.fullscreenElement) &&
-                  document.querySelector('#deck').classList.contains('controls-hidden')"""
-            )
+            page.wait_for_function("() => Boolean(document.fullscreenElement)")
+            page.wait_for_timeout(550)
+            self.assertEqual(page.locator("#deck.controls-hidden").count(), 1)
             page.keyboard.press("ArrowRight")
             page.dispatch_event("#deck", "pointerdown")
             page.evaluate(
@@ -251,13 +254,17 @@ class RepositoryMetadataTests(unittest.TestCase):
                 }))"""
             )
             self.assertEqual(page.locator("#deck.controls-hidden").count(), 1)
+            page.evaluate("() => document.dispatchEvent(new Event('fullscreenchange'))")
+            self.assertEqual(page.locator("#deck.controls-hidden").count(), 1)
+            page.wait_for_timeout(550)
             page.evaluate(
                 """() => document.querySelector('.slide.active').dispatchEvent(
                   new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })
                 )"""
             )
             self.assertEqual(page.locator("#deck.controls-hidden").count(), 1)
-            page.mouse.move(420, 320)
+            page.mouse.move(414, 320)
+            page.mouse.move(426, 320)
             page.wait_for_function(
                 "() => !document.querySelector('#deck').classList.contains('controls-hidden')"
             )

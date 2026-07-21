@@ -20,6 +20,7 @@ CONTROLLED_STEP_SELECTOR = ".fragment"
 TEXT_COLLISION_GAP_PX = 1.0
 TEXT_COLLISION_FONT_METRIC_SLACK_PX = 0.25
 CANVAS_TOLERANCE_RATIO = 0.005
+FULLSCREEN_CONTROL_STABILITY_MS = 550
 
 
 CONTROLLED_STEP_CHECK = f"""() => {{
@@ -652,11 +653,13 @@ def main() -> int:
             control_menu_open = page.locator("#moreMenu:not([hidden])").count() == 1
             page.wait_for_timeout(2200)
             menu_stays_open = page.locator("#moreMenu:not([hidden])").count() == 1
+            page.locator("#moreToggle").click()
+            page.locator("#moreToggle").click()
             page.locator("#fullscreenToggle").click()
             page.wait_for_function(
-                """() => Boolean(document.fullscreenElement) &&
-                  document.querySelector('#deck').classList.contains('controls-hidden')"""
+                "() => Boolean(document.fullscreenElement)"
             )
+            page.wait_for_timeout(FULLSCREEN_CONTROL_STABILITY_MS)
             fullscreen_entered = page.evaluate(
                 """() => ({
                   menuHidden: document.querySelector('#moreMenu').hidden,
@@ -682,8 +685,10 @@ def main() -> int:
             blank_click_kept_hidden = page.locator("#deck.controls-hidden").count() == 1
             page.evaluate("() => document.dispatchEvent(new Event('fullscreenchange'))")
             fullscreenchange_kept_hidden = page.locator("#deck.controls-hidden").count() == 1
+            page.wait_for_timeout(FULLSCREEN_CONTROL_STABILITY_MS)
 
-            page.mouse.move(args.width // 3, args.height // 3)
+            page.mouse.move(args.width // 3 - 6, args.height // 3)
+            page.mouse.move(args.width // 3 + 6, args.height // 3)
             page.wait_for_function(
                 "() => !document.querySelector('#deck').classList.contains('controls-hidden')"
             )
@@ -810,6 +815,7 @@ def main() -> int:
                 },
                 "fullscreen": {
                     "entered": fullscreen_entered,
+                    "stability_wait_ms": FULLSCREEN_CONTROL_STABILITY_MS,
                     "keyboard_kept_hidden": keyboard_kept_hidden,
                     "pointerdown_kept_hidden": pointerdown_kept_hidden,
                     "blank_click_kept_hidden": blank_click_kept_hidden,

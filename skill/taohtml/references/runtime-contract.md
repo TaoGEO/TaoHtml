@@ -84,7 +84,7 @@ Only an unconsumed primary-button click on report whitespace is a blank-page cli
 ### Controls and fullscreen
 
 - The auto-hide policy applies while presentation mode is fullscreen. `#prev`, `#next`, and the top-right more control are hidden immediately on entry; `#pageIndicator` remains visible. Outside this state, controls remain visible.
-- Only a trusted `mousemove` that represents actual pointer movement may reveal hidden controls. Keyboard or presenter-remote keys, blank-page clicks, `pointerdown`, `fullscreenchange`, mode changes, and Runtime navigation calls must not reveal or flash them.
+- Only a trusted `mousemove` that represents actual pointer movement may reveal hidden controls. The Runtime must ignore browser-generated pointer-coordinate relayout events during a short post-entry fullscreen stabilization window before accepting mouse movement. Keyboard or presenter-remote keys, blank-page clicks, `pointerdown`, `fullscreenchange`, mode changes, and Runtime navigation calls must not reveal or flash them.
 - After mouse movement reveals the controls, about two seconds of pointer inactivity hides them again.
 - Opening the more menu, entering edit mode, or actively interacting with the controls keeps them visible and suspends hiding. Closing the menu, leaving edit mode, or ending control interaction rearms the two-second hide timer when the auto-hide policy still applies.
 - Entering or exiting fullscreen closes the more menu and sets its toggle to `aria-expanded="false"`. Fullscreen changes synchronize the correct hidden or visible state without treating the event as pointer activity.
@@ -134,7 +134,7 @@ Before delivery, verify:
 - Returning to a page restores its stage.
 - Hash routes and page numbers match the active page.
 - Links, attachments, charts/interactive regions, forms, editable content, dialogs, menus, and media do not advance steps or pages.
-- Controls and fullscreen actions do not advance the report. Presentation fullscreen begins hidden; keyboard, blank-click, `pointerdown`, and `fullscreenchange` do not reveal controls; a real mouse movement does; idle time hides them again; menus, edit mode, and active control interaction pin them visible; the page number stays visible throughout.
+- Controls and fullscreen actions do not advance the report. Presentation fullscreen remains hidden after the post-entry stabilization window; keyboard, blank-click, `pointerdown`, browser coordinate relayout, and `fullscreenchange` do not reveal controls; the first real mouse movement after stabilization does; idle time hides them again; menus, edit mode, and active control interaction pin them visible; the page number stays visible throughout.
 - Direct HTML, Report IR Compiler output, and all built-in visual systems retain the same bundled Runtime script and behavior; themes may style controls but must not fork navigation or visibility state.
 - Edit mode pauses keyboard/blank-click/reveal advance, keeps page buttons usable, locks system UI, and restores the pre-edit Runtime state on exit.
 - Text, image replacement, and crop focus share Ctrl/Cmd undo and redo; refresh recovery and export/reopen pass `content-editor.md`.
