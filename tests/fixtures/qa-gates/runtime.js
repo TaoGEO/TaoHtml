@@ -21,6 +21,7 @@ const state = {
   mode: deck.dataset.mode === "reading" ? "reading" : "presentation",
   index: 0,
   stages: slides.map(() => 0),
+  editing: false,
 };
 
 function stepCount(slide) {
@@ -64,6 +65,7 @@ function previousPage() {
 }
 
 function nextStep() {
+  if (state.editing) return;
   if (state.mode === "reading") return nextPage();
   const count = stepCount(slides[state.index]);
   if (state.stages[state.index] < count) {
@@ -74,26 +76,35 @@ function nextStep() {
 }
 
 function previousStep() {
+  if (state.editing) return;
   if (state.mode === "reading") return previousPage();
   if (state.stages[state.index] > 0) {
     setStage(state.index, state.stages[state.index] - 1);
-    return;
   }
-  previousPage();
 }
 
 function setMode(mode) {
-  if (!['reading', 'presentation'].includes(mode)) return;
+  if (state.editing || !['reading', 'presentation'].includes(mode)) return;
   state.mode = mode;
   if (mode === "presentation") state.stages[state.index] = 0;
   render();
 }
 
 function getState() {
-  return { mode: state.mode, index: state.index, stages: [...state.stages] };
+  return {
+    mode: state.mode,
+    index: state.index,
+    stages: [...state.stages],
+    editing: state.editing,
+  };
 }
 
 async function toggleFullscreen() {}
+
+function setEditing(editing) {
+  state.editing = Boolean(editing);
+  render();
+}
 
 window.TaoHtmlRuntime = Object.freeze({
   getState,
@@ -104,6 +115,7 @@ window.TaoHtmlRuntime = Object.freeze({
   nextPage,
   previousPage,
   toggleFullscreen,
+  setEditing,
 });
 
 window.addEventListener("keydown", event => {

@@ -112,34 +112,164 @@ class RepositoryMetadataTests(unittest.TestCase):
             re.DOTALL,
         )
         self.assertIsNotNone(previous_step)
-        self.assertIn("previousPage();", previous_step.group("body"))
-        self.assertRegex(
-            previous_step.group("body"),
-            r"(?s)setStage\(state\.index, state\.stages\[state\.index\] - 1\);.*?return;.*?previousPage\(\);",
-        )
-
-        self.assertIn("function closeMoreMenu()", template)
-        self.assertRegex(
-            template,
-            r"async function toggleFullscreen\(\) \{\s+closeMoreMenu\(\);\s+wakeControls\(\);",
-        )
-        self.assertRegex(
-            template,
-            r"(?s)document\.addEventListener\('fullscreenchange', \(\) => \{\s+closeMoreMenu\(\);.*?wakeControls\(\);",
-        )
-
-        self.assertIn("at the initial state, it moves to the previous page", contract)
-        self.assertNotIn("at the initial state, it stays on the current page", contract)
-        self.assertIn("restarts the auto-hide timer after `fullscreenchange`", contract)
+        reading_branch = "if (state.mode === 'reading') return previousPage();"
+        self.assertIn(reading_branch, previous_step.group("body"))
         self.assertNotIn(
+            "previousPage();",
+            previous_step.group("body").replace(reading_branch, ""),
+        )
+        self.assertIn(
+            "setStage(state.index, state.stages[state.index] - 1);",
+            previous_step.group("body"),
+        )
+
+        self.assertIn("const CONTROL_HIDE_DELAY_MS = 2000;", template)
+        self.assertIn("function closeMoreMenu({ rearm = true } = {})", template)
+        self.assertIn("function revealControlsFromMouse()", template)
+        self.assertIn("document.addEventListener('mousemove', event => {", template)
+        self.assertIn("if (!event.isTrusted", template)
+        self.assertNotIn("['mousemove', 'pointerdown']", template)
+        self.assertIn("syncControlsForContext({ fullscreenChanged: true });", template)
+
+        self.assertIn("At the initial state it is a no-op", contract)
+        self.assertIn("Only a trusted `mousemove`", contract)
+        self.assertIn("`#pageIndicator` remains visible", contract)
+        self.assertIn(
             "ArrowLeft at step zero must not perform whole-page navigation", qa_script
         )
         self.assertIn(
-            "ArrowLeft at step zero did not return to the previous page and preserve its stage",
+            "A non-mousemove input revealed presentation fullscreen controls",
             qa_script,
         )
-        self.assertIn("fullscreen_idle_hidden", qa_script)
-        self.assertIn("fullscreen_pointer_revealed", qa_script)
+        self.assertIn("menu_pinned_controls", qa_script)
+        self.assertIn("hidden_more_keyboard_blocked", qa_script)
+        self.assertIn("edit_mode_pinned_controls", qa_script)
+
+    def test_runtime_browser_input_mapping_and_control_visibility(self) -> None:
+        from playwright.sync_api import sync_playwright
+
+        template = (
+            ROOT / "skill" / "taohtml" / "assets" / "html-deck-template" / "index.html"
+        )
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(args=["--disable-gpu"])
+            page = browser.new_page(viewport={"width": 1600, "height": 900})
+            page.goto(template.resolve().as_uri(), wait_until="load")
+            reset_presentation = """index => {
+              const runtime = window.TaoHtmlRuntime;
+              if (runtime.getState().mode === 'presentation') runtime.setMode('reading');
+              runtime.showPage(index);
+              runtime.setMode('presentation');
+            }"""
+            page.evaluate(reset_presentation, 0)
+
+            initial = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.keyboard.press("ArrowLeft")
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState()"), initial)
+            page.keyboard.press("ArrowRight")
+            stepped = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            self.assertEqual((stepped["index"], stepped["stages"][0]), (0, 1))
+            page.keyboard.press("ArrowRight")
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState().index"), 1)
+            second_at_zero = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            page.keyboard.press("ArrowLeft")
+            self.assertEqual(
+                page.evaluate("() => window.TaoHtmlRuntime.getState()"),
+                second_at_zero,
+            )
+            page.keyboard.press("PageUp")
+            restored = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            self.assertEqual((restored["index"], restored["stages"][0]), (0, 1))
+            page.keyboard.press("PageDown")
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState().index"), 1)
+
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('reading')")
+            page.evaluate("() => window.TaoHtmlRuntime.showPage(0)")
+            page.wait_for_timeout(520)
+            self.assertTrue(
+                page.locator(".slide.active .fragment").evaluate_all(
+                    "els => els.every(el => getComputedStyle(el).opacity === '1')"
+                )
+            )
+            page.keyboard.press("ArrowRight")
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState().index"), 1)
+            page.keyboard.press("ArrowLeft")
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState().index"), 0)
+            page.keyboard.press("Space")
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState().index"), 1)
+            page.keyboard.press("PageUp")
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState().index"), 0)
+            page.evaluate(
+                """() => document.querySelector('.slide.active').dispatchEvent(
+                  new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })
+                )"""
+            )
+            self.assertEqual(page.evaluate("() => window.TaoHtmlRuntime.getState().index"), 1)
+            page.evaluate("() => window.TaoHtmlRuntime.setMode('presentation')")
+            reset = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            self.assertEqual((reset["index"], reset["stages"][1]), (1, 0))
+
+            page.evaluate(reset_presentation, 0)
+            protected_before = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+            protected_after = page.evaluate(
+                """() => {
+                  const slide = document.querySelector('.slide.active');
+                  const sandbox = document.createElement('div');
+                  sandbox.innerHTML = `
+                    <a data-target href="#1">link</a>
+                    <div data-target data-taohtml-attachment>attachment</div>
+                    <div data-target class="ri-chart">chart</div>
+                    <form data-target>form</form>
+                    <div data-target contenteditable="true">editable</div>
+                    <div data-target role="dialog">dialog</div>
+                    <canvas data-target></canvas>`;
+                  slide.appendChild(sandbox);
+                  const states = [];
+                  sandbox.querySelectorAll('[data-target]').forEach(target => {
+                    target.dispatchEvent(new MouseEvent('click', {
+                      bubbles: true, cancelable: true, button: 0,
+                    }));
+                    states.push(window.TaoHtmlRuntime.getState());
+                  });
+                  sandbox.remove();
+                  return states;
+                }"""
+            )
+            self.assertTrue(all(state == protected_before for state in protected_after))
+
+            page.locator("#moreToggle").click()
+            page.locator("#fullscreenToggle").click()
+            page.wait_for_function(
+                """() => Boolean(document.fullscreenElement) &&
+                  document.querySelector('#deck').classList.contains('controls-hidden')"""
+            )
+            page.keyboard.press("ArrowRight")
+            page.dispatch_event("#deck", "pointerdown")
+            page.evaluate(
+                """() => document.dispatchEvent(new MouseEvent('mousemove', {
+                  bubbles: true, movementX: 10, movementY: 10,
+                }))"""
+            )
+            self.assertEqual(page.locator("#deck.controls-hidden").count(), 1)
+            page.evaluate(
+                """() => document.querySelector('.slide.active').dispatchEvent(
+                  new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })
+                )"""
+            )
+            self.assertEqual(page.locator("#deck.controls-hidden").count(), 1)
+            page.mouse.move(420, 320)
+            page.wait_for_function(
+                "() => !document.querySelector('#deck').classList.contains('controls-hidden')"
+            )
+            page.wait_for_timeout(2200)
+            self.assertEqual(page.locator("#deck.controls-hidden").count(), 1)
+            self.assertTrue(
+                page.locator("#pageIndicator").evaluate(
+                    "el => getComputedStyle(el).opacity !== '0' && el.getBoundingClientRect().width > 0"
+                )
+            )
+            page.evaluate("() => document.exitFullscreen()")
+            browser.close()
 
     def test_runtime_names_controlled_steps_canvas_and_text_collision_gates(self) -> None:
         skill_dir = ROOT / "skill" / "taohtml"

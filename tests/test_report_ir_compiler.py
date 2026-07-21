@@ -566,26 +566,89 @@ class ReportIrCompilerTests(unittest.TestCase):
             )
 
     def test_same_ir_semantics_compile_through_all_four_themes(self) -> None:
+        from playwright.sync_api import sync_playwright
+
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             self._project(root)
             normalized_hashes: set[str] = set()
             semantic_hashes: set[str] = set()
             html_hashes: set[str] = set()
+            outputs: list[Path] = []
+            shell_runtime = re.search(
+                r"<script>(?P<body>\s*const slides = .*?)</script>",
+                COMPILER.SHELL_PATH.read_text(encoding="utf-8"),
+                re.DOTALL,
+            )
+            self.assertIsNotNone(shell_runtime)
             for theme_id in THEME_IDS:
                 candidate = copy.deepcopy(self.ir)
                 candidate["build_binding"]["theme"]["ref"] = theme_id
                 output = root / theme_id
                 manifest = COMPILER.compile_ir(candidate, root, output)
+                outputs.append(output / "index.html")
                 rendered = (output / "index.html").read_text(encoding="utf-8")
                 normalized_hashes.add(manifest["report_ir"]["normalized_sha256"])
                 semantic_hashes.add(manifest["report_ir"]["semantic_graph_sha256"])
                 html_hashes.add(manifest["outputs"]["html"]["sha256"])
                 self.assertIn(f'data-theme="{theme_id}"', rendered)
                 self.assertEqual(manifest["counts"]["output_pages"], 7)
+                rendered_runtime = re.search(
+                    r"<script>(?P<body>\s*const slides = .*?)</script>",
+                    rendered,
+                    re.DOTALL,
+                )
+                self.assertIsNotNone(rendered_runtime)
+                self.assertEqual(rendered_runtime.group("body"), shell_runtime.group("body"))
             self.assertEqual(len(normalized_hashes), 4)
             self.assertEqual(len(semantic_hashes), 1)
             self.assertEqual(len(html_hashes), 4)
+
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(args=["--disable-gpu"])
+                for output in outputs:
+                    page = browser.new_page(viewport={"width": 1600, "height": 900})
+                    page.goto(output.resolve().as_uri(), wait_until="load")
+                    target_index = page.evaluate(
+                        """() => [...document.querySelectorAll('.slide')]
+                          .findIndex((slide, index, slides) =>
+                            index < slides.length - 1 && slide.querySelector('.fragment'))"""
+                    )
+                    self.assertGreaterEqual(target_index, 0)
+                    page.evaluate(
+                        """index => {
+                          const runtime = window.TaoHtmlRuntime;
+                          if (runtime.getState().mode === 'presentation') runtime.setMode('reading');
+                          runtime.showPage(index);
+                          runtime.setMode('presentation');
+                        }""",
+                        target_index,
+                    )
+                    before = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+                    page.keyboard.press("ArrowLeft")
+                    self.assertEqual(
+                        page.evaluate("() => window.TaoHtmlRuntime.getState()"),
+                        before,
+                    )
+                    page.keyboard.press("ArrowRight")
+                    after_step = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+                    self.assertEqual(after_step["index"], target_index)
+                    self.assertEqual(after_step["stages"][target_index], 1)
+                    page.evaluate(
+                        """index => {
+                          const runtime = window.TaoHtmlRuntime;
+                          runtime.setMode('reading');
+                          runtime.showPage(index);
+                          runtime.setMode('presentation');
+                        }""",
+                        target_index,
+                    )
+                    page.keyboard.press("PageDown")
+                    after_page = page.evaluate("() => window.TaoHtmlRuntime.getState()")
+                    self.assertEqual(after_page["index"], target_index + 1)
+                    self.assertEqual(after_page["stages"][target_index], 0)
+                    page.close()
+                browser.close()
 
     def test_v10_and_v11_share_computed_header_and_built_in_theme_styles(self) -> None:
         from playwright.sync_api import sync_playwright
