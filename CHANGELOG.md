@@ -4,6 +4,31 @@ TaoHtml follows Semantic Versioning. Release tags use the `vMAJOR.MINOR.PATCH` f
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-21
+
+### Added
+
+- Add nine on-demand business-production paths for formal submission, research and argumentation, periodic operations, proposals and decisions, live presentation, teaching and training, project lifecycle reporting, brand and editorial work, and rule response. Clear requests route directly; genuinely ambiguous requests use one nine-option routing question without creating nine separate Skills or production engines.
+- Add portable, hash-bound project handoff records so an eligible later Agent can inspect the current task intent, source bindings, confirmed decisions, build identity, validation state, and safe next action before continuing.
+- Package the Report IR schema, deterministic Compiler, runtime patcher, and pilot orchestrator for explicitly authorized engineering pilots while keeping the normal customer route unchanged.
+
+### Changed
+
+- Separate controlled content steps from whole-page navigation in the shared Runtime. In presentation mode, click, Right Arrow, and Space advance one content step before changing page; Left Arrow only undoes a step; Page Up/Down and the on-screen controls change whole pages. Reading mode keeps all content visible and uses whole-page navigation.
+- Restore each visited page's presentation-step state, reset the current page when switching from reading to presentation, and keep page navigation shared across Direct HTML, Report IR Compiler output, and all four built-in visual systems.
+- Hide presentation controls immediately after entering fullscreen and reveal them only after a real post-transition mouse movement; keyboard input, click, pointer down, and fullscreen events do not flash the controls, while menus and editing interactions keep them available.
+
+### Fixed
+
+- Require an uploaded source or an exact, parseable path before a file-based route becomes source-bound; stale workspace files and previous-task history cannot silently become the current report input.
+- Reject symbolic links, special files, output-inside-source paths, and unsafe archive members in deck packaging, and preserve an existing destination if a package attempt fails.
+- Preserve the starter template's compact display leading with explicit, screenshot-reviewed collision exceptions, while increasing panel body leading to clear the one-pixel browser QA safety gap.
+
+### Public beta boundaries
+
+- v0.5.0 is a public beta and continuous-iteration release. The automated contract for all nine paths is established, but the nine real Agent runs and their human visual acceptance are not all complete; this release does not relabel `DEFINED_PENDING_REAL_RUNS` as a nine-path PASS.
+- Report IR and the Compiler remain `experimental_pilot_only`; package presence is not general availability, and Direct HTML remains the default production route. Advanced composition graphs, non-monotonic Runtime state, incremental compilation, advanced motion authoring, and dual-screen presenting are not claimed.
+
 ## [0.4.0] - 2026-07-17
 
 ### Added

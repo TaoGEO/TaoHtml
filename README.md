@@ -12,7 +12,9 @@
 
 > English brief: TaoHtml turns ideas and source material into polished, offline HTML reports and presentation-ready decks, with confirmed design decisions, reusable visual systems, and delivery QA.
 
-当前版本：[`0.4.0`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.4.0) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
+当前版本：[`0.5.0`](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.5.0) · [完整更新历史](CHANGELOG.md) · [工作流说明](docs/workflow.md)
+
+> v0.5.0 是公开测试、持续迭代版本。九条业务生产路径及其自动化合同已经建立，但九次真实 Agent 运行与人工视觉验收尚未全部完成；Report IR / Compiler 仍为 experimental / pilot-only，Direct HTML 仍是默认生产路线。本版本不宣称高级动效编排、双屏演讲或其他尚未实现的能力已经可用。
 
 ## 核心能力
 
@@ -20,6 +22,7 @@
 - 每次新调用先建立本次入口：没有明确主题或绑定材料时只显示三个入口；短回答只绑定当前对话中 Agent 刚展示的选项，工作区旧文件不会被自动当成本次输入。
 - 一次只补一个真正会改变设计结果的决策，并保持明确的提问上限；转换型报告还会核对真实、可执行的行动入口。
 - 在正式制作前确认《报告设计简报》，记录受众、目标、结构、证据、视觉来源和必要边界。
+- 按业务目标路由到九条按需加载的生产路径，覆盖规范报送、研究分析、周期经营、方案决策、现场演讲、教学培训、项目全过程、品牌编辑和规则响应；路径共用同一套材料、设计、授权、Runtime 与交付门禁。
 - 内置四套可执行视觉系统，不只更换配色，还会改变构图、层级、组件、图片、图表、证据和动效语法。
 - 支持“参考风格重构”和“企业模板保真”：先生成可查看的 VI 设计标准图，确认后再编译项目专用主题。
 - 企业模板保真结果可保存到 `${TAOHTML_HOME:-~/.taohtml}` 的版本化企业档案；同一企业后续项目自动绑定 active version，支持本次临时更换、永久升级、回退、归档和严格 export/import。
@@ -131,7 +134,7 @@ cp -R "$source" "$target"
 
 ### Release ZIP：离线 / 手动安装
 
-[`taohtml-marketplace-v0.4.0.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.4.0/taohtml-marketplace-v0.4.0.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.4.0`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。GitHub Release、Skill Hub 与 ClawHub 是独立分发渠道；请以各渠道公开详情页显示的版本为准。
+[`taohtml-marketplace-v0.5.0.zip`](https://github.com/TaoGEO/TaoHtml/releases/download/v0.5.0/taohtml-marketplace-v0.5.0.zip) 同时包含 Codex 与 Claude Code 的本地 marketplace manifest，版本固定为 `0.5.0`。ZIP 不会自动接收更新；升级时需要完整替换解压目录并重新安装。GitHub Release、Skill Hub、ClawHub 与小红书 Red Skill 是独立分发渠道；请以各渠道公开详情页显示的版本为准。
 
 ## 版本更新
 
@@ -139,6 +142,7 @@ README 只保留每版最重要的用户变化；完整逐条历史见 [CHANGELO
 
 | 版本 | 最重要的变化 | 版本页与完整记录 |
 |---|---|---|
+| **v0.5.0（公开测试版）** | 新增九条按业务目标路由的生产路径与可续作交接；演讲 Runtime 明确区分内容步进和整页翻页；Report IR / Compiler 仍仅供实验性试点，Direct HTML 保持默认 | [GitHub Release](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.5.0) · [CHANGELOG](CHANGELOG.md#050---2026-07-21) |
 | **v0.4.0** | 新增轻量离线内容编辑器：可修改报告文字、替换图片、调整裁切焦点、撤销/重做、刷新恢复并导出新的 HTML；版式、图表数据和动效仍由 Agent 处理 | [GitHub Release](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.4.0) · [CHANGELOG](CHANGELOG.md#040---2026-07-17) |
 | **v0.3.3** | 企业模板在首次 VI 确认后可存为显式版本档案；后续项目精确匹配时自动沿用，并支持临时更换、永久升级、回退和完整迁移 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.3) · [CHANGELOG](CHANGELOG.md#033---2026-07-17) |
 | **v0.3.2** | 新调用入口握手与材料来源绑定；按能力运行的快速环境预检；技能包自带依赖声明与 Windows 冒烟验证 | [GitHub Release（发布后生效）](https://github.com/TaoGEO/TaoHtml/releases/tag/v0.3.2) · [CHANGELOG](CHANGELOG.md#032---2026-07-16) |
