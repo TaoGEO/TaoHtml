@@ -1255,7 +1255,7 @@ class ReportIrCompilerTests(unittest.TestCase):
             output = root / "build"
             result = subprocess.run(
                 [
-                    str(ROOT / ".venv" / "bin" / "python"),
+                    sys.executable,
                     str(SCRIPT_DIR / "compile_report_ir.py"),
                     str(ir_path),
                     "--artifact-root",

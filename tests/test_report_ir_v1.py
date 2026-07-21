@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -621,7 +622,7 @@ class ReportIrV1Tests(unittest.TestCase):
             ir_path.write_text(json.dumps(self.ir, ensure_ascii=False), encoding="utf-8")
             completed = subprocess.run(
                 [
-                    str(ROOT / ".venv" / "bin" / "python"),
+                    sys.executable,
                     str(SCRIPT_DIR / "validate_report_ir.py"),
                     str(ir_path),
                     "--output",
